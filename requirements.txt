@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+tortoise-orm
+aiosqlite
+instructor
+openai
+pydantic
+pymupdf4llm
+python-dotenv
