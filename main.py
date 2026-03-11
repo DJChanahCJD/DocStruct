@@ -8,7 +8,8 @@ from core.parser import ParserFactory
 from core.extractor import extract_structure, classify_document
 from schemas.models import (
     DocumentRecord, SrsDocument, ApiDocument, 
-    TestReportDocument, SddDocument, UserManualDocument,
+    DesignDocument, UserManualDocument,
+    TestPlanDocument, TestCaseDocument, TestReportDocument,
     UploadResponse, DocType
 )
 
@@ -22,8 +23,10 @@ app = FastAPI(title="DocStruct MVP")
 TYPE_MODEL_MAP = {
     DocType.SRS: SrsDocument,
     DocType.API: ApiDocument,
-    DocType.TEST: TestReportDocument,
-    DocType.SDD: SddDocument,
+    DocType.DESIGN: DesignDocument,
+    DocType.TEST_PLAN: TestPlanDocument,
+    DocType.TEST_CASE: TestCaseDocument,
+    DocType.TEST_REPORT: TestReportDocument,
     DocType.USER_MANUAL: UserManualDocument,
 }
 

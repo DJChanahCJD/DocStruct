@@ -1,53 +1,44 @@
 # JSON Format Instructions
 JSON_FORMAT_INSTRUCTION = """
-Return a valid JSON object. No Markdown blocks (```json). No comments. All keys must be in English.
+Return valid JSON only. No markdown, no comments. Keys must be in English.
 """
 
 # Document Classification Prompt Template (Role: Expert Software Architect)
 CLASSIFY_PROMPT_TEMPLATE = """
-Role: You are an Expert Software Architect specializing in technical documentation analysis.
+You are an expert in software engineering documentation.
 
-Task: Analyze the following Markdown document summary and classify it into one of the predefined categories.
+Classify the following document summary into one category.
 
 Document Summary:
----
 {summary}
----
 
 Categories:
-- srs: Software Requirements Specification (Functional requirements, user stories)
-- api: API Documentation (Endpoints, HTTP methods, parameters, responses)
-- test: Test Report (Test cases, execution status, pass/fail rates)
-- sdd: System Design Document (Architecture, modules, database schema)
-- user_manual: User Manual (Installation, usage guide, troubleshooting)
-- unknown: Cannot be classified into the above categories
+srs: Software Requirements Specification
+api: API documentation
+design: System or architecture design
+test_plan: Test planning document
+test_case: Test case definitions
+test_report: Test execution report
+user_manual: User guide or manual
+unknown: None of the above
 
 {json_instruction}
 
-Output Format:
-{{
-  "doc_type": "srs|api|test|sdd|user_manual|unknown",
-  "confidence": 0.95,
-  "reasoning": "Based on the presence of HTTP methods and endpoint paths..."
-}}
+Return JSON:
+{
+  "doc_type": "srs | api | design | test_plan | test_case | test_report | user_manual | unknown",
+  "confidence": 0.0-1.0
+}
 """
 
 # Structure Extraction Prompt Template (Role: Senior Technical Writer / Data Engineer)
 EXTRACT_PROMPT_TEMPLATE = """
-Role: You are a Senior Technical Writer and Data Engineer.
+Extract structured information from the following Markdown document using the provided JSON Schema.
 
-Task: Extract structured data from the following Markdown document strictly adhering to the provided JSON Schema.
-
-Context: The input is a technical document converted to Markdown. Use the headers (#, ##) and list structures to identify relevant sections.
-
-Document Content:
----
+Document:
 {content}
----
 
-(Note: Content may be truncated if too long. Focus on visible sections.)
-
-Schema Definition:
+Schema:
 {schema}
 
 {json_instruction}
