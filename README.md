@@ -1,10 +1,20 @@
-## 📝 项目文档：DocStruct
+## 📝 本科生毕业设计项目文档：DocStruct
 
 ### 1. 项目定位
 
-本系统是一个基于大语言模型（LLM）的**软件工程文档结构化提取系统**。旨在将非结构化的 PDF 文档（SRS、API、测试报告）通过 OCR 和 LLM 转化为标准化的 JSON 结构 。
+本系统是一个基于大语言模型（LLM）的**软件工程文档结构化提取系统**。旨在将非结构化的 PDF/DOCX/Markdown 文档转化为标准化的 JSON 结构，覆盖软件工程全生命周期。
 
-### 2. 技术栈 (Technical Stack)
+### 2. 核心功能与支持
+
+| 文档类型 | 状态 | 描述 |
+| :--- | :--- | :--- |
+| **软件需求规格 (SRS)** | ✅ 已支持 | 提取功能需求、非功能需求、优先级 |
+| **API 接口文档** | ✅ 已支持 | 提取接口路径、方法、参数、响应 |
+| **测试报告** | ✅ 已支持 | 提取测试用例、执行结果、统计数据 |
+| **系统设计说明书 (SDD)** | 🗓️ 计划中 | 提取架构设计、模块划分、数据库设计 |
+| **用户手册** | 🗓️ 计划中 | 提取操作指南、故障排除步骤 |
+
+### 3. 技术栈 (Technical Stack)
 
 * **后端**: FastAPI (Web 路由与静态托管) 。
 
@@ -15,7 +25,7 @@
 * **持久化**: SQLite + Tortoise-ORM (轻量级异步 ORM，零配置存储)。
 * **前端**: 单页 `index.html` (原生 JS Fetch + Tailwind CSS 极简展示)。
 
-### 3. 项目结构 (Project Structure)
+### 4. 项目结构 (Project Structure)
 
 ```text
 DocStruct/
@@ -34,7 +44,7 @@ DocStruct/
 
 ```
 
-### 4. 核心逻辑流程
+### 5. 核心逻辑流程 (Pipeline)
 
 1. **解析层**: 采用“Markdown 优先”策略。利用 Marker 还原 PDF 中的层级、标题与表格，为 LLM 提供语义清晰的输入。
 2. **提取层**: 使用 `instructor.patch(client)`。定义 `SrsDocument`, `ApiDocument`, `TestReportDocument` 等 Pydantic 类 。
