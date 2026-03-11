@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DocStruct - 智能文档结构化</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
@@ -13,20 +14,8 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        heading: ['Outfit', 'sans-serif'],
-                        body: ['Work Sans', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
-                        }
-                    }
+                    fontFamily: { heading: ['Outfit', 'sans-serif'], body: ['Work Sans', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' } }
                 }
             }
         }
@@ -34,396 +23,217 @@
     <style>
         body { font-family: 'Work Sans', sans-serif; }
         h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 selection:bg-brand-100 selection:text-brand-900">
+<body class="bg-slate-50 min-h-screen text-slate-800 selection:bg-brand-100 selection:text-brand-900" x-data="docStruct()">
     <div class="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none z-0"></div>
     
     <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 h-screen flex flex-col">
-        <!-- Header -->
         <header class="flex justify-between items-center mb-10">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900 tracking-tight">DocStruct</h1>
                     <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">MVP v1.0</p>
                 </div>
             </div>
-            <a href="https://github.com/todo" target="_blank" class="text-slate-400 hover:text-slate-700 transition-colors">
-                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-            </a>
         </header>
 
         <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
-            <!-- Left Column: Upload & History -->
             <div class="lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
-                <!-- Upload Area -->
                 <div class="glass-card rounded-2xl p-6 transition-all duration-300 hover:shadow-md">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                        <span class="w-1.5 h-6 bg-brand-500 rounded-full mr-3"></span>
-                        上传文档
+                        <span class="w-1.5 h-6 bg-brand-500 rounded-full mr-3"></span>上传文档
                     </h2>
                     
-                    <div id="dropZone" class="group border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-brand-500 hover:bg-brand-50/50 transition-all duration-300 cursor-pointer relative">
-                        <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept=".pdf,.docx,.doc,.md,.txt">
+                    <div class="group border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer relative"
+                         :class="isDragging ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:border-brand-500 hover:bg-brand-50/50'"
+                         @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop">
+                        <input type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept=".pdf,.docx,.md,.txt" @change="handleFile">
                         <div class="flex flex-col items-center pointer-events-none transition-transform group-hover:scale-105 duration-300">
                             <div class="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-3 group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">
-                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                             </div>
                             <p class="text-sm font-medium text-slate-700">点击或拖拽文件</p>
-                            <p class="text-xs text-slate-400 mt-1">支持 PDF, DOCX, Markdown, TXT (Max 10MB)</p>
+                            <p class="text-xs text-slate-400 mt-1">支持 PDF, DOCX, MD, TXT</p>
                         </div>
                     </div>
 
-                    <!-- File Info & Action -->
-                    <div id="fileInfoPanel" class="hidden mt-4 space-y-3 animate-fade-in">
+                    <div x-show="file" x-transition x-cloak class="mt-4 space-y-3">
                         <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
                             <div class="flex items-center overflow-hidden">
-                                <svg class="w-4 h-4 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h5v5h5v11H6z"/></svg>
-                                <span class="text-sm text-slate-700 truncate" id="fileName">filename.pdf</span>
+                                <span class="text-sm text-slate-700 truncate" x-text="file?.name"></span>
                             </div>
-                            <button id="clearFile" class="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
+                            <button @click="file = null" class="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors">&times;</button>
                         </div>
-                        <button id="uploadBtn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-lg shadow-brand-500/20 active:scale-95 transition-all duration-200 flex items-center justify-center">
-                            <span>开始智能提取</span>
-                            <svg class="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        <button @click="upload()" :disabled="loading" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-lg shadow-brand-500/20 active:scale-95 transition-all duration-200 disabled:opacity-50 flex items-center justify-center">
+                            <span x-text="loading ? '提取中...' : '开始智能提取'"></span>
                         </button>
                     </div>
                 </div>
 
-                <!-- History -->
                 <div class="glass-card rounded-2xl p-6 flex-1 flex flex-col min-h-0">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="w-1.5 h-6 bg-slate-300 rounded-full mr-3"></span>
-                            历史记录
-                        </div>
-                        <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full" id="historyCount">0</span>
+                        <div class="flex items-center"><span class="w-1.5 h-6 bg-slate-300 rounded-full mr-3"></span>历史记录</div>
+                        <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full" x-text="history.length"></span>
                     </h2>
-                    <div id="historyList" class="overflow-y-auto custom-scrollbar flex-1 space-y-2 pr-1 -mr-1">
-                        <!-- Items injected here -->
-                        <div class="flex flex-col items-center justify-center h-32 text-slate-400">
-                            <span class="text-sm">暂无历史记录</span>
-                        </div>
+                    <div class="overflow-y-auto custom-scrollbar flex-1 space-y-2 pr-1 -mr-1">
+                        <template x-if="history.length === 0">
+                            <div class="flex flex-col items-center justify-center h-32 text-slate-400 text-sm">暂无历史记录</div>
+                        </template>
+                        <template x-for="item in history" :key="item.id">
+                            <div @click="loadDoc(item.id)" class="group p-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-all duration-200">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="font-medium text-slate-700 truncate flex-1 mr-2 text-sm group-hover:text-brand-600 transition-colors" x-text="item.filename"></span>
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-600" x-text="item.doc_type || 'UNK'"></span>
+                                        <button @click.stop="deleteDoc(item.id)" class="text-slate-300 hover:text-red-500 transition-colors p-0.5 rounded hover:bg-red-50" title="删除">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-xs text-slate-400">
+                                    <span x-text="new Date(item.upload_time).toLocaleDateString()"></span>
+                                    <span :class="item.status === 'completed' ? 'text-emerald-500' : 'text-amber-500'" x-text="item.status"></span>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Column: Result Display -->
             <div class="lg:col-span-8 h-full min-h-0 flex flex-col">
                 <div class="glass-card rounded-2xl p-0 flex flex-col h-full overflow-hidden relative">
-                    <!-- Result Header -->
                     <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-sm">
-                        <div class="flex items-center space-x-3">
-                            <h2 class="text-lg font-semibold text-slate-800">提取结果</h2>
-                            <span id="docTypeTag" class="hidden text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide"></span>
-                        </div>
-                        <div class="flex space-x-2 opacity-0 pointer-events-none transition-opacity duration-300" id="actionButtons">
-                            <button id="copyBtn" class="flex items-center text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:border-brand-300 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
-                                <svg class="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                复制
-                            </button>
-                            <button id="downloadBtn" class="flex items-center text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:border-brand-300 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
-                                <svg class="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                下载
-                            </button>
+                        <h2 class="text-lg font-semibold text-slate-800">提取结果</h2>
+                        <div x-show="result" x-transition x-cloak class="flex space-x-2">
+                            <button @click="copy()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">复制</button>
+                            <button @click="download()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">下载</button>
                         </div>
                     </div>
 
-                    <!-- Content Area -->
                     <div class="flex-1 relative bg-slate-900 overflow-hidden">
-                        <!-- Loading State -->
-                        <div id="loading" class="hidden absolute inset-0 z-20 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
-                            <div class="relative w-16 h-16">
-                                <div class="absolute inset-0 border-4 border-brand-100 rounded-full"></div>
-                                <div class="absolute inset-0 border-4 border-brand-500 rounded-full border-t-transparent animate-spin"></div>
-                            </div>
-                            <h3 class="mt-6 text-lg font-medium text-slate-800">正在智能解析</h3>
-                            <p class="text-sm text-slate-500 mt-1 animate-pulse">AI 正在分析文档结构与内容...</p>
+                        <div x-show="loading" x-transition class="absolute inset-0 z-20 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
+                            <div class="w-12 h-12 border-4 border-brand-100 border-t-brand-500 rounded-full animate-spin"></div>
+                            <p class="mt-4 text-sm text-slate-500 animate-pulse">AI 正在分析文档...</p>
                         </div>
 
-                        <!-- Empty State -->
-                        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-10 bg-slate-50">
-                            <div class="w-20 h-20 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-4 transform rotate-3">
-                                <svg class="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            </div>
-                            <p class="text-sm font-medium">请在左侧上传文档</p>
-                            <p class="text-xs text-slate-400 mt-1">支持 SRS、API 文档及测试报告</p>
+                        <div x-show="!result && !loading" x-transition class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-10 bg-slate-50">
+                            <p class="text-sm font-medium">请在左侧上传或选择文档</p>
                         </div>
 
-                        <!-- Code Display -->
-                        <div id="resultContent" class="hidden absolute inset-0 overflow-auto custom-scrollbar">
-                            <pre><code id="jsonOutput" class="language-json text-sm font-mono leading-relaxed"></code></pre>
+                        <div x-show="result && !loading" class="absolute inset-0 overflow-auto custom-scrollbar">
+                            <pre><code id="codeBlock" class="language-json text-sm font-mono leading-relaxed" x-text="resultStr"></code></pre>
                         </div>
-                    </div>
-                    
-                    <!-- Status Toast -->
-                    <div id="statusToast" class="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-full shadow-lg translate-y-20 transition-transform duration-300 z-50 flex items-center">
-                        <span id="statusIcon" class="mr-2"></span>
-                        <span id="statusMsg">操作成功</span>
                     </div>
                 </div>
             </div>
         </main>
+        
+        <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-full shadow-lg transition-all duration-300 z-50"
+             :class="toast.show ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'" x-text="toast.msg"></div>
     </div>
 
     <script>
-        // DOM Elements
-        const els = {
-            fileInput: document.getElementById('fileInput'),
-            fileInfoPanel: document.getElementById('fileInfoPanel'),
-            fileName: document.getElementById('fileName'),
-            clearFile: document.getElementById('clearFile'),
-            uploadBtn: document.getElementById('uploadBtn'),
-            loading: document.getElementById('loading'),
-            resultContent: document.getElementById('resultContent'),
-            jsonOutput: document.getElementById('jsonOutput'),
-            emptyState: document.getElementById('emptyState'),
-            historyList: document.getElementById('historyList'),
-            historyCount: document.getElementById('historyCount'),
-            actionButtons: document.getElementById('actionButtons'),
-            copyBtn: document.getElementById('copyBtn'),
-            downloadBtn: document.getElementById('downloadBtn'),
-            docTypeTag: document.getElementById('docTypeTag'),
-            statusToast: document.getElementById('statusToast'),
-            statusMsg: document.getElementById('statusMsg'),
-            statusIcon: document.getElementById('statusIcon'),
-            dropZone: document.getElementById('dropZone')
-        };
-
-        let currentFile = null;
-
-        // --- Event Listeners ---
-
-        // File Selection
-        els.fileInput.addEventListener('change', handleFileSelect);
-        els.clearFile.addEventListener('click', clearFileSelection);
-        
-        // Drag & Drop Visuals
-        els.dropZone.addEventListener('dragenter', () => els.dropZone.classList.add('border-brand-500', 'bg-brand-50'));
-        els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('border-brand-500', 'bg-brand-50'));
-        els.dropZone.addEventListener('drop', () => els.dropZone.classList.remove('border-brand-500', 'bg-brand-50'));
-
-        // Upload Action
-        els.uploadBtn.addEventListener('click', handleUpload);
-
-        // Copy & Download
-        els.copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(els.jsonOutput.textContent);
-            showToast('已复制到剪贴板', 'success');
-        });
-        
-        els.downloadBtn.addEventListener('click', () => {
-            const blob = new Blob([els.jsonOutput.textContent], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `docstruct_export_${Date.now()}.json`;
-            a.click();
-            showToast('下载已开始', 'success');
-        });
-
-        // --- Functions ---
-
-        function handleFileSelect(e) {
-            if (e.target.files.length > 0) {
-                currentFile = e.target.files[0];
-                els.fileName.textContent = currentFile.name;
-                els.fileInfoPanel.classList.remove('hidden');
-                els.uploadBtn.disabled = false;
-            }
-        }
-
-        function clearFileSelection() {
-            els.fileInput.value = '';
-            currentFile = null;
-            els.fileInfoPanel.classList.add('hidden');
-            els.uploadBtn.disabled = true;
-        }
-
-        async function handleUpload() {
-            if (!currentFile) return;
-
-            setLoading(true);
-            const formData = new FormData();
-            formData.append('file', currentFile);
-
-            try {
-                const res = await fetch('/api/upload', { method: 'POST', body: formData });
-                if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
+        function docStruct() {
+            return {
+                file: null, isDragging: false, loading: false, result: null, history: [],
+                toast: { show: false, msg: '' },
                 
-                const data = await res.json();
-                await fetchDocumentResult(data.id);
-                loadHistory();
-                showToast('解析完成', 'success');
-                clearFileSelection();
-
-            } catch (err) {
-                console.error(err);
-                showToast(err.message, 'error');
-                setLoading(false);
-            }
-        }
-
-        async function fetchDocumentResult(id) {
-            try {
-                const res = await fetch(`/api/documents/${id}`);
-                const doc = await res.json();
+                get resultStr() { return this.result ? JSON.stringify(this.result, null, 2) : ''; },
                 
-                // Display Content
-                const jsonStr = JSON.stringify(doc.extracted_data, null, 2);
-                els.jsonOutput.textContent = jsonStr;
-                Prism.highlightElement(els.jsonOutput);
+                init() { 
+                    this.fetchHistory(); 
+                    // 监听 result 变化，自动触发 Prism 高亮
+                    this.$watch('result', () => {
+                        this.$nextTick(() => { if(this.result) Prism.highlightElement(document.getElementById('codeBlock')); });
+                    });
+                },
                 
-                // Update UI State
-                els.resultContent.classList.remove('hidden');
-                els.emptyState.classList.add('hidden');
-                els.loading.classList.add('hidden');
-                
-                // Show Actions
-                els.actionButtons.classList.remove('opacity-0', 'pointer-events-none');
-                
-                // Update Tag
-                updateDocTypeTag(doc.doc_type);
-
-            } catch (e) {
-                showToast('获取结果失败', 'error');
-                setLoading(false);
-            }
-        }
-
-        async function deleteDocument(id) {
-            if (!confirm('确定要删除这条记录吗？')) return;
-            
-            try {
-                const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error('Delete failed');
-                
-                showToast('记录已删除', 'success');
-                loadHistory();
-            } catch (err) {
-                console.error(err);
-                showToast('删除失败', 'error');
-            }
-        }
-
-        async function loadHistory() {
-            try {
-                const res = await fetch('/api/documents');
-                const docs = await res.json();
-                
-                els.historyCount.textContent = docs.length;
-                els.historyList.innerHTML = '';
-                
-                if (docs.length === 0) {
-                    els.historyList.innerHTML = '<div class="text-center text-slate-400 py-8 text-sm">暂无记录</div>';
-                    return;
-                }
-
-                docs.forEach(doc => {
-                    const item = document.createElement('div');
-                    item.className = 'group p-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-all duration-200';
-                    const date = new Date(doc.upload_time).toLocaleDateString();
-                    
-                    // Type Badge Colors
-                    let badgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
-                    if (doc.doc_type === 'srs') badgeClass = 'bg-blue-50 text-blue-600 border-blue-100';
-                    if (doc.doc_type === 'api') badgeClass = 'bg-purple-50 text-purple-600 border-purple-100';
-                    if (doc.doc_type === 'test') badgeClass = 'bg-emerald-50 text-emerald-600 border-emerald-100';
-
-                    item.innerHTML = `
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="font-medium text-slate-700 truncate w-3/4 text-sm group-hover:text-brand-600 transition-colors" title="${doc.filename}">${doc.filename}</span>
-                            <div class="flex items-center space-x-1">
-                                <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${badgeClass}">${doc.doc_type || 'UNK'}</span>
-                                <button class="delete-btn text-slate-400 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100" title="删除">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs text-slate-400">${date}</span>
-                            <span class="text-xs ${doc.status === 'completed' ? 'text-emerald-500' : 'text-amber-500'} flex items-center">
-                                <span class="w-1.5 h-1.5 rounded-full ${doc.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'} mr-1"></span>
-                                ${doc.status}
-                            </span>
-                        </div>
-                    `;
-                    
-                    // Delete Button Handler
-                    const deleteBtn = item.querySelector('.delete-btn');
-                    if (deleteBtn) {
-                        deleteBtn.onclick = (e) => {
-                            e.stopPropagation();
-                            deleteDocument(doc.id);
-                        };
+                handleFile(e) { if(e.target.files[0]) this.file = e.target.files[0]; },
+                handleDrop(e) { 
+                    this.isDragging = false; 
+                    const file = e.dataTransfer.files[0];
+                    if (file) {
+                        const ext = file.name.split('.').pop().toLowerCase();
+                        if (['pdf', 'docx', 'md', 'txt'].includes(ext)) {
+                            this.file = file;
+                        } else {
+                            this.showToast('不支持的文件类型');
+                        }
                     }
+                },
+                
+                async upload() {
+                    if (!this.file) return;
+                    this.loading = true;
+                    const fd = new FormData(); fd.append('file', this.file);
+                    try {
+                        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                        if (!res.ok) throw new Error();
+                        const data = await res.json();
+                        await this.loadDoc(data.id);
+                        this.fetchHistory();
+                        this.file = null;
+                        this.showToast('解析成功');
+                    } catch {
+                        this.showToast('解析失败，请检查服务');
+                    } finally { this.loading = false; }
+                },
+                
+                async loadDoc(id) {
+                    this.loading = true;
+                    try {
+                        const res = await fetch(`/api/documents/${id}`);
+                        this.result = (await res.json()).extracted_data;
+                    } catch { this.showToast('获取数据失败'); }
+                    finally { this.loading = false; }
+                },
 
-                    item.onclick = () => {
-                        setLoading(true);
-                        fetchDocumentResult(doc.id);
-                    };
-                    els.historyList.appendChild(item);
-                });
-            } catch (e) {
-                console.error("History load failed", e);
+                async deleteDoc(id) {
+                    if (!confirm('确定要删除此记录吗？')) return;
+                    try {
+                        const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            this.history = this.history.filter(h => h.id !== id);
+                            this.showToast('删除成功');
+                        } else {
+                            this.showToast('删除失败');
+                        }
+                    } catch { this.showToast('请求出错'); }
+                },
+                
+                async fetchHistory() {
+                    try { this.history = await (await fetch('/api/documents')).json(); } catch(e){}
+                },
+                
+                copy() {
+                    navigator.clipboard.writeText(this.resultStr);
+                    this.showToast('已复制到剪贴板');
+                },
+                
+                download() {
+                    const blob = new Blob([this.resultStr], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `docstruct_export_${Date.now()}.json`;
+                    a.click(); URL.revokeObjectURL(url);
+                },
+
+                showToast(msg) {
+                    this.toast.msg = msg; this.toast.show = true;
+                    setTimeout(() => this.toast.show = false, 3000);
+                }
             }
         }
-
-        function updateDocTypeTag(type) {
-            els.docTypeTag.classList.remove('hidden');
-            els.docTypeTag.textContent = type || 'UNKNOWN';
-            
-            // Reset classes
-            els.docTypeTag.className = 'text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide';
-            
-            if (type === 'srs') els.docTypeTag.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-200');
-            else if (type === 'api') els.docTypeTag.classList.add('bg-purple-50', 'text-purple-600', 'border-purple-200');
-            else if (type === 'test') els.docTypeTag.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
-            else els.docTypeTag.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200');
-        }
-
-        function setLoading(isLoading) {
-            if (isLoading) {
-                els.loading.classList.remove('hidden');
-                els.emptyState.classList.add('hidden');
-                els.resultContent.classList.add('hidden');
-                els.actionButtons.classList.add('opacity-0', 'pointer-events-none');
-            } else {
-                els.loading.classList.add('hidden');
-            }
-        }
-
-        function showToast(msg, type = 'success') {
-            els.statusMsg.textContent = msg;
-            els.statusIcon.innerHTML = type === 'success' 
-                ? '<svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>'
-                : '<svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
-            
-            els.statusToast.classList.remove('translate-y-20');
-            setTimeout(() => els.statusToast.classList.add('translate-y-20'), 3000);
-        }
-
-        // Init
-        loadHistory();
     </script>
 </body>
 </html>

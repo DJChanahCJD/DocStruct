@@ -6,9 +6,11 @@ from enum import Enum
 # --- Enums ---
 
 class DocType(str, Enum):
-    SRS = "srs"
+    SRS = "srs"  # 
     API = "api"
     TEST = "test"
+    SDD = "sdd"
+    USER_MANUAL = "user_manual"
     UNKNOWN = "unknown"
 
 # --- Tortoise ORM Models (Database) ---
@@ -88,7 +90,7 @@ class TestCase(BaseModel):
     id: str = Field(..., description="测试用例ID")
     name: str = Field(..., description="测试用例名称")
     status: Literal["pass", "fail", "skipped", "error"] = Field(..., description="执行状态")
-    failure_reason: Optional[str] = Field(None, description="失败原因（如果有）")
+    failure_reason: Optional[str] = Field(None, description="失败原因（可选）")
 
 class TestReportDocument(BaseModel):
     """
@@ -101,6 +103,59 @@ class TestReportDocument(BaseModel):
     passed_tests: int = Field(..., description="通过数量")
     failed_tests: int = Field(..., description="失败数量")
     test_cases: List[TestCase] = Field(..., description="测试用例详情列表")
+
+# 4. System Design Document (SDD)
+class SddModule(BaseModel):
+    """
+    系统模块定义
+    """
+    name: str = Field(..., description="模块名称")
+    description: str = Field(..., description="模块功能描述")
+    interfaces: List[str] = Field(default=[], description="模块提供的接口或方法列表")
+
+class SddDatabaseTable(BaseModel):
+    """
+    数据库表定义
+    """
+    name: str = Field(..., description="表名")
+    description: Optional[str] = Field(None, description="表描述")
+    columns: List[str] = Field(..., description="包含的列名列表")
+
+class SddDocument(BaseModel):
+    """
+    系统设计说明书 (SDD) 结构
+    """
+    doc_type: Literal["sdd"] = Field(default="sdd", description="文档类型标识")
+    title: str = Field(..., description="文档标题")
+    version: str = Field(default="1.0", description="版本号")
+    architecture_summary: str = Field(..., description="系统架构概要描述")
+    modules: List[SddModule] = Field(..., description="系统模块列表")
+    database_design: List[SddDatabaseTable] = Field(default=[], description="数据库设计（可选）")
+
+# 5. User Manual
+class TroubleshootingItem(BaseModel):
+    """
+    故障排除条目
+    """
+    problem: str = Field(..., description="问题描述")
+    solution: str = Field(..., description="解决方案")
+
+class UserManualSection(BaseModel):
+    """
+    用户手册章节
+    """
+    title: str = Field(..., description="章节标题，如'安装'、'登录'")
+    content: str = Field(..., description="章节具体内容或步骤描述")
+
+class UserManualDocument(BaseModel):
+    """
+    用户手册结构
+    """
+    doc_type: Literal["user_manual"] = Field(default="user_manual", description="文档类型标识")
+    title: str = Field(..., description="手册标题")
+    target_audience: Optional[str] = Field(None, description="目标用户群体")
+    sections: List[UserManualSection] = Field(..., description="主要章节列表（安装、使用说明等）")
+    troubleshooting: List[TroubleshootingItem] = Field(default=[], description="故障排除列表")
 
 # --- API Response Models ---
 
