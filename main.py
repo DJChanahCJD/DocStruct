@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from tortoise.contrib.fastapi import register_tortoise
 
-from core.parser import parse_pdf_to_markdown
+from core.parser import ParserFactory
 from core.extractor import extract_structure, classify_document
 from schemas.models import (
     DocumentRecord, SrsDocument, ApiDocument, 
@@ -32,11 +32,15 @@ async def read_root():
 
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_document(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "仅支持 PDF 文件")
+    # 扩展名校验
+    allowed_extensions = {".pdf", ".docx", ".doc", ".md", ".txt"}
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    
+    if file_ext not in allowed_extensions:
+        raise HTTPException(400, f"不支持的文件类型: {file_ext}。仅支持: {', '.join(allowed_extensions)}")
 
     # 保存文件
-    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{file.filename}")
+    file_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}{file_ext}")
     async with aiofiles.open(file_path, 'wb') as f:
         await f.write(await file.read())
 
@@ -45,7 +49,10 @@ async def upload_document(file: UploadFile = File(...)):
 
     try:
         # A. 解析与分类
-        md_text = parse_pdf_to_markdown(file_path)
+        # 使用工厂模式获取对应的解析器
+        parser = ParserFactory.get_parser(file_path)
+        md_text = parser.parse(file_path)
+        
         cls_result = classify_document(md_text)
         
         # B. 匹配模型并提取

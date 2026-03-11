@@ -8,3 +8,4 @@ openai
 pydantic
 pymupdf4llm
 python-dotenv
+python-docx
