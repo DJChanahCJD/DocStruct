@@ -6,24 +6,22 @@
 
 ### 2. 核心功能与支持
 
-| 文档类型 | 状态 | 描述 |
-| :--- | :--- | :--- |
-| **软件需求规格 (SRS)** | ✅ 已支持 | 提取功能需求、非功能需求、优先级 |
-| **API 接口文档** | ✅ 已支持 | 提取接口路径、方法、参数、响应 |
-| **测试报告** | ✅ 已支持 | 提取测试用例、执行结果、统计数据 |
-| **系统设计说明书 (SDD)** | 🗓️ 计划中 | 提取架构设计、模块划分、数据库设计 |
-| **用户手册** | 🗓️ 计划中 | 提取操作指南、故障排除步骤 |
+| 文档类型              | 状态    | 描述                |
+| :---------------- | :---- | :---------------- |
+| **软件需求规格 (SRS)**  | ✅ 已支持 | 提取功能需求、非功能需求、优先级  |
+| **API 接口文档**      | ✅ 已支持 | 提取接口路径、方法、参数、响应   |
+| **测试报告**          | ✅ 已支持 | 提取测试用例、执行结果、统计数据  |
+| **系统设计说明书 (SDD)** | ✅ 已支持 | 提取架构设计、模块划分、数据库设计 |
+| **用户手册**          | ✅ 已支持 | 提取操作指南、故障排除步骤     |
 
 ### 3. 技术栈 (Technical Stack)
 
-* **后端**: FastAPI (Web 路由与静态托管) 。
-
-
-* **解析**: Marker-PDF (将 PDF 转换为高质量 Markdown，保留表格结构)。
-* **提取**: Instructor (基于 Pydantic 模型的强约束 LLM 提取) 。
-* **模型**: Pydantic (定义字段、校验数据与 JSON 生成) 。
-* **持久化**: SQLite + Tortoise-ORM (轻量级异步 ORM，零配置存储)。
-* **前端**: 单页 `index.html` (原生 JS Fetch + Tailwind CSS 极简展示)。
+- **后端**: FastAPI (Web 路由与静态托管) 。
+- **解析**: Marker-PDF (将 PDF 转换为高质量 Markdown，保留表格结构)。
+- **提取**: Instructor (基于 Pydantic 模型的强约束 LLM 提取) 。
+- **模型**: Pydantic (定义字段、校验数据与 JSON 生成) 。
+- **持久化**: SQLite + Tortoise-ORM (轻量级异步 ORM，零配置存储)。
+- **前端**: 单页 `index.html` (原生 JS Fetch + Tailwind CSS 极简展示)。
 
 ### 4. 项目结构 (Project Structure)
 
@@ -50,10 +48,7 @@ DocStruct/
 2. **提取层**: 使用 `instructor.patch(client)`。定义 `SrsDocument`, `ApiDocument`, `TestReportDocument` 等 Pydantic 类 。
 3. **持久化层**: 提取成功的 JSON 数据连同元数据（文件名、时间）存入 `document_records` 表。
 4. **校验层**: 利用 Pydantic 的 `ValidationError` 捕获异常 。
-
-
-
-5. 核心 Pydantic 约束示例 
+5. 核心 Pydantic 约束示例
 
 ```python
 class RequirementItem(BaseModel):
@@ -67,3 +62,4 @@ class SrsDocument(BaseModel):
     requirements: list[RequirementItem]
 
 ```
+
