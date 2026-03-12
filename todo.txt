@@ -11,10 +11,13 @@ High Priority:
 
 可能的方案：“SQLite + Chroma / FAISS + Markdown分块 + Embedding检索 + RAG问答”
 
+参考：
+1. https://www.llamaindex.ai/
+2. https://github.com/HlhDataScience/DocsIngestionApi
 
 
 
 Low：
 - 实现多语言支持（当前仅中英文即可）
-- 多输出渠道（JSON、CSV、SQL表、Neo4j？）
+- 增加格式化输出渠道（JSON/MD/XML/CSV/YAML） （可选：SQL脚本、Neo4J Cipher、TOML）
 - 转用 PostgreSQL + pgvector 统一存储结构化数据和向量数据（是否必要？）
