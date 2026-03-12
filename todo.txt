@@ -7,6 +7,7 @@ High Priority:
 - 翻译参考文献等长文本
 - 自动生成知识库，文档问答
 - 系统提供一个界面，可以：查看抽取结果、按需求分类、搜索需求、查看模块关系等，并能够通过 AI 询问具体问题（需要向量库？）
+- 支持多种输入文档(图片/HTML/XML等)
 
 
 可能的方案：“SQLite + Chroma / FAISS + Markdown分块 + Embedding检索 + RAG问答”
@@ -21,3 +22,17 @@ Low：
 - 实现多语言支持（当前仅中英文即可）
 - 增加格式化输出渠道（JSON/MD/XML/CSV/YAML） （可选：SQL脚本、Neo4J Cipher、TOML）
 - 转用 PostgreSQL + pgvector 统一存储结构化数据和向量数据（是否必要？）
+
+
+数据集：
+github上有很多这种软件文档
+1. https://zenodo.org/records/10976097
+2. SRS PDF： https://zenodo.org/records/7897601
+3. https://github.com/yawar2518/Online-Examination-System-Software-Requirments-Specification-Document
+3. https://www.pdfsdownload.com/download-pdf-for-free/srs-document
+2. 韩文 http://dslab.konkuk.ac.kr/Class/2025/25GP/Projects/project1/srs2.pdf
+3. API文档：https://apis.guru/
+4. 测试报告参考: https://support.functionize.com/hc/en-us/articles/33002630144535-Test-Reports
+5. bug数据集： https://github.com/rjust/defects4j
+
+其他：软件雪球分为功能需求FR，与非功能需求NFR
