@@ -1,13 +1,13 @@
 import os
 import instructor
-import traceback
 import logging
 from openai import OpenAI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from schemas.models import DocClassification, DocType
 from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
-from core.utils import clean_and_parse_json
+from core.chunker import split_markdown_into_chunks
+from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
 
 # 加载环境变量
 load_dotenv()
@@ -35,6 +35,32 @@ client = instructor.from_openai(
     raw_client,
     mode=instructor.Mode.JSON,
 )
+
+
+def _extract_once(content: str, response_model: type[BaseModel], context_note: str | None = None) -> dict:
+    prompt_content = content
+    if context_note:
+        prompt_content = f"[Context]\n{context_note}\n\n[Document Chunk]\n{content}"
+
+    prompt = EXTRACT_PROMPT_TEMPLATE.format(
+        content=prompt_content,
+        schema=response_model.model_json_schema(),
+        json_instruction=JSON_FORMAT_INSTRUCTION
+    )
+
+    resp = raw_client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+    )
+
+    content = resp.choices[0].message.content
+    logger.info(f"--- Raw LLM Response (Extraction) ---\n{content}\n----------------------------------")
+    data = clean_and_parse_json(content)
+    return normalize_extracted_data(data)
 
 def classify_document(markdown_content: str) -> DocClassification:
     """
@@ -96,34 +122,71 @@ def extract_structure(markdown_content: str, response_model: type[BaseModel]) ->
         BaseModel: 填充好数据的模型实例
     """
     
-    # 使用常量构建提示词
-    prompt = EXTRACT_PROMPT_TEMPLATE.format(
-        content=markdown_content[:30000],
-        schema=response_model.model_json_schema(),
-        json_instruction=JSON_FORMAT_INSTRUCTION
-    )
-    
-    try:
-        # 使用原始 client 获取文本响应
-        logger.info(f"--- Extracting structure for {response_model.__name__} ---")
-        resp = raw_client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0, # 降低随机性
-        )
-        
-        content = resp.choices[0].message.content
-        logger.info(f"--- Raw LLM Response (Extraction) ---\n{content}\n----------------------------------")
+    extracted, _ = extract_structure_with_meta(markdown_content, response_model)
+    return extracted
 
-        # 自定义数据清洗与解析
-        data = clean_and_parse_json(content)
-        # Pydantic 验证
-        return response_model.model_validate(data)
-        
+
+def extract_structure_with_meta(markdown_content: str, response_model: type[BaseModel]) -> tuple[BaseModel, dict]:
+    """
+    分块抽取 + 合并校验。
+    对短文档保持单次抽取；对长文档采用分块抽取，并在必要时回退到单次抽取。
+    """
+    logger.info(f"--- Extracting structure for {response_model.__name__} ---")
+
+    threshold = 6000
+    if len(markdown_content) <= threshold:
+        try:
+            data = _extract_once(markdown_content[:30000], response_model)
+            validated = response_model.model_validate(data)
+            return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
+        except Exception as e:
+            logger.error(f"Single extraction failed: {e}", exc_info=True)
+            raise RuntimeError(f"LLM Extraction failed: {str(e)}")
+
+    chunks = split_markdown_into_chunks(markdown_content, max_chars=5000, overlap_chars=200)
+    if not chunks:
+        try:
+            data = _extract_once(markdown_content[:30000], response_model)
+            validated = response_model.model_validate(data)
+            return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
+        except Exception as e:
+            logger.error(f"Extraction failed on empty chunk fallback: {e}", exc_info=True)
+            raise RuntimeError(f"LLM Extraction failed: {str(e)}")
+
+    partial_results = []
+    failed_chunks = 0
+
+    for chunk in chunks:
+        context_note = f"heading_path={' > '.join(chunk.heading_path) if chunk.heading_path else '(no-heading)'}"
+        try:
+            data = _extract_once(chunk.text, response_model, context_note=context_note)
+            partial_results.append(data)
+        except Exception as e:
+            failed_chunks += 1
+            logger.warning(f"Chunk extraction failed at index={chunk.index}: {e}")
+
+    if partial_results:
+        try:
+            merged = merge_extraction_results(partial_results)
+            validated = response_model.model_validate(merged)
+            return validated, {
+                "mode": "chunked",
+                "chunk_count": len(chunks),
+                "failed_chunks": failed_chunks,
+                "fallback_used": False,
+            }
+        except Exception as e:
+            logger.warning(f"Merged chunk validation failed, fallback to single extraction: {e}")
+
+    try:
+        fallback_data = _extract_once(markdown_content[:30000], response_model)
+        validated = response_model.model_validate(fallback_data)
+        return validated, {
+            "mode": "single_fallback",
+            "chunk_count": len(chunks),
+            "failed_chunks": failed_chunks,
+            "fallback_used": True,
+        }
     except Exception as e:
-        logger.error(f"Extraction failed: {e}", exc_info=True)
-        # 记录详细错误信息以便调试
+        logger.error(f"Extraction failed after fallback: {e}", exc_info=True)
         raise RuntimeError(f"LLM Extraction failed: {str(e)}")

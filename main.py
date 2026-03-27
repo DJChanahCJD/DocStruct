@@ -5,7 +5,8 @@ from fastapi.responses import FileResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.parser import ParserFactory
-from core.extractor import extract_structure, classify_document
+from core.extractor import extract_structure_with_meta, classify_document
+from core.retrieval import build_retrieval_corpus
 from schemas.models import (
     DocumentRecord, SrsDocument, ApiDocument, 
     DesignDocument, UserManualDocument,
@@ -78,7 +79,14 @@ async def upload_document(file: UploadFile = File(...)):
         else:
             # 结构化提取
             logger.info(f"Extracting structure using model: {target_model.__name__}")
-            extracted = extract_structure(md_text, target_model)
+            extracted, extraction_meta = extract_structure_with_meta(md_text, target_model)
+            logger.info(
+                "Extraction meta: mode=%s, chunk_count=%s, failed_chunks=%s, fallback_used=%s",
+                extraction_meta.get("mode"),
+                extraction_meta.get("chunk_count"),
+                extraction_meta.get("failed_chunks"),
+                extraction_meta.get("fallback_used"),
+            )
             doc.update_from_dict({
                 "status": "completed",
                 "doc_type": cls_result.doc_type.value,
@@ -88,6 +96,7 @@ async def upload_document(file: UploadFile = File(...)):
             logger.info("Extraction completed successfully.")
         
         await doc.save()
+        build_retrieval_corpus(doc.id)
         return UploadResponse(id=doc.id, filename=doc.filename, status="completed", message=f"识别为: {doc.doc_type}")
 
     except Exception as e:

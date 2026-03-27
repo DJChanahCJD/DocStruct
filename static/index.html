@@ -85,12 +85,22 @@
                         <div class="flex items-center"><span class="w-1.5 h-6 bg-slate-300 rounded-full mr-3"></span>历史记录</div>
                         <span class="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full" x-text="history.length"></span>
                     </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                        <input x-model="searchKeyword" type="text" placeholder="搜索文件名..." class="sm:col-span-2 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200">
+                        <select x-model="statusFilter" class="text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200">
+                            <option value="">全部状态</option>
+                            <option value="completed">completed</option>
+                            <option value="processing">processing</option>
+                            <option value="failed">failed</option>
+                        </select>
+                    </div>
                     <div class="overflow-y-auto custom-scrollbar flex-1 space-y-2 pr-1 -mr-1">
-                        <template x-if="history.length === 0">
+                        <template x-if="filteredHistory.length === 0">
                             <div class="flex flex-col items-center justify-center h-32 text-slate-400 text-sm">暂无历史记录</div>
                         </template>
-                        <template x-for="item in history" :key="item.id">
-                            <div @click="loadDoc(item.id)" class="group p-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-all duration-200">
+                        <template x-for="item in filteredHistory" :key="item.id">
+                            <div :id="`history-item-${item.id}`" @click="loadDoc(item.id)" class="group p-3 rounded-xl hover:bg-slate-50 cursor-pointer border transition-all duration-200"
+                                :class="selectedDocId === item.id ? 'border-brand-300 bg-brand-50/60' : 'border-transparent hover:border-slate-200'">
                                 <div class="flex justify-between items-start mb-1">
                                     <span class="font-medium text-slate-700 truncate flex-1 mr-2 text-sm group-hover:text-brand-600 transition-colors" x-text="item.filename"></span>
                                     <div class="flex items-center gap-1.5 shrink-0">
@@ -113,8 +123,19 @@
             <div class="lg:col-span-8 h-full min-h-0 flex flex-col">
                 <div class="glass-card rounded-2xl p-0 flex flex-col h-full overflow-hidden relative">
                     <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-sm">
-                        <h2 class="text-lg font-semibold text-slate-800">提取结果</h2>
-                        <div x-show="result" x-transition x-cloak class="flex space-x-2">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-lg font-semibold text-slate-800">提取结果</h2>
+                            <div x-show="currentDoc" x-cloak class="flex items-center gap-1 text-xs">
+                                <button @click="activeTab = 'json'" class="px-2.5 py-1 rounded-md border transition-colors"
+                                    :class="activeTab === 'json' ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500'">结构化 JSON</button>
+                                <button @click="activeTab = 'raw'" class="px-2.5 py-1 rounded-md border transition-colors"
+                                    :class="activeTab === 'raw' ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500'">原文预览</button>
+                                <button @click="activeTab = 'error'" class="px-2.5 py-1 rounded-md border transition-colors"
+                                    :class="activeTab === 'error' ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500'">错误信息</button>
+                            </div>
+                        </div>
+                        <div x-show="currentDoc" x-transition x-cloak class="flex space-x-2">
+                            <button @click="reloadCurrent()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">重新加载</button>
                             <button @click="copy()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">复制</button>
                             <button @click="download()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">下载</button>
                         </div>
@@ -123,15 +144,28 @@
                     <div class="flex-1 relative bg-slate-900 overflow-hidden">
                         <div x-show="loading" x-transition class="absolute inset-0 z-20 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
                             <div class="w-12 h-12 border-4 border-brand-100 border-t-brand-500 rounded-full animate-spin"></div>
-                            <p class="mt-4 text-sm text-slate-500 animate-pulse">AI 正在分析文档...</p>
+                            <p class="mt-4 text-sm text-slate-500 animate-pulse" x-text="uploadStage || 'AI 正在分析文档...'"></p>
                         </div>
 
-                        <div x-show="!result && !loading" x-transition class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-10 bg-slate-50">
+                        <div x-show="!currentDoc && !loading" x-transition class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-10 bg-slate-50">
                             <p class="text-sm font-medium">请在左侧上传或选择文档</p>
                         </div>
 
-                        <div x-show="result && !loading" class="absolute inset-0 overflow-auto custom-scrollbar">
-                            <pre><code id="codeBlock" class="language-json text-sm font-mono leading-relaxed" x-text="resultStr"></code></pre>
+                        <div x-show="currentDoc && !loading && activeTab === 'json'" class="absolute inset-0 overflow-auto custom-scrollbar">
+                            <template x-if="result">
+                                <pre><code id="codeBlock" class="language-json text-sm font-mono leading-relaxed" x-text="resultStr"></code></pre>
+                            </template>
+                            <template x-if="!result">
+                                <div class="h-full flex items-center justify-center bg-slate-50 text-slate-400 text-sm">当前记录无结构化结果</div>
+                            </template>
+                        </div>
+
+                        <div x-show="currentDoc && !loading && activeTab === 'raw'" class="absolute inset-0 overflow-auto custom-scrollbar bg-slate-50">
+                            <pre class="text-sm text-slate-700 font-mono leading-relaxed p-4 whitespace-pre-wrap" x-text="rawContent || '无解析原文'"></pre>
+                        </div>
+
+                        <div x-show="currentDoc && !loading && activeTab === 'error'" class="absolute inset-0 overflow-auto custom-scrollbar bg-slate-50">
+                            <pre class="text-sm text-red-600 font-mono leading-relaxed p-4 whitespace-pre-wrap" x-text="errorContent || '无错误信息'"></pre>
                         </div>
                     </div>
                 </div>
@@ -146,9 +180,21 @@
         function docStruct() {
             return {
                 file: null, isDragging: false, loading: false, result: null, history: [],
+                currentDoc: null, selectedDocId: null, activeTab: 'json',
+                searchKeyword: '', statusFilter: '', uploadStage: '',
                 toast: { show: false, msg: '' },
                 
                 get resultStr() { return this.result ? JSON.stringify(this.result, null, 2) : ''; },
+                get rawContent() { return this.currentDoc?.parsed_content || ''; },
+                get errorContent() { return this.currentDoc?.error_message || ''; },
+                get filteredHistory() {
+                    const keyword = this.searchKeyword.trim().toLowerCase();
+                    return this.history.filter((item) => {
+                        const matchName = !keyword || (item.filename || '').toLowerCase().includes(keyword);
+                        const matchStatus = !this.statusFilter || item.status === this.statusFilter;
+                        return matchName && matchStatus;
+                    });
+                },
                 
                 init() { 
                     this.fetchHistory(); 
@@ -175,27 +221,40 @@
                 async upload() {
                     if (!this.file) return;
                     this.loading = true;
+                    this.uploadStage = '上传中...';
                     const fd = new FormData(); fd.append('file', this.file);
                     try {
+                        this.uploadStage = '处理中...';
                         const res = await fetch('/api/upload', { method: 'POST', body: fd });
                         if (!res.ok) throw new Error();
                         const data = await res.json();
-                        await this.loadDoc(data.id);
-                        this.fetchHistory();
+                        await this.loadDoc(data.id, true);
+                        await this.fetchHistory(data.id);
                         this.file = null;
                         this.showToast('解析成功');
                     } catch {
                         this.showToast('解析失败，请检查服务');
-                    } finally { this.loading = false; }
+                    } finally {
+                        this.loading = false;
+                        this.uploadStage = '';
+                    }
                 },
                 
-                async loadDoc(id) {
+                async loadDoc(id, forceJsonTab = false) {
                     this.loading = true;
                     try {
                         const res = await fetch(`/api/documents/${id}`);
-                        this.result = (await res.json()).extracted_data;
+                        this.currentDoc = await res.json();
+                        this.result = this.currentDoc?.extracted_data || null;
+                        this.selectedDocId = id;
+                        if (forceJsonTab) this.activeTab = 'json';
                     } catch { this.showToast('获取数据失败'); }
                     finally { this.loading = false; }
+                },
+
+                async reloadCurrent() {
+                    if (!this.selectedDocId) return;
+                    await this.loadDoc(this.selectedDocId);
                 },
 
                 async deleteDoc(id) {
@@ -204,6 +263,11 @@
                         const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
                         if (res.ok) {
                             this.history = this.history.filter(h => h.id !== id);
+                            if (this.selectedDocId === id) {
+                                this.selectedDocId = null;
+                                this.currentDoc = null;
+                                this.result = null;
+                            }
                             this.showToast('删除成功');
                         } else {
                             this.showToast('删除失败');
@@ -211,20 +275,33 @@
                     } catch { this.showToast('请求出错'); }
                 },
                 
-                async fetchHistory() {
-                    try { this.history = await (await fetch('/api/documents')).json(); } catch(e){}
+                async fetchHistory(highlightId = null) {
+                    try {
+                        this.history = await (await fetch('/api/documents')).json();
+                        if (highlightId) {
+                            this.selectedDocId = highlightId;
+                            this.$nextTick(() => {
+                                const node = document.getElementById(`history-item-${highlightId}`);
+                                if (node) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            });
+                        }
+                    } catch(e){}
                 },
                 
                 copy() {
-                    navigator.clipboard.writeText(this.resultStr);
+                    const text = this.activeTab === 'raw' ? this.rawContent : (this.activeTab === 'error' ? this.errorContent : this.resultStr);
+                    navigator.clipboard.writeText(text || '');
                     this.showToast('已复制到剪贴板');
                 },
                 
                 download() {
-                    const blob = new Blob([this.resultStr], {type: 'application/json'});
+                    const content = this.activeTab === 'raw' ? this.rawContent : (this.activeTab === 'error' ? this.errorContent : this.resultStr);
+                    const mime = this.activeTab === 'json' ? 'application/json' : 'text/plain;charset=utf-8';
+                    const ext = this.activeTab === 'json' ? 'json' : 'txt';
+                    const blob = new Blob([content || ''], {type: mime});
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = url; a.download = `docstruct_export_${Date.now()}.json`;
+                    a.href = url; a.download = `docstruct_export_${Date.now()}.${ext}`;
                     a.click(); URL.revokeObjectURL(url);
                 },
 
