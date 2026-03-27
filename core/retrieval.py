@@ -112,8 +112,79 @@ def _compose_display_text(title_path: str | None, display_text: str) -> str:
     return "\n\n".join(parts).strip()
 
 
+def _normalize_title_path(title_path: str | None) -> str:
+    if not title_path:
+        return ""
+
+    cleaned = re.sub(r"[*_`#]+", "", title_path)
+    cleaned = re.sub(r"\bStructured Data\s*>\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*>\s*", " > ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip(" >")
+
+
+def _normalize_snippet_line(line: str) -> str:
+    cleaned = line.strip()
+    if not cleaned:
+        return ""
+
+    cleaned = re.sub(r"^\s*标题路径:\s*", "", cleaned)
+    cleaned = re.sub(r"[*_`#]+", "", cleaned)
+    cleaned = re.sub(r"\[(.*?)\]\((.*?)\)", r"\1", cleaned)
+    cleaned = re.sub(r"(?m)(^|\s)\d+(?=[{\[\"'])", r"\1", cleaned)
+    cleaned = re.sub(r"\bAPI endpoint:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bMethod:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bPath:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bSummary:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bDescription:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*\|\s*", " | ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip(" -|")
+
+
+def _normalize_snippet_text(title_path: str | None, display_text: str, chunk_type: str | None) -> str:
+    lines = [line for line in (display_text or "").splitlines() if line.strip()]
+    normalized_lines = [_normalize_snippet_line(line) for line in lines]
+    normalized_lines = [line for line in normalized_lines if line]
+
+    if chunk_type == "table":
+        normalized_lines = [line for line in normalized_lines if "---" not in line]
+
+    normalized_title = _normalize_title_path(title_path)
+    if normalized_lines:
+        first_line_lower = normalized_lines[0].lower()
+        if normalized_title and normalized_title.lower() in first_line_lower:
+            normalized_title = ""
+
+    parts = []
+    if normalized_title:
+        parts.append(normalized_title)
+    parts.extend(normalized_lines)
+    return "\n".join(parts).strip()
+
+
+def _select_snippet_source(content: str, question: str) -> str:
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    if not lines:
+        return ""
+
+    terms = _extract_query_terms(question)
+    if not terms:
+        return "\n".join(lines[:3])
+
+    matched_lines = [
+        line for line in lines
+        if any(term in line.lower() for term in terms)
+    ]
+    if matched_lines:
+        return "\n".join(matched_lines[:3])
+
+    return "\n".join(lines[:3])
+
+
 def _build_snippet(content: str, question: str, max_chars: int = 220) -> str:
-    compact = re.sub(r"\s+", " ", content).strip()
+    source = _select_snippet_source(content, question)
+    compact = re.sub(r"\s+", " ", source).strip()
     if len(compact) <= max_chars:
         return compact
 
@@ -147,12 +218,82 @@ def _normalize_for_compare(text: str) -> str:
     return cleaned
 
 
+def _content_density(item: dict) -> tuple[int, int]:
+    display_text = item.get("display_text") or ""
+    chunk_type = item.get("chunk_type") or ""
+    lower_text = display_text.lower()
+    fact_hits = sum(
+        token in lower_text
+        for token in ("failed", "error", "pass", "passed", "bug #", "/api/", "method:", "path:", "tc", "req-")
+    )
+    type_weight = {
+        "table": 4,
+        "list": 3,
+        "structured": 3,
+        "code": 2,
+        "paragraph": 1,
+    }.get(chunk_type, 0)
+    return type_weight + fact_hits, len(display_text)
+
+
+def _prefer_candidate(candidate: dict, chosen: dict) -> bool:
+    candidate_density = _content_density(candidate)
+    chosen_density = _content_density(chosen)
+    if candidate_density != chosen_density:
+        return candidate_density > chosen_density
+    return candidate["score"] > chosen["score"]
+
+
+def _title_paths_related(candidate_path: str, chosen_path: str) -> bool:
+    if not candidate_path or not chosen_path:
+        return False
+    if candidate_path == chosen_path:
+        return True
+    return candidate_path.startswith(f"{chosen_path} > ") or chosen_path.startswith(f"{candidate_path} > ")
+
+
+def _rank_item(item: dict) -> tuple[float, tuple[int, int]]:
+    return item["score"], _content_density(item)
+
+
+def _select_primary_doc_results(results: list[dict], top_k: int) -> list[dict]:
+    if len(results) <= 1:
+        return results
+
+    doc_scores: dict[int, list[float]] = {}
+    for item in results:
+        doc_scores.setdefault(item["doc_id"], []).append(item["score"])
+
+    ranked_docs = sorted(
+        doc_scores.items(),
+        key=lambda item: (len(item[1]), max(item[1])),
+        reverse=True,
+    )
+    primary_doc, primary_scores = ranked_docs[0]
+    primary_results = [item for item in results if item["doc_id"] == primary_doc]
+    if len(primary_results) < 2:
+        return results[:top_k]
+
+    best_primary = max(primary_scores)
+    best_other = max(
+        (item["score"] for item in results if item["doc_id"] != primary_doc),
+        default=-1.0,
+    )
+    if best_other >= best_primary * 0.8:
+        return results[:top_k]
+
+    filtered = [item for item in results if item["doc_id"] == primary_doc]
+    return filtered[:top_k]
+
+
 def _is_duplicate_candidate(candidate: dict, chosen: dict) -> bool:
     if candidate["doc_id"] != chosen["doc_id"]:
         return False
 
     candidate_path = candidate.get("title_path") or ""
     chosen_path = chosen.get("title_path") or ""
+    candidate_section = candidate.get("section_title") or ""
+    chosen_section = chosen.get("section_title") or ""
     candidate_order = candidate.get("order_index")
     chosen_order = chosen.get("order_index")
     if (
@@ -164,6 +305,27 @@ def _is_duplicate_candidate(candidate: dict, chosen: dict) -> bool:
     ):
         return True
 
+    if (
+        _title_paths_related(candidate_path, chosen_path)
+        and candidate_order is not None
+        and chosen_order is not None
+        and abs(candidate_order - chosen_order) <= 3
+    ):
+        return True
+
+    if (
+        candidate_section
+        and chosen_section
+        and candidate_section == chosen_section
+        and candidate_order is not None
+        and chosen_order is not None
+        and abs(candidate_order - chosen_order) <= 2
+    ):
+        candidate_type = candidate.get("chunk_type")
+        chosen_type = chosen.get("chunk_type")
+        if {candidate_type, chosen_type} & {"table", "list", "structured", "code"}:
+            return True
+
     candidate_text = _normalize_for_compare(candidate["display_text"])
     chosen_text = _normalize_for_compare(chosen["display_text"])
     if not candidate_text or not chosen_text:
@@ -174,6 +336,23 @@ def _is_duplicate_candidate(candidate: dict, chosen: dict) -> bool:
         return True
 
     return SequenceMatcher(None, candidate_text[:500], chosen_text[:500]).ratio() >= 0.88
+
+
+def _merge_ranked_candidates(candidates: list[dict]) -> list[dict]:
+    clusters: list[dict] = []
+    for item in candidates:
+        duplicate_index = next(
+            (idx for idx, existing in enumerate(clusters) if _is_duplicate_candidate(item, existing)),
+            None,
+        )
+        if duplicate_index is None:
+            clusters.append(item)
+            continue
+        if _prefer_candidate(item, clusters[duplicate_index]):
+            clusters[duplicate_index] = item
+
+    clusters.sort(key=_rank_item, reverse=True)
+    return clusters
 
 
 async def _rebuild_index_from_db() -> None:
@@ -289,7 +468,7 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
     records = await ChunkRecord.filter(id__in=[item[1] for item in candidates]).prefetch_related("doc")
     record_map = {rec.id: rec for rec in records}
 
-    result: list[dict] = []
+    ranked_candidates: list[dict] = []
     for score, chunk_id in candidates:
         rec = record_map.get(chunk_id)
         if not rec:
@@ -300,6 +479,11 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
         title_path = rec.title_path or rec.heading_path
         display_text = rec.display_text or rec.content
         content = _compose_display_text(title_path=title_path, display_text=display_text)
+        snippet_source = _normalize_snippet_text(
+            title_path=title_path,
+            display_text=display_text,
+            chunk_type=rec.chunk_type,
+        )
         item = {
             "doc_id": rec.doc_id,
             "chunk_id": rec.id,
@@ -308,19 +492,18 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
             "section_title": rec.section_title,
             "chunk_type": rec.chunk_type,
             "order_index": rec.order_index if rec.order_index is not None else rec.chunk_index,
-            "snippet": _build_snippet(content, question=question),
+            "snippet": _build_snippet(snippet_source, question=question),
             "display_text": display_text,
             "content": content,
         }
 
-        if any(_is_duplicate_candidate(item, existing) for existing in result):
-            continue
+        ranked_candidates.append(item)
 
-        result.append(item)
-        if len(result) >= top_k:
-            break
+    result = _merge_ranked_candidates(ranked_candidates)
 
-    return result
+    if doc_id is None:
+        return _select_primary_doc_results(result, top_k=top_k)
+    return result[:top_k]
 
 
 async def answer_question(question: str, doc_id: Optional[int] = None, top_k: int = 5) -> dict:

@@ -9,6 +9,10 @@ LIST_ITEM_PATTERN = re.compile(r"^\s*(?:[-+*]|\d+\.)\s+")
 CODE_FENCE_PATTERN = re.compile(r"^\s*(```+|~~~+)")
 TABLE_ROW_PATTERN = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEPARATOR_PATTERN = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
+FACT_PATTERN = re.compile(
+    r"(failed|error|pass|passed|fail|bug\s*#|/api/|tc\d+|req-\d+|method:|path:|\|\s*[^|]+\s*\|)",
+    re.IGNORECASE,
+)
 DEFAULT_TARGET_SIZE = 700
 DEFAULT_OVERLAP = 80
 DEFAULT_MIN_SIZE = 200
@@ -240,6 +244,51 @@ def _clean_embed_text(text: str) -> str:
     return compact
 
 
+def _strip_markdown_noise(text: str) -> str:
+    cleaned = text.strip()
+    cleaned = re.sub(r"^\s*#{1,6}\s*", "", cleaned, flags=re.MULTILINE)
+    cleaned = cleaned.replace("**", "").replace("__", "").replace("`", "")
+    cleaned = re.sub(r"\[(.*?)\]\((.*?)\)", r"\1", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+
+def _is_low_value_chunk(display_text: str, title_path: list[str], chunk_type: str) -> bool:
+    cleaned = display_text.strip()
+    if not cleaned:
+        return True
+
+    normalized = _clean_embed_text(cleaned)
+    semantic_text = _strip_markdown_noise(normalized)
+    normalized_lower = semantic_text.lower()
+    title_leaf = _strip_markdown_noise((title_path[-1] if title_path else "")).lower()
+
+    if chunk_type == "paragraph":
+        if title_leaf and normalized_lower == title_leaf:
+            return True
+
+        lines = [_strip_markdown_noise(line).lower() for line in normalized.splitlines() if line.strip()]
+        if title_leaf and len(lines) == 1 and lines[0] == title_leaf:
+            return True
+
+        if len(semantic_text) < 40 and not FACT_PATTERN.search(semantic_text):
+            return True
+
+        if len(semantic_text) < 90 and not FACT_PATTERN.search(semantic_text):
+            generic_prefixes = (
+                "test report",
+                "api documentation",
+                "test summary",
+                "summary",
+                "overview",
+                "introduction",
+            )
+            if normalized_lower.startswith(generic_prefixes):
+                return True
+
+    return False
+
+
 def _tail_overlap(text: str, overlap_chars: int) -> str:
     if overlap_chars <= 0:
         return ""
@@ -408,6 +457,9 @@ def _build_chunks_from_blocks(
     for block in blocks:
         display_text = block.text.strip()
         if not display_text:
+            continue
+        if _is_low_value_chunk(display_text=display_text, title_path=title_path, chunk_type=block.chunk_type):
+            previous_display = display_text
             continue
 
         overlap_prefix = _tail_overlap(previous_display, overlap_chars) if previous_display else ""
