@@ -25,10 +25,10 @@ unknown: None of the above
 {json_instruction}
 
 Return JSON:
-{
+{{
   "doc_type": "srs | api | design | test_plan | test_case | test_report | user_manual | unknown",
   "confidence": 0.0-1.0
-}
+}}
 """
 
 # Structure Extraction Prompt Template (Role: Senior Technical Writer / Data Engineer)

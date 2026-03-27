@@ -1,11 +1,15 @@
 fastapi
 uvicorn
 python-multipart
+aiofiles
 tortoise-orm
 aiosqlite
 instructor
 openai
 pydantic
 pymupdf4llm
+pymupdf
 python-dotenv
 python-docx
+numpy
+faiss-cpu

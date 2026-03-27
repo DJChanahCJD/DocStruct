@@ -21,7 +21,21 @@
 - **提取**: Instructor (基于 Pydantic 模型的强约束 LLM 提取) 。
 - **模型**: Pydantic (定义字段、校验数据与 JSON 生成) 。
 - **持久化**: SQLite + Tortoise-ORM (轻量级异步 ORM，零配置存储)。
+- **检索问答**: NumPy + FAISS (向量索引) + OpenAI-Compatible Embedding + RAG 问答。
 - **前端**: 单页 `index.html` (原生 JS Fetch + Tailwind CSS 极简展示)。
+
+### 3.1 环境变量（DashScope/OpenAI-Compatible）
+
+```env
+LLM_PROVIDER=openai_compatible
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_API_KEY=你的 Key
+LLM_MODEL=qwen-doc-turbo
+EMBEDDING_MODEL=text-embedding-v4
+```
+
+说明：
+- `EMBEDDING_MODEL` 建议显式设置为 `text-embedding-v4`，避免出现 `text-embedding-3-small` 的 `404 model_not_found`。
 
 ### 4. 项目结构 (Project Structure)
 
@@ -47,7 +61,9 @@ DocStruct/
 1. **解析层**: 采用“Markdown 优先”策略。利用 Marker 还原 PDF 中的层级、标题与表格，为 LLM 提供语义清晰的输入。
 2. **提取层**: 使用 `instructor.patch(client)`。定义 `SrsDocument`, `ApiDocument`, `TestReportDocument` 等 Pydantic 类 。
 3. **持久化层**: 提取成功的 JSON 数据连同元数据（文件名、时间）存入 `document_records` 表。
-4. **校验层**: 利用 Pydantic 的 `ValidationError` 捕获异常 。
+4. **向量层**: 将解析文本切块后做 embedding，写入 `chunk_records` 并重建 FAISS 索引。
+5. **问答层**: `/api/qa` 先向量召回，再把片段上下文送入 LLM 生成答案与引用。
+6. **校验层**: 利用 Pydantic 的 `ValidationError` 捕获异常 。
 5. 核心 Pydantic 约束示例
 
 ```python
@@ -61,5 +77,20 @@ class SrsDocument(BaseModel):
     title: str
     requirements: list[RequirementItem]
 
+```
+
+### 6. 检索问答接口
+
+- `POST /api/reindex/{doc_id}`：重建指定文档向量索引。
+- `POST /api/qa`：基于向量召回做问答。
+
+示例请求：
+
+```json
+{
+  "question": "系统支持哪些上传格式？",
+  "doc_id": 1,
+  "top_k": 5
+}
 ```
 

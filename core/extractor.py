@@ -37,12 +37,23 @@ client = instructor.from_openai(
 )
 
 
+def _render_prompt(template: str, **kwargs) -> str:
+    """
+    仅替换显式占位符，避免 JSON 示例中的花括号被 str.format 误解析。
+    """
+    rendered = template
+    for key, value in kwargs.items():
+        rendered = rendered.replace(f"{{{key}}}", str(value))
+    return rendered
+
+
 def _extract_once(content: str, response_model: type[BaseModel], context_note: str | None = None) -> dict:
     prompt_content = content
     if context_note:
         prompt_content = f"[Context]\n{context_note}\n\n[Document Chunk]\n{content}"
 
-    prompt = EXTRACT_PROMPT_TEMPLATE.format(
+    prompt = _render_prompt(
+        EXTRACT_PROMPT_TEMPLATE,
         content=prompt_content,
         schema=response_model.model_json_schema(),
         json_instruction=JSON_FORMAT_INSTRUCTION
@@ -76,7 +87,8 @@ def classify_document(markdown_content: str) -> DocClassification:
     summary = markdown_content[:2000]
     
     # 使用常量构建提示词
-    prompt = CLASSIFY_PROMPT_TEMPLATE.format(
+    prompt = _render_prompt(
+        CLASSIFY_PROMPT_TEMPLATE,
         summary=summary,
         json_instruction=JSON_FORMAT_INSTRUCTION
     )

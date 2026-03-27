@@ -49,7 +49,7 @@
 
         <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
             <div class="lg:col-span-4 flex flex-col gap-6 h-full min-h-0">
-                <div class="glass-card rounded-2xl p-6 transition-all duration-300 hover:shadow-md">
+                <div class="glass-card rounded-2xl p-6 transition-all duration-300 hover:shadow-md max-h-56 overflow-y-auto">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
                         <span class="w-1.5 h-6 bg-brand-500 rounded-full mr-3"></span>上传文档
                     </h2>
@@ -77,6 +77,28 @@
                         <button @click="upload()" :disabled="loading" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-lg shadow-brand-500/20 active:scale-95 transition-all duration-200 disabled:opacity-50 flex items-center justify-center">
                             <span x-text="loading ? '提取中...' : '开始智能提取'"></span>
                         </button>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6 transition-all duration-300 hover:shadow-md max-h-56 overflow-y-auto">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <span class="w-1.5 h-6 bg-brand-500 rounded-full mr-3"></span>知识问答
+                    </h2>
+                    <textarea x-model="qaQuestion" rows="3" placeholder="输入问题，基于当前文档检索回答..." class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200"></textarea>
+                    <div class="mt-3 flex items-center gap-2">
+                        <input type="number" min="1" max="10" x-model.number="qaTopK" class="w-20 text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-200">
+                        <button @click="askQuestion()" :disabled="qaLoading || !qaQuestion.trim()" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium py-2 px-3 rounded-lg disabled:opacity-50">
+                            <span x-text="qaLoading ? '回答中...' : '提问'"></span>
+                        </button>
+                    </div>
+                    <div x-show="qaAnswer" x-cloak class="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700 whitespace-pre-wrap" x-text="qaAnswer"></div>
+                    <div x-show="qaCitations.length > 0" x-cloak class="mt-3 max-h-36 overflow-y-auto custom-scrollbar space-y-2">
+                        <template x-for="(c, idx) in qaCitations" :key="`${c.chunk_id}-${idx}`">
+                            <div class="p-2 rounded-lg border border-slate-200 bg-white">
+                                <div class="text-xs text-slate-500" x-text="`doc=${c.doc_id} chunk=${c.chunk_id} score=${c.score}`"></div>
+                                <div class="text-xs text-slate-600 mt-1" x-text="c.snippet"></div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
@@ -135,6 +157,7 @@
                             </div>
                         </div>
                         <div x-show="currentDoc" x-transition x-cloak class="flex space-x-2">
+                            <button @click="reindexCurrent()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">重建索引</button>
                             <button @click="reloadCurrent()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">重新加载</button>
                             <button @click="copy()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">复制</button>
                             <button @click="download()" class="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:text-brand-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm">下载</button>
@@ -182,6 +205,7 @@
                 file: null, isDragging: false, loading: false, result: null, history: [],
                 currentDoc: null, selectedDocId: null, activeTab: 'json',
                 searchKeyword: '', statusFilter: '', uploadStage: '',
+                qaQuestion: '', qaAnswer: '', qaCitations: [], qaLoading: false, qaTopK: 5,
                 toast: { show: false, msg: '' },
                 
                 get resultStr() { return this.result ? JSON.stringify(this.result, null, 2) : ''; },
@@ -255,6 +279,48 @@
                 async reloadCurrent() {
                     if (!this.selectedDocId) return;
                     await this.loadDoc(this.selectedDocId);
+                },
+
+                async reindexCurrent() {
+                    if (!this.selectedDocId) {
+                        this.showToast('请先选择文档');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`/api/reindex/${this.selectedDocId}`, { method: 'POST' });
+                        if (!res.ok) throw new Error();
+                        this.showToast('索引重建成功');
+                    } catch {
+                        this.showToast('索引重建失败');
+                    }
+                },
+
+                async askQuestion() {
+                    const question = this.qaQuestion.trim();
+                    if (!question) return;
+                    this.qaLoading = true;
+                    this.qaAnswer = '';
+                    this.qaCitations = [];
+                    try {
+                        const payload = {
+                            question,
+                            doc_id: this.selectedDocId || null,
+                            top_k: this.qaTopK || 5
+                        };
+                        const res = await fetch('/api/qa', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data?.detail || '问答失败');
+                        this.qaAnswer = data.answer || '';
+                        this.qaCitations = data.citations || [];
+                    } catch {
+                        this.showToast('问答失败，请检查索引与模型配置');
+                    } finally {
+                        this.qaLoading = false;
+                    }
                 },
 
                 async deleteDoc(id) {

@@ -35,6 +35,24 @@ class DocumentRecord(models.Model):
     class Meta:
         table = "document_records"
 
+
+class ChunkRecord(models.Model):
+    """
+    文档分块向量表，用于向量检索。
+    """
+    id = fields.IntField(pk=True)
+    doc = fields.ForeignKeyField("models.DocumentRecord", related_name="chunks", on_delete=fields.CASCADE)
+    chunk_index = fields.IntField(description="块序号")
+    heading_path = fields.CharField(max_length=500, null=True, description="标题路径")
+    content = fields.TextField(description="块文本")
+    vector = fields.JSONField(description="向量")
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "chunk_records"
+        unique_together = (("doc", "chunk_index"),)
+
 # --- Pydantic Models (Classification) ---
 
 class DocClassification(BaseModel):
@@ -198,3 +216,21 @@ class UploadResponse(BaseModel):
     filename: str
     status: str
     message: str
+
+
+class QaRequest(BaseModel):
+    question: str = Field(..., min_length=1, description="问题文本")
+    doc_id: Optional[int] = Field(None, description="可选：限定文档ID")
+    top_k: int = Field(5, ge=1, le=10, description="召回片段数")
+
+
+class CitationItem(BaseModel):
+    doc_id: int
+    chunk_id: int
+    score: float
+    snippet: str
+
+
+class QaResponse(BaseModel):
+    answer: str
+    citations: List[CitationItem] = Field(default_factory=list)

@@ -6,12 +6,12 @@ from tortoise.contrib.fastapi import register_tortoise
 
 from core.parser import ParserFactory
 from core.extractor import extract_structure_with_meta, classify_document
-from core.retrieval import build_retrieval_corpus
+from core.retrieval import build_retrieval_corpus, answer_question
 from schemas.models import (
     DocumentRecord, SrsDocument, ApiDocument, 
     DesignDocument, UserManualDocument,
     TestPlanDocument, TestCaseDocument, TestReportDocument,
-    UploadResponse, DocType
+    UploadResponse, DocType, QaRequest, QaResponse
 )
 
 # 配置日志
@@ -96,8 +96,22 @@ async def upload_document(file: UploadFile = File(...)):
             logger.info("Extraction completed successfully.")
         
         await doc.save()
-        build_retrieval_corpus(doc.id)
-        return UploadResponse(id=doc.id, filename=doc.filename, status="completed", message=f"识别为: {doc.doc_type}")
+
+        vector_warning = None
+        try:
+            await build_retrieval_corpus(doc.id)
+        except Exception as ve:
+            vector_warning = str(ve)
+            logger.warning("Vector build failed but upload remains successful. doc_id=%s error=%s", doc.id, ve)
+            await doc.update_from_dict({"error_message": f"向量索引构建失败: {vector_warning}"}).save()
+        else:
+            if doc.status == "completed" and doc.extracted_data:
+                await doc.update_from_dict({"error_message": None}).save()
+
+        message = f"识别为: {doc.doc_type}"
+        if vector_warning:
+            message += "（向量索引构建失败，可稍后重建）"
+        return UploadResponse(id=doc.id, filename=doc.filename, status="completed", message=message)
 
     except Exception as e:
         logger.error(f"Error processing document {file.filename}: {e}", exc_info=True)
@@ -111,7 +125,9 @@ async def list_documents():
 @app.get("/api/documents/{doc_id}")
 async def get_document(doc_id: int):
     doc = await DocumentRecord.get_or_none(id=doc_id)
-    return doc or HTTPException(404, "记录不存在")
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    return doc
 
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: int):
@@ -128,6 +144,33 @@ async def delete_document(doc_id: int):
             
     await doc.delete()
     return {"message": "删除成功", "id": doc_id}
+
+
+@app.post("/api/reindex/{doc_id}")
+async def reindex_document(doc_id: int):
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    try:
+        await build_retrieval_corpus(doc_id)
+        return {"message": "重建索引成功", "doc_id": doc_id}
+    except Exception as e:
+        logger.error(f"Reindex failed for doc {doc_id}: {e}", exc_info=True)
+        raise HTTPException(500, f"重建索引失败: {str(e)}")
+
+
+@app.post("/api/qa", response_model=QaResponse)
+async def qa(request: QaRequest):
+    try:
+        result = await answer_question(
+            question=request.question,
+            doc_id=request.doc_id,
+            top_k=request.top_k,
+        )
+        return QaResponse(**result)
+    except Exception as e:
+        logger.error(f"QA failed: {e}", exc_info=True)
+        raise HTTPException(500, f"问答失败: {str(e)}")
 
 # 注册 Tortoise ORM
 register_tortoise(
