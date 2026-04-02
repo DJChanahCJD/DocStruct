@@ -37,3 +37,6 @@ github上有很多这种软件文档
 5. bug数据集： https://github.com/rjust/defects4j
 
 其他：软件需求分为功能需求FR，与非功能需求NFR
+
+
+该论文提供了很多 API 文档，https://arxiv.org/pdf/2507.05316。我们应该还需要通过网页提取
