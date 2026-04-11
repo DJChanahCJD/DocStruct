@@ -1,0 +1,54 @@
+{
+  "name": "docstruct-baseline",
+  "description": "最小评测基线清单，可直接扩充为每类短文档/长文档各一份。",
+  "samples": [
+    {
+      "sample_id": "srs-md-001",
+      "file_path": "static/examples/srs_example.md",
+      "expected_doc_type": "srs",
+      "notes": "SRS Markdown 短文档"
+    },
+    {
+      "sample_id": "api-pdf-001",
+      "file_path": "static/examples/api_example.pdf",
+      "expected_doc_type": "api",
+      "notes": "API PDF 样例"
+    },
+    {
+      "sample_id": "design-md-001",
+      "file_path": "static/examples/sdd_example.md",
+      "expected_doc_type": "design",
+      "notes": "设计说明 Markdown 样例"
+    },
+    {
+      "sample_id": "test-report-docx-001",
+      "file_path": "static/examples/test_report_example.docx",
+      "expected_doc_type": "test_report",
+      "notes": "测试报告 DOCX 样例"
+    },
+    {
+      "sample_id": "user-manual-md-001",
+      "file_path": "static/examples/user_manual_example.md",
+      "expected_doc_type": "user_manual",
+      "notes": "用户手册 Markdown 样例"
+    },
+    {
+      "sample_id": "test-plan-md-001",
+      "file_path": "static/examples/test_plan_example.md",
+      "expected_doc_type": "test_plan",
+      "notes": "测试计划 Markdown 样例"
+    },
+    {
+      "sample_id": "test-case-md-001",
+      "file_path": "static/examples/test_case_example.md",
+      "expected_doc_type": "test_case",
+      "notes": "测试用例 Markdown 样例"
+    },
+    {
+      "sample_id": "bug-report-md-001",
+      "file_path": "static/examples/bug_report_example.md",
+      "expected_doc_type": "bug_report",
+      "notes": "缺陷报告 Markdown 样例"
+    }
+  ]
+}

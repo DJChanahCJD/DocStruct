@@ -7,10 +7,10 @@ from difflib import SequenceMatcher
 from typing import Optional
 
 import numpy as np
-from dotenv import load_dotenv
 from openai import OpenAI
 
 from core.chunker import split_markdown_into_chunks
+from core.config import get_settings
 from schemas.models import ChunkRecord, DocumentRecord
 
 try:
@@ -18,21 +18,20 @@ try:
 except Exception:  # pragma: no cover
     faiss = None
 
-
-load_dotenv()
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
-API_KEY = os.getenv("LLM_API_KEY")
-BASE_URL = os.getenv("LLM_BASE_URL")
-CHAT_MODEL = os.getenv("LLM_MODEL", "qwen2.5-7b-instruct-1m")
-EMBED_MODEL = os.getenv("EMBEDDING_MODEL") or os.getenv("LLM_EMBED_MODEL") or "text-embedding-v4"
+API_KEY = settings.llm_api_key
+BASE_URL = settings.llm_base_url
+CHAT_MODEL = settings.llm_model
+EMBED_MODEL = settings.embedding_model
 
 raw_client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
-VECTOR_DIR = os.path.join("db", "vector")
+VECTOR_DIR = settings.vector_dir
 INDEX_PATH = os.path.join(VECTOR_DIR, "faiss.index")
 META_PATH = os.path.join(VECTOR_DIR, "faiss_ids.json")
-DB_PATH = os.path.join("db", "db.sqlite3")
+DB_PATH = settings.db_path
 REQUIRED_CHUNK_COLUMNS: dict[str, str] = {
     "title_path": "TEXT",
     "section_title": "TEXT",
@@ -80,7 +79,7 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
         return []
 
     vectors: list[list[float]] = []
-    batch_size = 32
+    batch_size = settings.embedding_batch_size
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         resp = raw_client.embeddings.create(model=EMBED_MODEL, input=batch)
@@ -137,6 +136,7 @@ def _normalize_snippet_line(line: str) -> str:
     cleaned = re.sub(r"\bPath:\s*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\bSummary:\s*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\bDescription:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bBug ID:\s*", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s*\|\s*", " | ", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
     return cleaned.strip(" -|")
@@ -224,7 +224,7 @@ def _content_density(item: dict) -> tuple[int, int]:
     lower_text = display_text.lower()
     fact_hits = sum(
         token in lower_text
-        for token in ("failed", "error", "pass", "passed", "bug #", "/api/", "method:", "path:", "tc", "req-")
+        for token in ("failed", "error", "pass", "passed", "bug #", "bug id", "/api/", "method:", "path:", "tc", "req-")
     )
     type_weight = {
         "table": 4,
@@ -405,9 +405,9 @@ async def build_retrieval_corpus(record_id: int) -> None:
 
     chunks = split_markdown_into_chunks(
         doc.parsed_content or "",
-        max_chars=700,
-        overlap_chars=80,
-        min_chars=200,
+        max_chars=settings.retrieval_chunk_max_chars,
+        overlap_chars=settings.retrieval_chunk_overlap_chars,
+        min_chars=settings.retrieval_chunk_min_chars,
         doc_type=doc.doc_type,
         extracted_data=doc.extracted_data,
     )

@@ -1,23 +1,20 @@
-import os
 import instructor
 import logging
 from openai import OpenAI
 from pydantic import BaseModel
-from dotenv import load_dotenv
 from schemas.models import DocClassification, DocType
+from core.config import get_settings
 from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
 from core.chunker import split_markdown_into_chunks
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
 
-# 加载环境变量
-load_dotenv()
-
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 # 获取 LLM 配置
-API_KEY = os.getenv("LLM_API_KEY")
-BASE_URL = os.getenv("LLM_BASE_URL")
-MODEL_NAME = os.getenv("LLM_MODEL", "qwen2.5-7b-instruct-1m") # 默认模型
+API_KEY = settings.llm_api_key
+BASE_URL = settings.llm_base_url
+MODEL_NAME = settings.llm_model
 
 if not API_KEY:
     # 仅作为警告，允许运行时再配置
@@ -145,20 +142,24 @@ def extract_structure_with_meta(markdown_content: str, response_model: type[Base
     """
     logger.info(f"--- Extracting structure for {response_model.__name__} ---")
 
-    threshold = 6000
+    threshold = settings.extraction_threshold
     if len(markdown_content) <= threshold:
         try:
-            data = _extract_once(markdown_content[:30000], response_model)
+            data = _extract_once(markdown_content[:settings.extraction_single_max_chars], response_model)
             validated = response_model.model_validate(data)
             return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
         except Exception as e:
             logger.error(f"Single extraction failed: {e}", exc_info=True)
             raise RuntimeError(f"LLM Extraction failed: {str(e)}")
 
-    chunks = split_markdown_into_chunks(markdown_content, max_chars=5000, overlap_chars=200)
+    chunks = split_markdown_into_chunks(
+        markdown_text=markdown_content,
+        max_chars=settings.extraction_chunk_max_chars,
+        overlap_chars=settings.extraction_chunk_overlap_chars,
+    )
     if not chunks:
         try:
-            data = _extract_once(markdown_content[:30000], response_model)
+            data = _extract_once(markdown_content[:settings.extraction_single_max_chars], response_model)
             validated = response_model.model_validate(data)
             return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
         except Exception as e:
@@ -191,7 +192,7 @@ def extract_structure_with_meta(markdown_content: str, response_model: type[Base
             logger.warning(f"Merged chunk validation failed, fallback to single extraction: {e}")
 
     try:
-        fallback_data = _extract_once(markdown_content[:30000], response_model)
+        fallback_data = _extract_once(markdown_content[:settings.extraction_single_max_chars], response_model)
         validated = response_model.model_validate(fallback_data)
         return validated, {
             "mode": "single_fallback",

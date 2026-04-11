@@ -1,6 +1,6 @@
 from tortoise import fields, models
-from pydantic import BaseModel, Field, RootModel
-from typing import Literal, List, Optional, Union
+from pydantic import BaseModel, Field
+from typing import Literal, List, Optional
 from enum import Enum
 
 # --- Enums ---
@@ -14,6 +14,7 @@ class DocType(str, Enum):
     TEST_CASE = "test_case"  # 测试用例
     TEST_REPORT = "test_report"  # 测试报告
     USER_MANUAL = "user_manual"  # 用户手册
+    BUG_REPORT = "bug_report"  # 缺陷报告
     UNKNOWN = "unknown"  # 未知类型
 
 # --- Tortoise ORM Models (Database) ---
@@ -27,6 +28,8 @@ class DocumentRecord(models.Model):
     stored_path = fields.CharField(max_length=512, description="文件存储路径")
     upload_time = fields.DatetimeField(auto_now_add=True, description="上传时间")
     doc_type = fields.CharField(max_length=50, default="unknown", description="文档类型") # 新增字段
+    source_type = fields.CharField(max_length=20, default="file", description="来源类型: file/url")
+    source_url = fields.CharField(max_length=1024, null=True, description="URL 来源地址")
     parsed_content = fields.TextField(null=True, description="解析后的Markdown内容")
     extracted_data = fields.JSONField(null=True, description="LLM提取的结构化JSON数据")
     status = fields.CharField(max_length=20, default="pending", description="状态: pending/processing/completed/failed")
@@ -130,6 +133,25 @@ class TestCaseResult(BaseModel):
     status: Literal["pass", "fail", "skipped", "error"] = Field(..., description="执行状态")
     failure_reason: Optional[str] = Field(None, description="失败原因（可选）")
 
+class TestPlanResource(BaseModel):
+    """
+    测试资源定义
+    """
+    human_resources: Optional[List[dict]] = Field(None, description="人力资源列表")
+    environment: Optional[List[str]] = Field(None, description="测试环境配置")
+    tools: Optional[List[str]] = Field(None, description="测试工具列表")
+
+
+class TestPlanStrategy(BaseModel):
+    """
+    测试策略定义
+    """
+    functional_test_strategy: Optional[str] = Field(None, description="功能测试策略")
+    interface_test_strategy: Optional[str] = Field(None, description="接口测试策略")
+    performance_test_strategy: Optional[str] = Field(None, description="性能测试策略")
+    compatibility_test_strategy: Optional[str] = Field(None, description="兼容性测试策略")
+
+
 class TestPlanDocument(BaseModel):
     """
     测试计划文档 (Test Plan)
@@ -137,9 +159,9 @@ class TestPlanDocument(BaseModel):
     doc_type: Literal["test_plan"] = Field(default="test_plan", description="文档类型标识")
     title: str = Field(..., description="文档标题")
     scope: Optional[str] = Field(None, description="测试范围")
-    resources: Optional[str] = Field(None, description="资源需求")
+    resources: Optional[TestPlanResource] = Field(None, description="资源需求")
     schedule: Optional[str] = Field(None, description="进度安排")
-    strategy: Optional[str] = Field(None, description="测试策略")
+    strategy: Optional[TestPlanStrategy] = Field(None, description="测试策略")
     deliverables: List[str] = Field(default_factory=list, description="交付物列表")
 
 class TestCaseDocument(BaseModel):
@@ -215,6 +237,27 @@ class UserManualDocument(BaseModel):
     sections: List[UserManualSection] = Field(..., description="主要章节列表（安装、使用说明等）")
     troubleshooting: List[TroubleshootingItem] = Field(default_factory=list, description="故障排除列表")
 
+
+# 6. Bug Report
+class BugReportDocument(BaseModel):
+    """
+    缺陷报告结构
+    """
+    doc_type: Literal["bug_report"] = Field(default="bug_report", description="文档类型标识")
+    title: str = Field(..., description="缺陷标题")
+    bug_id: Optional[str] = Field(None, description="缺陷编号，如 BUG-123")
+    summary: Optional[str] = Field(None, description="问题摘要")
+    status: Optional[str] = Field(None, description="当前状态，如 open/fixed/closed")
+    severity: Optional[str] = Field(None, description="严重程度，如 critical/high/medium/low")
+    priority: Optional[str] = Field(None, description="优先级，如 P0/P1/P2")
+    environment: Optional[str] = Field(None, description="环境信息，如浏览器、系统、版本")
+    steps_to_reproduce: List[str] = Field(default_factory=list, description="复现步骤")
+    expected_result: Optional[str] = Field(None, description="期望结果")
+    actual_result: Optional[str] = Field(None, description="实际结果")
+    root_cause: Optional[str] = Field(None, description="根因分析")
+    workaround: Optional[str] = Field(None, description="临时绕过方案")
+    fix_summary: Optional[str] = Field(None, description="修复摘要")
+
 # --- API Response Models ---
 
 class UploadResponse(BaseModel):
@@ -222,6 +265,10 @@ class UploadResponse(BaseModel):
     filename: str
     status: str
     message: str
+
+
+class UrlUploadRequest(BaseModel):
+    url: str = Field(..., min_length=1, description="待抓取的公开网页 URL")
 
 
 class QaRequest(BaseModel):

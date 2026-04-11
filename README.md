@@ -14,10 +14,11 @@ DocStruct 是一个面向软件工程文档的结构化提取系统。项目目�
 - `DOCX`
 - `MD`
 - `TXT`
+- `URL（公开静态 HTML 页面）`
 
 ### 支持文档类型
 
-当前已支持 7 类软件工程文档：
+当前已支持 8 类软件工程文档：
 
 | 文档类型 | `doc_type` | 当前能力 |
 | --- | --- | --- |
@@ -28,12 +29,14 @@ DocStruct 是一个面向软件工程文档的结构化提取系统。项目目�
 | 测试用例 | `test_case` | 提取测试用例标题、步骤、预期结果等 |
 | 测试报告 | `test_report` | 提取执行摘要、统计信息、用例结果 |
 | 用户手册 | `user_manual` | 提取章节内容与故障排除信息 |
+| 缺陷报告 | `bug_report` | 提取缺陷编号、状态、严重级别、复现步骤、期望/实际结果等 |
 
 ### 当前前端能力
 
 前端为单页 `static/index.html`，已支持：
 
 - 文档上传
+- URL 导入
 - 文档列表查看
 - 文档删除
 - 指定文档重建索引
@@ -103,8 +106,9 @@ DocStruct/
 
 ### 1. 上传与解析
 
-- `POST /api/upload` 接收文件上传。
-- 根据扩展名选择解析器。
+- `POST /api/upload` 接收文件上传，`POST /api/upload-url` 接收网页 URL。
+- 文件输入根据扩展名选择解析器。
+- URL 输入抓取公开静态 HTML 页面并转换为 Markdown。
 - 输出统一 Markdown 文本，作为后续分类与抽取输入。
 
 ### 2. 文类识别
@@ -147,6 +151,12 @@ DocStruct/
 - `POST /api/upload`
 
 上传并处理文档，返回文档 ID、状态与识别结果。
+
+### URL 导入
+
+- `POST /api/upload-url`
+
+导入公开静态网页，抓取正文后进入统一处理链路。
 
 ### 文档列表
 
@@ -219,7 +229,7 @@ python main.py
 
 当前无自动化测试，必须手动验证。
 
-推荐使用 `static/examples/` 中样例文件，至少覆盖以下检查：
+推荐使用 `static/examples/` 中样例文件，以及 1 个公开静态文档 URL，至少覆盖以下检查：
 
 1. 上传文档后，确认状态从 `processing` 正常转为 `completed` 或 `failed`。
 2. 打开文档详情，检查 `parsed_content` 是否生成。
@@ -227,6 +237,43 @@ python main.py
 4. 执行一次 `重建索引`，确认接口正常返回。
 5. 对当前文档或全库发起问答，检查答案与引用片段是否一致。
 6. 检查日志与 `db/` 下 SQLite / 向量索引是否正常生成。
+7. 对 URL 导入文档，检查 `source_type` 与 `source_url` 是否正确保存。
+
+## 离线评测基线
+
+项目已补充最小离线评测脚本，用于论文实验和模型 / Prompt 对比。
+
+默认评测清单：
+
+- `experiments/datasets/baseline_manifest.json`
+
+运行方式：
+
+```powershell
+python scripts/run_eval.py
+```
+
+常用参数：
+
+```powershell
+python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-source predicted
+```
+
+运行后会在 `experiments/results/` 下生成：
+
+- 结构化实验结果 `JSON`
+- 便于汇总的 `Markdown` 报告
+
+当前脚本会记录：
+
+- 样本 ID、期望文类、预测文类
+- 文类识别是否正确
+- 抽取是否成功
+- 耗时
+- 分块模式
+- 结构完整率（基础指标）
+
+当前基线样本已补充 `bug_report` 文类；如需评测 URL 导入，可在清单中补充 `source_type=url` 的样本。
 
 ## 已知现状与后续方向
 
@@ -235,5 +282,6 @@ python main.py
   - README 与实现对齐
   - 长文档稳定性
   - 模型与 Prompt 评测体系
-  - URL 输入与新增文类扩展
+  - URL 输入与新增文类扩展后的稳定性
 - 后续开发总路线见根目录 [PLAN.md](C:\Users\DJCHAN\SE\1_CourseProject\DocStruct\PLAN.md)。
+- URL 输入与 `bug_report` 扩展说明见 [docs/url-bug-report-reference.md](C:\Users\DJCHAN\SE\1_CourseProject\DocStruct\docs\url-bug-report-reference.md)。
