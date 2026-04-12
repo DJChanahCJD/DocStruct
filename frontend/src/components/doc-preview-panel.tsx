@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useDocument } from "@/hooks/use-api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { CitationItem } from "@/lib/api";
 
 // 类型断言绕过 react-markdown v10 类型定义问题
 const Markdown = ReactMarkdown as React.FC<{
@@ -14,7 +15,7 @@ const Markdown = ReactMarkdown as React.FC<{
 interface DocPreviewPanelProps {
   docId: number | null;
   mode: "preview" | "citation";
-  citationSnippet?: string | null;
+  citationSnippet?: CitationItem | null;
 }
 
 /**
@@ -72,8 +73,13 @@ export function DocPreviewPanel({
                 <div className="mb-1 text-xs font-medium uppercase text-primary">
                   引用片段
                 </div>
+                {citationSnippet.title_path && (
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {citationSnippet.title_path}
+                  </p>
+                )}
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  {citationSnippet}
+                  {citationSnippet.snippet}
                 </p>
               </div>
             </div>

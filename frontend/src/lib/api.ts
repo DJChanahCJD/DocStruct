@@ -32,7 +32,7 @@ export interface CitationItem {
   chunk_id: number;
   score: number;
   snippet: string;
-  filename?: string;
+  title_path?: string;
 }
 
 export interface QaRequest {

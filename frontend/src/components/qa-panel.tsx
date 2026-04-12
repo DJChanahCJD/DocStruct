@@ -14,7 +14,7 @@ import type { CitationItem } from "@/lib/api";
 interface QaPanelProps {
   selectedDocId: number | null;
   selectedDocName: string;
-  onOpenCitation: (docId: number, snippet: string) => void;
+  onOpenCitation: (citation: CitationItem) => void;
 }
 
 export function QaPanel({
@@ -23,6 +23,7 @@ export function QaPanel({
   onOpenCitation,
 }: QaPanelProps) {
   const [question, setQuestion] = useState("");
+  const [selectedCitationIdx, setSelectedCitationIdx] = useState<number | null>(null);
   const ask = useAskQuestion();
   const [lastQuestion, setLastQuestion] = useState("");
 
@@ -32,6 +33,7 @@ export function QaPanel({
       return;
     }
     setLastQuestion(question.trim());
+    setSelectedCitationIdx(null);
     try {
       await ask.mutateAsync({
         question: question.trim(),
@@ -52,12 +54,12 @@ export function QaPanel({
           {selectedDocName}
         </Badge>
         <span className="ml-auto text-muted-foreground">
-          {lastQuestion ? `Q: ${lastQuestion}` : "等待提问"}
+          {lastQuestion ? `Q: ${lastQuestion}` : ""}
         </span>
       </div>
 
       {/* 问答结果区 */}
-      <ScrollArea className="flex-1 px-4 py-3">
+      <ScrollArea className="flex-1 min-h-0 px-4 py-3">
         {ask.isPending && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -103,9 +105,11 @@ export function QaPanel({
                       key={idx}
                       citation={citation}
                       index={idx + 1}
-                      onClick={() =>
-                        onOpenCitation(citation.doc_id, citation.snippet)
-                      }
+                      selected={selectedCitationIdx === idx}
+                      onClick={() => {
+                        setSelectedCitationIdx(idx);
+                        onOpenCitation(citation);
+                      }}
                     />
                   ))}
                 </div>
@@ -172,30 +176,43 @@ export function QaPanel({
 function CitationCard({
   citation,
   index,
+  selected,
   onClick,
 }: {
   citation: CitationItem;
   index: number;
+  selected: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full rounded-lg border p-3 text-left transition hover:border-primary hover:bg-muted/50"
+      className={`w-full rounded-lg border p-3 text-left transition ${
+        selected
+          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+          : "border-border hover:border-primary/50 hover:bg-muted/50"
+      }`}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+            selected ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+          }`}>
             {index}
           </span>
           <span className="truncate text-xs font-medium">
-            {citation.filename ?? `文档 ${citation.doc_id}`}
+            {`文档 ${citation.doc_id}`}
           </span>
         </div>
-        <span className="flex-shrink-0 text-xs text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {(citation.score).toFixed(3)}
         </span>
       </div>
+      {citation.title_path && (
+        <p className="mb-1 truncate text-[11px] text-muted-foreground/60">
+          {citation.title_path}
+        </p>
+      )}
       <p className="line-clamp-2 text-xs text-muted-foreground">
         {citation.snippet}
       </p>

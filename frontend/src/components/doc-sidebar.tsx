@@ -63,9 +63,13 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
   const filtered = useMemo(() => {
     let result = docs;
     if (keyword) {
-      result = result.filter((d: DocumentRecord) =>
-        d.filename.toLowerCase().includes(keyword.toLowerCase()),
-      );
+      const kw = keyword.toLowerCase();
+      const isIdSearch = /^\d+$/.test(keyword.trim());
+      result = result.filter((d: DocumentRecord) => {
+        const matchFilename = d.filename.toLowerCase().includes(kw);
+        const matchId = isIdSearch && d.id === parseInt(keyword.trim(), 10);
+        return matchFilename || matchId;
+      });
     }
     if (filters.status.length > 0) {
       result = result.filter((d: DocumentRecord) =>
@@ -229,7 +233,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
         </div>
       </div>
       <Separator />
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 min-h-0 px-3 py-2">
         {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             加载中...

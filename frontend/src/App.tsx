@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { DocSidebar } from "./components/doc-sidebar";
 import { QaPanel } from "./components/qa-panel";
 import { DocPreviewPanel } from "./components/doc-preview-panel";
+import type { CitationItem } from "./lib/api";
 
 const queryClient = new QueryClient();
 
@@ -12,7 +13,7 @@ function AppContent() {
   const [selectedDocName, setSelectedDocName] = useState("全库检索");
   const [previewMode, setPreviewMode] = useState<"preview" | "citation">("preview");
   const [previewDocId, setPreviewDocId] = useState<number | null>(null);
-  const [citationSnippet, setCitationSnippet] = useState<string | null>(null);
+  const [citationSnippet, setCitationSnippet] = useState<CitationItem | null>(null);
 
   const handleSelectDoc = (id: number, name: string) => {
     setSelectedDocId(id);
@@ -27,10 +28,10 @@ function AppContent() {
     setPreviewDocId(null);
   };
 
-  const handleOpenCitation = (docId: number, snippet: string) => {
+  const handleOpenCitation = (citation: CitationItem) => {
     setPreviewMode("citation");
-    setPreviewDocId(docId);
-    setCitationSnippet(snippet);
+    setPreviewDocId(citation.doc_id);
+    setCitationSnippet(citation);
   };
 
   return (
@@ -80,10 +81,10 @@ function AppContent() {
           />
         </main>
 
-        {/* 右侧预览面板（有选中文档时显示） */}
-        {selectedDocId && (
+        {/* 右侧预览面板（有预览文档时显示） */}
+        {previewDocId && (
           <DocPreviewPanel
-            docId={previewDocId ?? selectedDocId}
+            docId={previewDocId}
             mode={previewMode}
             citationSnippet={citationSnippet}
           />

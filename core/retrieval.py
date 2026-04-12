@@ -142,7 +142,11 @@ def _normalize_snippet_line(line: str) -> str:
     return cleaned.strip(" -|")
 
 
-def _normalize_snippet_text(title_path: str | None, display_text: str, chunk_type: str | None) -> str:
+def _normalize_snippet_text(display_text: str, chunk_type: str | None) -> str:
+    """
+    规范化 snippet 文本，仅处理 display_text 内容。
+    title_path 由调用方单独传递，不再混入 snippet。
+    """
     lines = [line for line in (display_text or "").splitlines() if line.strip()]
     normalized_lines = [_normalize_snippet_line(line) for line in lines]
     normalized_lines = [line for line in normalized_lines if line]
@@ -150,17 +154,7 @@ def _normalize_snippet_text(title_path: str | None, display_text: str, chunk_typ
     if chunk_type == "table":
         normalized_lines = [line for line in normalized_lines if "---" not in line]
 
-    normalized_title = _normalize_title_path(title_path)
-    if normalized_lines:
-        first_line_lower = normalized_lines[0].lower()
-        if normalized_title and normalized_title.lower() in first_line_lower:
-            normalized_title = ""
-
-    parts = []
-    if normalized_title:
-        parts.append(normalized_title)
-    parts.extend(normalized_lines)
-    return "\n".join(parts).strip()
+    return "\n".join(normalized_lines).strip()
 
 
 def _select_snippet_source(content: str, question: str) -> str:
@@ -480,7 +474,6 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
         display_text = rec.display_text or rec.content
         content = _compose_display_text(title_path=title_path, display_text=display_text)
         snippet_source = _normalize_snippet_text(
-            title_path=title_path,
             display_text=display_text,
             chunk_type=rec.chunk_type,
         )
@@ -488,7 +481,7 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
             "doc_id": rec.doc_id,
             "chunk_id": rec.id,
             "score": round(score, 6),
-            "title_path": title_path,
+            "title_path": _normalize_title_path(title_path) or None,
             "section_title": rec.section_title,
             "chunk_type": rec.chunk_type,
             "order_index": rec.order_index if rec.order_index is not None else rec.chunk_index,
@@ -544,6 +537,7 @@ async def answer_question(question: str, doc_id: Optional[int] = None, top_k: in
             "chunk_id": item["chunk_id"],
             "score": item["score"],
             "snippet": item["snippet"],
+            "title_path": item.get("title_path"),
         }
         for item in retrieved
     ]

@@ -282,6 +282,7 @@ class CitationItem(BaseModel):
     chunk_id: int
     score: float
     snippet: str
+    title_path: Optional[str] = None
 
 
 class QaResponse(BaseModel):

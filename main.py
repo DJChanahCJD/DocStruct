@@ -12,6 +12,7 @@ from schemas.models import (
     DocumentRecord, SrsDocument, ApiDocument,
     DesignDocument, UserManualDocument,
     TestPlanDocument, TestCaseDocument, TestReportDocument,
+    BugReportDocument,
     UploadResponse, DocType, QaRequest, QaResponse, UrlUploadRequest
 )
 
@@ -39,6 +40,7 @@ TYPE_MODEL_MAP = {
     DocType.TEST_CASE: TestCaseDocument,
     DocType.TEST_REPORT: TestReportDocument,
     DocType.USER_MANUAL: UserManualDocument,
+    DocType.BUG_REPORT: BugReportDocument,
 }
 
 UPLOAD_DIR = "db/uploads"
@@ -79,7 +81,7 @@ async def upload_document(file: UploadFile = File(...)):
         target_model = TYPE_MODEL_MAP.get(cls_result.doc_type)
         if not target_model:
             logger.warning(f"Unknown document type: {cls_result.doc_type}")
-            doc.update_from_dict({"status": "completed", "doc_type": cls_result.doc_type.value, "error_message": "未知的文档类型"})
+            doc.update_from_dict({"status": "completed", "doc_type": cls_result.doc_type.value, "parsed_content": md_text, "error_message": "未知的文档类型"})
         else:
             # 结构化提取
             logger.info(f"Extracting structure using model: {target_model.__name__}")
@@ -248,7 +250,7 @@ async def upload_from_url(request: UrlUploadRequest):
         target_model = TYPE_MODEL_MAP.get(cls_result.doc_type)
         if not target_model:
             logger.warning(f"Unknown document type: {cls_result.doc_type}")
-            doc.update_from_dict({"status": "completed", "doc_type": cls_result.doc_type.value, "error_message": "未知的文档类型"})
+            doc.update_from_dict({"status": "completed", "doc_type": cls_result.doc_type.value, "parsed_content": md_text, "error_message": "未知的文档类型"})
         else:
             logger.info(f"Extracting structure using model: {target_model.__name__}")
             extracted, extraction_meta = extract_structure_with_meta(md_text, target_model)

@@ -56,6 +56,6 @@ def get_settings() -> RuntimeSettings:
         retrieval_chunk_max_chars=_get_int("RETRIEVAL_CHUNK_MAX_CHARS", 700),
         retrieval_chunk_overlap_chars=_get_int("RETRIEVAL_CHUNK_OVERLAP_CHARS", 80),
         retrieval_chunk_min_chars=_get_int("RETRIEVAL_CHUNK_MIN_CHARS", 200),
-        embedding_batch_size=_get_int("EMBEDDING_BATCH_SIZE", 32),
+        embedding_batch_size=_get_int("EMBEDDING_BATCH_SIZE", 10),
         qa_top_k=_get_int("QA_TOP_K", 5),
     )

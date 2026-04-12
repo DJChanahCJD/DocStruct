@@ -36,13 +36,14 @@ export function DocCard({
       onClick={onSelect}
       className={`group relative cursor-pointer rounded-lg border px-3 py-2.5 transition-all ${
         selected
-          ? "border-blue-500 bg-blue-50 shadow-sm"
-          : "border-transparent hover:bg-muted/50"
+          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+          : "border-transparent hover:border-border hover:bg-muted/50"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{doc.filename}</div>
+          <div className="truncate text-sm font-medium">{doc.filename}<span className="ml-1 text-sm text-muted-foreground/60 font-mono">#{doc.id}</span></div>
+          
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge variant="secondary" className="text-[10px] uppercase">
               {doc.doc_type || "unknown"}
