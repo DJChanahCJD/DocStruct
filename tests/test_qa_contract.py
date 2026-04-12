@@ -8,7 +8,11 @@ import main
 
 class QaContractTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = TestClient(main.app)
+        self.client_cm = TestClient(main.app)
+        self.client = self.client_cm.__enter__()
+
+    def tearDown(self) -> None:
+        self.client_cm.__exit__(None, None, None)
 
     def test_api_qa_accepts_expected_json_contract(self) -> None:
         mock_result = {
@@ -34,33 +38,26 @@ class QaContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertIn("question", response.text)
 
-    def test_partial_qa_accepts_form_contract(self) -> None:
-        mock_result = {
-            "answer": "表单回答",
-            "citations": [
-                {"doc_id": 3, "chunk_id": 7, "score": 0.8, "snippet": "表单证据"},
-            ],
-        }
-
-        with patch("main.answer_question", new=AsyncMock(return_value=mock_result)) as mock_qa:
-            response = self.client.post(
-                "/partials/qa",
-                data={"question": "  表单问题  ", "doc_id": "3", "top_k": "4"},
-            )
+    def test_list_documents_returns_json_array(self) -> None:
+        response = self.client.get("/api/documents")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("表单回答", response.text)
-        mock_qa.assert_awaited_once_with(question="表单问题", doc_id=3, top_k=4)
+        self.assertIsInstance(response.json(), list)
 
-    def test_partial_qa_rejects_blank_question(self) -> None:
+    def test_get_document_rejects_missing_record(self) -> None:
+        response = self.client.get("/api/documents/999999")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("记录不存在", response.text)
+
+    def test_upload_rejects_unsupported_extension(self) -> None:
         response = self.client.post(
-            "/partials/qa",
-            data={"question": "   ", "doc_id": "", "top_k": "5"},
+            "/api/upload",
+            files={"file": ("notes.csv", b"id,name\n1,test\n", "text/csv")},
         )
 
-        self.assertEqual(response.status_code, 422)
-        self.assertIn("question 不能为空", response.text)
-
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("不支持的文件类型", response.text)
 
 if __name__ == "__main__":
     unittest.main()

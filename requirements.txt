@@ -13,3 +13,5 @@ python-dotenv
 python-docx
 numpy
 faiss-cpu
+httpx
+markdownify

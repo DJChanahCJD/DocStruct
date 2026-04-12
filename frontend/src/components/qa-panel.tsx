@@ -1,0 +1,204 @@
+import { useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Copy, FileText } from "lucide-react";
+import { useAskQuestion } from "@/hooks/use-api";
+import { toast } from "sonner";
+import type { CitationItem } from "@/lib/api";
+
+interface QaPanelProps {
+  selectedDocId: number | null;
+  selectedDocName: string;
+  onOpenCitation: (docId: number, snippet: string) => void;
+}
+
+export function QaPanel({
+  selectedDocId,
+  selectedDocName,
+  onOpenCitation,
+}: QaPanelProps) {
+  const [question, setQuestion] = useState("");
+  const ask = useAskQuestion();
+  const [lastQuestion, setLastQuestion] = useState("");
+
+  const handleAsk = async () => {
+    if (!question.trim()) {
+      toast.error("请输入问题");
+      return;
+    }
+    setLastQuestion(question.trim());
+    try {
+      await ask.mutateAsync({
+        question: question.trim(),
+        doc_id: selectedDocId,
+        top_k: 5,
+      });
+    } catch {
+      toast.error("问答失败");
+    }
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* 范围指示条 */}
+      <div className="flex items-center gap-2 border-b px-4 py-2 text-sm">
+        <span className="text-muted-foreground">当前范围:</span>
+        <Badge variant={selectedDocId ? "default" : "secondary"}>
+          {selectedDocName}
+        </Badge>
+        <span className="ml-auto text-muted-foreground">
+          {lastQuestion ? `Q: ${lastQuestion}` : "等待提问"}
+        </span>
+      </div>
+
+      {/* 问答结果区 */}
+      <ScrollArea className="flex-1 px-4 py-3">
+        {ask.isPending && (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="mt-2 text-sm">思考中...</span>
+          </div>
+        )}
+
+        {ask.data && !ask.isPending && (
+          <div className="space-y-4">
+            {/* 回答 */}
+            <Card>
+              <CardContent className="pt-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="font-semibold">回答</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      navigator.clipboard.writeText(ask.data!.answer);
+                      toast.success("已复制");
+                    }}
+                  >
+                    <Copy className="mr-1 h-3 w-3" />
+                    复制
+                  </Button>
+                </div>
+                <div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                  {ask.data.answer}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 引用列表 */}
+            {ask.data.citations.length > 0 && (
+              <div>
+                <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                  引用 ({ask.data.citations.length})
+                </h4>
+                <div className="space-y-2">
+                  {ask.data.citations.map((citation: CitationItem, idx: number) => (
+                    <CitationCard
+                      key={idx}
+                      citation={citation}
+                      index={idx + 1}
+                      onClick={() =>
+                        onOpenCitation(citation.doc_id, citation.snippet)
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!ask.data && !ask.isPending && (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 opacity-20" />
+            <p className="mt-3 text-sm">选择文档或全库模式提问</p>
+          </div>
+        )}
+      </ScrollArea>
+
+      <Separator />
+
+      {/* 输入区 */}
+      <div className="p-4 space-y-2">
+        <Textarea
+          placeholder="输入问题..."
+          value={question}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+            setQuestion(e.target.value)
+          }
+          onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              handleAsk();
+            }
+          }}
+          className="min-h-[80px] text-sm resize-none"
+        />
+        <div className="flex gap-2">
+          <Button
+            onClick={handleAsk}
+            disabled={ask.isPending || !question.trim()}
+            className="flex-1"
+          >
+            {ask.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            开始问答
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setQuestion("");
+              setLastQuestion("");
+            }}
+            className="px-4"
+          >
+            清空
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground/60">
+          Ctrl + Enter 快捷提交
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CitationCard({
+  citation,
+  index,
+  onClick,
+}: {
+  citation: CitationItem;
+  index: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full rounded-lg border p-3 text-left transition hover:border-primary hover:bg-muted/50"
+    >
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            {index}
+          </span>
+          <span className="truncate text-xs font-medium">
+            {citation.filename ?? `文档 ${citation.doc_id}`}
+          </span>
+        </div>
+        <span className="flex-shrink-0 text-xs text-muted-foreground">
+          {(citation.score).toFixed(3)}
+        </span>
+      </div>
+      <p className="line-clamp-2 text-xs text-muted-foreground">
+        {citation.snippet}
+      </p>
+    </button>
+  );
+}
