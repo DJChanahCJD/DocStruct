@@ -20,6 +20,9 @@ class TextModelSpec:
     is_default: bool = False
 
 
+# 分类任务专用模型：固定低成本、文档理解专用，与用户选择的提取模型解耦
+CLASSIFY_MODEL_ID = "qwen-doc-turbo"
+
 _PREDEFINED_TEXT_MODELS: tuple[TextModelSpec, ...] = (
     TextModelSpec(
         id="qwen-doc-turbo",

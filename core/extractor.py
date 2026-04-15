@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
 from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
-from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model
+from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model, CLASSIFY_MODEL_ID
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
 from schemas.models import DocClassification, DocType
 
@@ -81,8 +81,12 @@ def _extract_once(
 
 
 def classify_document(markdown_content: str, llm_model: str | None = None) -> DocClassification:
-    """使用活动文本模型对文档进行快速分类。"""
-    model_spec = resolve_text_model(llm_model)
+    """使用固定分类模型（qwen-doc-turbo）对文档进行快速分类。
+
+    llm_model 参数保留以兼容调用方签名，但分类任务始终使用 CLASSIFY_MODEL_ID，
+    原因：分类只需文档前 2000 字符，qwen-doc-turbo 性价比最高且专为文档理解设计。
+    """
+    model_spec = resolve_text_model(CLASSIFY_MODEL_ID)
     summary = markdown_content[:2000]
     prompt = _render_prompt(
         CLASSIFY_PROMPT_TEMPLATE,
