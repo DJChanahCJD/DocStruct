@@ -29,7 +29,9 @@ function AppContent() {
   const [citationSnippet, setCitationSnippet] = useState<CitationItem | null>(null);
   const [showQaPanel, setShowQaPanel] = useState(false);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const [activeModelId, setActiveModelId] = useState("");
+  const [activeModelId, setActiveModelId] = useState<string>(
+    () => localStorage.getItem("docstruct_active_model_id") ?? ""
+  );
   const { data: textModelResponse, isLoading: isLoadingTextModels } = useTextModels();
 
   const textModels = textModelResponse?.models ?? [];
@@ -46,10 +48,12 @@ function AppContent() {
       return;
     }
     setActiveModelId((current) => {
-      if (current && textModels.some((model) => model.id === current)) {
-        return current;
-      }
-      return textModels.find((model) => model.is_default)?.id ?? textModels[0].id;
+      const next =
+        current && textModels.some((model) => model.id === current)
+          ? current
+          : textModels.find((model) => model.is_default)?.id ?? textModels[0].id;
+      localStorage.setItem("docstruct_active_model_id", next);
+      return next;
     });
   }, [textModels]);
 
@@ -108,8 +112,9 @@ function AppContent() {
                 <DropdownMenuLabel>全局文本模型</DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={activeModelId} onValueChange={(value) => {
+              <DropdownMenuRadioGroup value={activeModelId}                 onValueChange={(value) => {
                 setActiveModelId(value);
+                localStorage.setItem("docstruct_active_model_id", value);
                 setModelDropdownOpen(false);
               }}>
                 {textModels.map((model) => (
