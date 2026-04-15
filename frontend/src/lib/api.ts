@@ -14,6 +14,7 @@ export interface DocumentRecord {
   doc_type: string;
   source_type: string;
   source_url: string | null;
+  llm_model: string | null;
   parsed_content: string | null;
   extracted_data: Record<string, unknown> | null;
   status: string;
@@ -25,6 +26,27 @@ export interface UploadResponse {
   filename: string;
   status: string;
   message: string;
+}
+
+export interface TextModelOption {
+  id: string;
+  label: string;
+  description: string;
+  is_default: boolean;
+}
+
+export interface TextModelListResponse {
+  models: TextModelOption[];
+}
+
+export interface UploadFileRequest {
+  file: File;
+  llm_model?: string | null;
+}
+
+export interface UploadUrlRequest {
+  url: string;
+  llm_model?: string | null;
 }
 
 export interface CitationItem {
@@ -39,6 +61,7 @@ export interface QaRequest {
   question: string;
   doc_id?: number | null;
   top_k?: number;
+  llm_model?: string | null;
 }
 
 export interface QaResponse {
@@ -53,6 +76,11 @@ export async function listDocuments(): Promise<DocumentRecord[]> {
   return data;
 }
 
+export async function listTextModels(): Promise<TextModelListResponse> {
+  const { data } = await api.get<TextModelListResponse>("/text-models");
+  return data;
+}
+
 export async function getDocument(id: number): Promise<DocumentRecord> {
   const { data } = await api.get<DocumentRecord>(`/documents/${id}`);
   return data;
@@ -62,15 +90,18 @@ export async function deleteDocument(id: number): Promise<void> {
   await api.delete(`/documents/${id}`);
 }
 
-export async function uploadFile(file: File): Promise<UploadResponse> {
+export async function uploadFile(req: UploadFileRequest): Promise<UploadResponse> {
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", req.file);
+  if (req.llm_model) {
+    form.append("llm_model", req.llm_model);
+  }
   const { data } = await api.post<UploadResponse>("/upload", form);
   return data;
 }
 
-export async function uploadUrl(url: string): Promise<UploadResponse> {
-  const { data } = await api.post<UploadResponse>("/upload/url", { url });
+export async function uploadUrl(req: UploadUrlRequest): Promise<UploadResponse> {
+  const { data } = await api.post<UploadResponse>("/upload/url", req);
   return data;
 }
 
@@ -82,3 +113,4 @@ export async function askQuestion(req: QaRequest): Promise<QaResponse> {
   const { data } = await api.post<QaResponse>("/qa", req);
   return data;
 }
+

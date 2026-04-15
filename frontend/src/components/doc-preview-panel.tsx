@@ -19,8 +19,8 @@ interface DocPreviewPanelProps {
 }
 
 /**
- * 文档预览面板（内联右侧列）
- * 显示选中文档的原文、JSON、错误信息和元数据
+ * 文档预览面板（内联右侧列）。
+ * 显示选中文档的原文、JSON 和错误信息。
  */
 export function DocPreviewPanel({
   docId,
@@ -32,14 +32,14 @@ export function DocPreviewPanel({
   if (!docId) return null;
 
   return (
-    <aside className="w-[420px] shrink-0 border-l flex flex-col h-full overflow-hidden bg-background">
-      {/* 标题栏 */}
+    <div className="w-full flex-1 flex flex-col h-full overflow-hidden bg-background">
+      {/* 标题栏
       <header className="border-b px-4 py-3">
         <h2 className="text-sm font-medium truncate">
           {mode === "preview" ? "文档预览" : "引用详情"}:{" "}
           {isLoading ? "加载中..." : doc?.filename ?? `文档 ${docId}`}
         </h2>
-      </header>
+      </header> */}
 
       {/* 内容区 */}
       {isLoading ? (
@@ -52,11 +52,11 @@ export function DocPreviewPanel({
           {/* Tab 切换栏 */}
           <div className="px-4 py-2 border-b shrink-0">
             <TabsList className="w-full">
-              <TabsTrigger value="raw" className="flex-1">
-                原文
-              </TabsTrigger>
               <TabsTrigger value="json" className="flex-1">
                 JSON
+              </TabsTrigger>
+              <TabsTrigger value="raw" className="flex-1">
+                原文
               </TabsTrigger>
               {doc.error_message && (
                 <TabsTrigger value="error" className="flex-1">
@@ -74,7 +74,7 @@ export function DocPreviewPanel({
                   引用片段
                 </div>
                 {citationSnippet.title_path && (
-                  <p className="text-xs text-muted-foreground mb-2">
+                  <p className="mb-2 text-xs text-muted-foreground">
                     {citationSnippet.title_path}
                   </p>
                 )}
@@ -111,38 +111,13 @@ export function DocPreviewPanel({
               </TabsContent>
             )}
           </ScrollArea>
-
-          {/* 元数据 - 固定在底部 */}
-          <div className="px-4 py-3 border-t shrink-0 space-y-2 text-sm">
-            <DocMetaField label="文件名" value={doc.filename} />
-            <DocMetaField label="类型" value={doc.doc_type} />
-            <DocMetaField label="来源" value={doc.source_type} />
-            {doc.source_url && (
-              <DocMetaField label="URL" value={doc.source_url} />
-            )}
-            <DocMetaField label="状态" value={doc.status} />
-          </div>
         </Tabs>
       ) : (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <p className="text-sm">文档不存在</p>
         </div>
       )}
-    </aside>
-  );
-}
-
-function DocMetaField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
-  return (
-    <div className="flex justify-between border-b py-2">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium truncate ml-2">{value ?? "-"}</span>
     </div>
   );
 }
+

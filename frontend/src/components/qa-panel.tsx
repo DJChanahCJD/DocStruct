@@ -1,44 +1,48 @@
 import { useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
-import { Textarea } from "@/components/ui/textarea";
+import { Copy, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { useAskQuestion } from "@/hooks/use-api";
+import type { CitationItem } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Copy, FileText } from "lucide-react";
-import { useAskQuestion } from "@/hooks/use-api";
-import { toast } from "sonner";
-import type { CitationItem } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
 
 interface QaPanelProps {
   selectedDocId: number | null;
-  selectedDocName: string;
+  activeModelId?: string | null;
+  activeModelLabel?: string;
   onOpenCitation: (citation: CitationItem) => void;
 }
 
+/**
+ * 渲染问答面板，并复用全局文本模型发起问答。
+ */
 export function QaPanel({
   selectedDocId,
-  selectedDocName,
+  activeModelId,
+  activeModelLabel,
   onOpenCitation,
 }: QaPanelProps) {
   const [question, setQuestion] = useState("");
   const [selectedCitationIdx, setSelectedCitationIdx] = useState<number | null>(null);
   const ask = useAskQuestion();
-  const [lastQuestion, setLastQuestion] = useState("");
 
   const handleAsk = async () => {
     if (!question.trim()) {
       toast.error("请输入问题");
       return;
     }
-    setLastQuestion(question.trim());
     setSelectedCitationIdx(null);
     try {
       await ask.mutateAsync({
         question: question.trim(),
         doc_id: selectedDocId,
         top_k: 5,
+        llm_model: activeModelId ?? undefined,
       });
     } catch {
       toast.error("问答失败");
@@ -47,18 +51,6 @@ export function QaPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {/* 范围指示条 */}
-      <div className="flex items-center gap-2 border-b px-4 py-2 text-sm">
-        <span className="text-muted-foreground">当前范围:</span>
-        <Badge variant={selectedDocId ? "default" : "secondary"}>
-          {selectedDocName}
-        </Badge>
-        <span className="ml-auto text-muted-foreground">
-          {lastQuestion ? `Q: ${lastQuestion}` : ""}
-        </span>
-      </div>
-
-      {/* 问答结果区 */}
       <ScrollArea className="flex-1 min-h-0 px-4 py-3">
         {ask.isPending && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -69,7 +61,6 @@ export function QaPanel({
 
         {ask.data && !ask.isPending && (
           <div className="space-y-4">
-            {/* 回答 */}
             <Card>
               <CardContent className="pt-4">
                 <div className="mb-3 flex items-center justify-between">
@@ -93,7 +84,6 @@ export function QaPanel({
               </CardContent>
             </Card>
 
-            {/* 引用列表 */}
             {ask.data.citations.length > 0 && (
               <div>
                 <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
@@ -128,20 +118,34 @@ export function QaPanel({
 
       <Separator />
 
-      {/* 输入区 */}
-      <div className="p-4 space-y-2">
+      <div className="space-y-2 p-4">
+        <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">当前文本模型</p>
+              <p className="mt-1 truncate font-medium text-foreground">
+                {activeModelLabel ?? "默认模型"}
+              </p>
+            </div>
+            <div className="text-right text-muted-foreground">
+              <p className="text-[10px] uppercase tracking-wide">检索范围</p>
+              <p className="mt-1 font-medium text-foreground">
+                {selectedDocId ? `文档 #${selectedDocId}` : "全库检索"}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <Textarea
           placeholder="输入问题..."
           value={question}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-            setQuestion(e.target.value)
-          }
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setQuestion(e.target.value)}
           onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               handleAsk();
             }
           }}
-          className="min-h-[80px] text-sm resize-none"
+          className="min-h-[80px] resize-none text-sm"
         />
         <div className="flex gap-2">
           <Button
@@ -149,29 +153,25 @@ export function QaPanel({
             disabled={ask.isPending || !question.trim()}
             className="flex-1"
           >
-            {ask.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
+            {ask.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             开始问答
           </Button>
           <Button
             variant="outline"
             onClick={() => {
               setQuestion("");
-              setLastQuestion("");
             }}
             className="px-4"
           >
             清空
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground/60">
-          Ctrl + Enter 快捷提交
-        </p>
+        <p className="text-xs text-muted-foreground/60">Ctrl + Enter 快捷提交</p>
       </div>
     </div>
   );
 }
+
 
 function CitationCard({
   citation,

@@ -1,16 +1,20 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  listDocuments,
-  getDocument,
+  askQuestion,
   deleteDocument,
+  getDocument,
+  listDocuments,
+  listTextModels,
+  reindexDocument,
   uploadFile,
   uploadUrl,
-  reindexDocument,
-  askQuestion,
   type QaRequest,
   type QaResponse,
 } from "@/lib/api";
 
+/**
+ * 获取文档列表。
+ */
 export function useDocuments() {
   return useQuery({
     queryKey: ["documents"],
@@ -18,6 +22,20 @@ export function useDocuments() {
   });
 }
 
+/**
+ * 获取可用文本模型列表。
+ */
+export function useTextModels() {
+  return useQuery({
+    queryKey: ["text-models"],
+    queryFn: listTextModels,
+    staleTime: Infinity,
+  });
+}
+
+/**
+ * 获取单篇文档详情。
+ */
 export function useDocument(id: number | null) {
   return useQuery({
     queryKey: ["document", id],
@@ -26,6 +44,9 @@ export function useDocument(id: number | null) {
   });
 }
 
+/**
+ * 删除文档并刷新列表。
+ */
 export function useDeleteDocument() {
   const qc = useQueryClient();
   return useMutation({
@@ -34,6 +55,9 @@ export function useDeleteDocument() {
   });
 }
 
+/**
+ * 上传文件并刷新列表。
+ */
 export function useUploadDocument() {
   const qc = useQueryClient();
   return useMutation({
@@ -42,6 +66,9 @@ export function useUploadDocument() {
   });
 }
 
+/**
+ * 上传 URL 并刷新列表。
+ */
 export function useUploadUrl() {
   const qc = useQueryClient();
   return useMutation({
@@ -50,12 +77,18 @@ export function useUploadUrl() {
   });
 }
 
+/**
+ * 触发文档重建索引。
+ */
 export function useReindex() {
   return useMutation({
     mutationFn: reindexDocument,
   });
 }
 
+/**
+ * 发起问答请求。
+ */
 export function useAskQuestion() {
   return useMutation({
     mutationFn: (req: QaRequest) => askQuestion(req),
@@ -63,3 +96,4 @@ export function useAskQuestion() {
 }
 
 export type { QaResponse };
+

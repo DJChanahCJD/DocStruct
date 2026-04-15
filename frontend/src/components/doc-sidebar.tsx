@@ -19,13 +19,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface DocSidebarProps {
   selectedId: number | null;
+  activeModelId?: string | null;
+  activeModelLabel?: string;
   onSelectDoc: (id: number, name: string) => void;
 }
 
-export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
+/**
+ * 渲染文档侧栏，并提供文档卡片所需的 Tooltip 上下文。
+ */
+export function DocSidebar({
+  selectedId,
+  activeModelId,
+  activeModelLabel,
+  onSelectDoc,
+}: DocSidebarProps) {
+
+
   const { data: docs = [], isLoading } = useDocuments();
   const deleteDoc = useDeleteDocument();
   const reindex = useReindex();
@@ -128,139 +141,145 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="p-3">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索文档..."
-              value={keyword}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setKeyword(e.target.value)
-              }
-              className="h-8 text-sm pl-9 pr-9"
-            />
-            {keyword && (
-              <button
-                onClick={() => setKeyword("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="h-8 px-2 rounded-md border bg-background hover:bg-accent relative">
-              <Filter className="h-4 w-4" />
-              {activeFilterCount > 0 && (
-                <Badge
-                  variant="default"
-                  className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px]"
-                >
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {filterOptions.status.length > 0 && (
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>状态</DropdownMenuLabel>
-                  {filterOptions.status.map((s) => (
-                    <DropdownMenuCheckboxItem
-                      key={s}
-                      checked={filters.status.includes(s)}
-                      onCheckedChange={() => toggleFilter("status", s)}
-                    >
-                      {s === "completed"
-                        ? "已完成"
-                        : s === "processing"
-                          ? "处理中"
-                          : s === "failed"
-                            ? "失败"
-                            : s}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuGroup>
-              )}
-              {filterOptions.status.length > 0 &&
-                (filterOptions.docType.length > 0 ||
-                  filterOptions.sourceType.length > 0) && (
-                  <DropdownMenuSeparator />
-                )}
-              {filterOptions.docType.length > 0 && (
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>文档类型</DropdownMenuLabel>
-                  {filterOptions.docType.map((t) => (
-                    <DropdownMenuCheckboxItem
-                      key={t}
-                      checked={filters.docType.includes(t)}
-                      onCheckedChange={() => toggleFilter("docType", t)}
-                    >
-                      {t}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuGroup>
-              )}
-              {filterOptions.docType.length > 0 &&
-                filterOptions.sourceType.length > 0 && (
-                  <DropdownMenuSeparator />
-                )}
-              {filterOptions.sourceType.length > 0 && (
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>来源</DropdownMenuLabel>
-                  {filterOptions.sourceType.map((s) => (
-                    <DropdownMenuCheckboxItem
-                      key={s}
-                      checked={filters.sourceType.includes(s)}
-                      onCheckedChange={() => toggleFilter("sourceType", s)}
-                    >
-                      {s === "file" ? "文件上传" : s === "url" ? "URL 抓取" : s}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuGroup>
-              )}
-              {activeFilterCount > 0 && (
+    <TooltipProvider delay={150}>
+      <div className="flex h-full flex-col">
+        <div className="p-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索文档..."
+                value={keyword}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setKeyword(e.target.value)
+                }
+                className="h-8 text-sm pl-9 pr-9"
+              />
+              {keyword && (
                 <button
-                  onClick={clearFilters}
-                  className="w-full px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground text-left"
+                  onClick={() => setKeyword("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  清除筛选
+                  <X className="h-4 w-4" />
                 </button>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="h-8 px-2 rounded-md border bg-background hover:bg-accent relative">
+                <Filter className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <Badge
+                    variant="default"
+                    className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px]"
+                  >
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {filterOptions.status.length > 0 && (
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>状态</DropdownMenuLabel>
+                    {filterOptions.status.map((s) => (
+                      <DropdownMenuCheckboxItem
+                        key={s}
+                        checked={filters.status.includes(s)}
+                        onCheckedChange={() => toggleFilter("status", s)}
+                      >
+                        {s === "completed"
+                          ? "已完成"
+                          : s === "processing"
+                            ? "处理中"
+                            : s === "failed"
+                              ? "失败"
+                              : s}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuGroup>
+                )}
+                {filterOptions.status.length > 0 &&
+                  (filterOptions.docType.length > 0 ||
+                    filterOptions.sourceType.length > 0) && (
+                    <DropdownMenuSeparator />
+                  )}
+                {filterOptions.docType.length > 0 && (
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>文档类型</DropdownMenuLabel>
+                    {filterOptions.docType.map((t) => (
+                      <DropdownMenuCheckboxItem
+                        key={t}
+                        checked={filters.docType.includes(t)}
+                        onCheckedChange={() => toggleFilter("docType", t)}
+                      >
+                        {t}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuGroup>
+                )}
+                {filterOptions.docType.length > 0 &&
+                  filterOptions.sourceType.length > 0 && (
+                    <DropdownMenuSeparator />
+                  )}
+                {filterOptions.sourceType.length > 0 && (
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>来源</DropdownMenuLabel>
+                    {filterOptions.sourceType.map((s) => (
+                      <DropdownMenuCheckboxItem
+                        key={s}
+                        checked={filters.sourceType.includes(s)}
+                        onCheckedChange={() => toggleFilter("sourceType", s)}
+                      >
+                        {s === "file" ? "文件上传" : s === "url" ? "URL 抓取" : s}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuGroup>
+                )}
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="w-full px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground text-left"
+                  >
+                    清除筛选
+                  </button>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+        <Separator />
+        <ScrollArea className="flex-1 min-h-0 px-3 py-2">
+          {isLoading ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              加载中...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              暂无文档
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((doc: DocumentRecord) => (
+                <DocCard
+                  key={doc.id}
+                  doc={doc}
+                  selected={selectedId === doc.id}
+                  onSelect={() => onSelectDoc(doc.id, doc.filename)}
+                  onDelete={() => handleDelete(doc)}
+                  onReindex={() => handleReindex(doc)}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+        <Separator />
+        <div className="p-3">
+          <UploadZone
+            activeModelId={activeModelId}
+            activeModelLabel={activeModelLabel}
+          />
+        </div>
+
       </div>
-      <Separator />
-      <ScrollArea className="flex-1 min-h-0 px-3 py-2">
-        {isLoading ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            加载中...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            暂无文档
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((doc: DocumentRecord) => (
-              <DocCard
-                key={doc.id}
-                doc={doc}
-                selected={selectedId === doc.id}
-                onSelect={() => onSelectDoc(doc.id, doc.filename)}
-                onDelete={() => handleDelete(doc)}
-                onReindex={() => handleReindex(doc)}
-              />
-            ))}
-          </div>
-        )}
-      </ScrollArea>
-      <Separator />
-      <div className="p-3">
-        <UploadZone />
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }
