@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil, X, Check, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { useDocument, useUpdateDocument } from "@/hooks/use-api";
 import { ReExtractPanel } from "@/components/re-extract-panel";
 import { FieldJsonView } from "@/components/field-json-view";
@@ -26,46 +26,12 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
   const { data: doc, isLoading } = useDocument(docId);
   const updateDoc = useUpdateDocument(docId ?? 0);
 
-  // idle | editing | reextracting  三种互斥的 JSON 面板模式
-  const [jsonMode, setJsonMode] = useState<"idle" | "editing" | "reextracting">("idle");
-  const [editText, setEditText] = useState("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  // idle | reextracting  两种互斥的 JSON 面板模式（行级编辑由 FieldInlineEditor 管理）
+  const [jsonMode, setJsonMode] = useState<"idle" | "reextracting">("idle");
 
   useEffect(() => {
     setJsonMode("idle");
-    setJsonError(null);
   }, [docId]);
-
-  const handleEdit = useCallback(() => {
-    setEditText(doc?.extracted_data ? JSON.stringify(doc.extracted_data, null, 2) : "{}");
-    setJsonError(null);
-    setJsonMode("editing");
-  }, [doc]);
-
-  const handleTextChange = (value: string) => {
-    setEditText(value);
-    try {
-      JSON.parse(value);
-      setJsonError(null);
-    } catch (e) {
-      setJsonError((e as Error).message);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const parsed = JSON.parse(editText);
-      await updateDoc.mutateAsync({ extracted_data: parsed });
-      toast.success("保存成功");
-      setJsonMode("idle");
-    } catch (e) {
-      if (e instanceof SyntaxError) {
-        setJsonError(e.message);
-      } else {
-        toast.error("保存失败");
-      }
-    }
-  };
 
   /** ReExtractPanel 全量重提取回调：应用新结果并持久化 */
   const handleReExtractApply = async (newData: Record<string, unknown>) => {
@@ -73,16 +39,12 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
     setJsonMode("idle");
   };
 
-  /** 行级追问单字段应用回调：merge 单字段后持久化 */
+  /** 行级编辑/追问单字段应用回调：merge 单字段后持久化 */
   const handleFieldApply = async (fieldKey: string, newValue: unknown) => {
     const current = (doc?.extracted_data ?? {}) as Record<string, unknown>;
     const merged = { ...current, [fieldKey]: newValue };
-    try {
-      await updateDoc.mutateAsync({ extracted_data: merged });
-      toast.success(`字段「${fieldKey}」已更新`);
-    } catch {
-      toast.error("保存失败");
-    }
+    await updateDoc.mutateAsync({ extracted_data: merged });
+    toast.success(`字段「${fieldKey}」已更新`);
   };
 
   if (!docId) return null;
@@ -161,55 +123,7 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
         <TabsContent value="json" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
           <ScrollArea className="h-full px-5 py-4">
 
-            {/* 编辑模式 */}
-            {jsonMode === "editing" && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">编辑数据</span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8"
-                      onClick={() => setJsonMode("idle")}
-                      disabled={updateDoc.isPending}
-                    >
-                      <X className="mr-1.5 h-3.5 w-3.5" />
-                      取消
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-8"
-                      onClick={handleSave}
-                      disabled={!!jsonError || updateDoc.isPending}
-                    >
-                      {updateDoc.isPending ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Check className="mr-1.5 h-3.5 w-3.5" />
-                      )}
-                      保存
-                    </Button>
-                  </div>
-                </div>
-
-                <textarea
-                  className="min-h-[400px] w-full resize-y rounded-md border bg-muted/50 p-4 font-mono text-sm leading-relaxed outline-none transition-colors focus:border-primary focus:bg-background"
-                  value={editText}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  spellCheck={false}
-                />
-
-                {jsonError && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    {jsonError}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* 重新提取模式 */}
+            {/* 重新提取模式 */
             {jsonMode === "reextracting" && (
               <div className="flex flex-col gap-4">
                 <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed opacity-50">
@@ -234,19 +148,10 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
                     size="sm"
                     variant="secondary"
                     className="h-8"
-                    onClick={handleEdit}
-                  >
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    编辑
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-8"
                     onClick={() => setJsonMode("reextracting")}
                   >
                     <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                    重新提取
+                    全量重提取
                   </Button>
                 </div>
                 {doc.extracted_data && typeof doc.extracted_data === "object" && !Array.isArray(doc.extracted_data) ? (

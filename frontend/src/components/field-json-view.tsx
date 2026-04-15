@@ -4,7 +4,7 @@ interface FieldJsonViewProps {
   data: Record<string, unknown>;
   docId: number;
   /** 单字段确认新值后的回调，父组件负责合并和持久化 */
-  onFieldApply: (fieldKey: string, newValue: unknown) => void;
+  onFieldApply: (fieldKey: string, newValue: unknown) => Promise<void>;
 }
 
 /**
