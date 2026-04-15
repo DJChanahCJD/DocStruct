@@ -123,7 +123,7 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
         <TabsContent value="json" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
           <ScrollArea className="h-full px-5 py-4">
 
-            {/* 重新提取模式 */
+            {/* 重新提取模式 */}
             {jsonMode === "reextracting" && (
               <div className="flex flex-col gap-4">
                 <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed opacity-50">
