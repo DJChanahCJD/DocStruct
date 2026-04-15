@@ -27,27 +27,27 @@ _PREDEFINED_TEXT_MODELS: tuple[TextModelSpec, ...] = (
     TextModelSpec(
         id="qwen-doc-turbo",
         label="Qwen Doc Turbo",
-        description="当前默认的文档理解模型，适合作为通用基线。",
+        description="低成本文档理解专用，适合通用基线。",
     ),
     TextModelSpec(
         id="kimi-k2.5",
         label="Kimi K2.5",
-        description="适合长文本理解与格式化输出的通用文本模型。",
+        description="256K 长文本，适合多模态与格式化输出。",
     ),
     TextModelSpec(
         id="deepseek-v3.2",
         label="DeepSeek V3.2",
-        description="DeepSeek V3.2 模型",
+        description="高性价比推理模型，擅长代码与思考任务。",
     ),
     TextModelSpec(
         id="glm-4.7",
         label="GLM-4.7",
-        description="GLM-4.7 模型",
+        description="通用推理与 Agent 任务，平衡性能与成本。",
     ),
     TextModelSpec(
         id="MiniMax-M2.5",
         label="MiniMax-M2.5",
-        description="MiniMax-M2.5 模型",
+        description="200K 上下文，编程与多语言场景优选。",
     ),
 )
 

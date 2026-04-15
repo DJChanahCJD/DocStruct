@@ -126,24 +126,24 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
             {/* 重新提取模式 */}
             {jsonMode === "reextracting" && (
               <div className="flex flex-col gap-4">
-                <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed opacity-50">
-                  {doc.extracted_data
-                    ? JSON.stringify(doc.extracted_data, null, 2)
-                    : "暂无结构化数据"}
-                </pre>
                 <ReExtractPanel
                   docId={doc.id}
                   currentData={doc.extracted_data ?? {}}
                   onApply={handleReExtractApply}
                   onCancel={() => setJsonMode("idle")}
                 />
+                <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed opacity-50">
+                  {doc.extracted_data
+                    ? JSON.stringify(doc.extracted_data, null, 2)
+                    : "暂无结构化数据"}
+                </pre>
               </div>
             )}
 
             {/* 只读模式（idle） */}
             {jsonMode === "idle" && (
-              <div className="group relative">
-                <div className="absolute right-2 top-2 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 z-10">
+              <div className="space-y-3">
+                <div className="flex justify-end">
                   <Button
                     size="sm"
                     variant="secondary"
