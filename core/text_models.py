@@ -36,6 +36,16 @@ _PREDEFINED_TEXT_MODELS: tuple[TextModelSpec, ...] = (
         label="DeepSeek V3.2",
         description="DeepSeek V3.2 模型",
     ),
+    TextModelSpec(
+        id="glm-4.7",
+        label="GLM-4.7",
+        description="GLM-4.7 模型",
+    ),
+    TextModelSpec(
+        id="MiniMax-M2.5",
+        label="MiniMax-M2.5",
+        description="MiniMax-M2.5 模型",
+    ),
 )
 
 
