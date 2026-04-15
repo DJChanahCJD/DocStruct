@@ -7,10 +7,10 @@ from difflib import SequenceMatcher
 from typing import Optional
 
 import numpy as np
-from openai import OpenAI
 
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
+from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model
 from schemas.models import ChunkRecord, DocumentRecord
 
 try:
@@ -21,12 +21,8 @@ except Exception:  # pragma: no cover
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-API_KEY = settings.llm_api_key
-BASE_URL = settings.llm_base_url
-CHAT_MODEL = settings.llm_model
 EMBED_MODEL = settings.embedding_model
-
-raw_client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+raw_client = get_openai_client()
 
 VECTOR_DIR = settings.vector_dir
 INDEX_PATH = os.path.join(VECTOR_DIR, "faiss.index")
@@ -499,7 +495,14 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
     return result[:top_k]
 
 
-async def answer_question(question: str, doc_id: Optional[int] = None, top_k: int = 5) -> dict:
+async def answer_question(
+    question: str,
+    doc_id: Optional[int] = None,
+    top_k: int = 5,
+    llm_model: str | None = None,
+) -> dict[str, object]:
+    """基于检索片段生成答案，并按请求使用活动文本模型。"""
+    model_spec = resolve_text_model(llm_model)
     retrieved = await search_similar_chunks(question=question, doc_id=doc_id, top_k=top_k)
     if not retrieved:
         return {
@@ -521,15 +524,18 @@ async def answer_question(question: str, doc_id: Optional[int] = None, top_k: in
         f"问题: {question}\n\n上下文:\n{context}"
     )
 
+    logger.info("Answer question using text model: %s", model_spec.id)
     resp = raw_client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=[
-            {"role": "system", "content": "你是文档问答助手，必须基于检索片段作答，不可编造。"},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.1,
+        **build_chat_completion_kwargs(
+            llm_model=model_spec.id,
+            messages=[
+                {"role": "system", "content": "你是文档问答助手，必须基于检索片段作答，不可编造。"},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+        )
     )
-    answer = resp.choices[0].message.content.strip()
+    answer = (resp.choices[0].message.content or "").strip()
 
     citations = [
         {

@@ -48,7 +48,7 @@ export function DocPreviewPanel({
           <span className="mt-2 text-sm">加载中...</span>
         </div>
       ) : doc ? (
-        <Tabs defaultValue="raw" className="flex flex-col flex-1 overflow-hidden">
+        <Tabs defaultValue="json" className="flex flex-col flex-1 overflow-hidden">
           {/* Tab 切换栏 */}
           <div className="px-4 py-2 border-b shrink-0">
             <TabsList className="w-full">

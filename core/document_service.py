@@ -11,6 +11,7 @@ from core.config import get_settings
 from core.extractor import classify_document, extract_structure_with_meta
 from core.parser import ParserFactory
 from core.retrieval import build_retrieval_corpus
+from core.text_models import resolve_text_model
 from core.url_parser import parse_url_to_markdown
 from schemas.models import (
     ApiDocument,
@@ -45,10 +46,13 @@ TYPE_MODEL_MAP = {
 REQUIRED_DOCUMENT_COLUMNS: dict[str, str] = {
     "source_type": "TEXT DEFAULT 'file'",
     "source_url": "TEXT",
+    "llm_model": "TEXT",
 }
 
 
+
 def ensure_document_record_schema() -> None:
+    """补齐旧版本数据库缺失的文档记录字段。"""
     if not os.path.exists(settings.db_path):
         return
 
@@ -70,31 +74,49 @@ def ensure_document_record_schema() -> None:
         conn.close()
 
 
+
 def _build_message(doc_type: str, vector_warning: str | None) -> str:
+    """生成上传完成后的统一反馈文案。"""
     message = f"识别为: {doc_type}"
     if vector_warning:
         message += "（向量索引构建失败，可稍后重建）"
     return message
 
 
-async def _finalize_document(doc: DocumentRecord, markdown_text: str) -> UploadResponse:
+
+async def _finalize_document(
+    doc: DocumentRecord,
+    markdown_text: str,
+    *,
+    llm_model: str | None = None,
+) -> UploadResponse:
+    """完成文档分类、结构化提取和检索索引构建。"""
+    model_spec = resolve_text_model(llm_model)
+
     logger.info("Parsed content length: %s", len(markdown_text))
-    logger.info("Classifying document type...")
-    cls_result = classify_document(markdown_text)
+    logger.info("Classifying document type using %s...", model_spec.id)
+    cls_result = classify_document(markdown_text, llm_model=model_spec.id)
     logger.info("Classification result: %s", cls_result)
 
     target_model = TYPE_MODEL_MAP.get(cls_result.doc_type)
     if not target_model:
         logger.warning("Unknown document type: %s", cls_result.doc_type)
-        doc.update_from_dict({
-            "status": "completed",
-            "doc_type": cls_result.doc_type.value,
-            "parsed_content": markdown_text,
-            "error_message": "未知的文档类型",
-        })
+        doc.update_from_dict(
+            {
+                "status": "completed",
+                "doc_type": cls_result.doc_type.value,
+                "parsed_content": markdown_text,
+                "error_message": "未知的文档类型",
+                "llm_model": model_spec.id,
+            }
+        )
     else:
-        logger.info("Extracting structure using model: %s", target_model.__name__)
-        extracted, extraction_meta = extract_structure_with_meta(markdown_text, target_model)
+        logger.info("Extracting structure using %s with text model %s", target_model.__name__, model_spec.id)
+        extracted, extraction_meta = extract_structure_with_meta(
+            markdown_text,
+            target_model,
+            llm_model=model_spec.id,
+        )
         logger.info(
             "Extraction meta: mode=%s, chunk_count=%s, failed_chunks=%s, fallback_used=%s",
             extraction_meta.get("mode"),
@@ -102,12 +124,15 @@ async def _finalize_document(doc: DocumentRecord, markdown_text: str) -> UploadR
             extraction_meta.get("failed_chunks"),
             extraction_meta.get("fallback_used"),
         )
-        doc.update_from_dict({
-            "status": "completed",
-            "doc_type": cls_result.doc_type.value,
-            "parsed_content": markdown_text,
-            "extracted_data": extracted.model_dump(),
-        })
+        doc.update_from_dict(
+            {
+                "status": "completed",
+                "doc_type": cls_result.doc_type.value,
+                "parsed_content": markdown_text,
+                "extracted_data": extracted.model_dump(),
+                "llm_model": model_spec.id,
+            }
+        )
 
     await doc.save()
 
@@ -130,7 +155,10 @@ async def _finalize_document(doc: DocumentRecord, markdown_text: str) -> UploadR
     )
 
 
-async def process_uploaded_file(file: UploadFile) -> UploadResponse:
+
+async def process_uploaded_file(file: UploadFile, llm_model: str | None = None) -> UploadResponse:
+    """处理文件上传，并按当前活动文本模型完成分类与抽取。"""
+    model_spec = resolve_text_model(llm_model)
     allowed_extensions = {".pdf", ".docx", ".md", ".txt"}
     file_ext = os.path.splitext(file.filename)[1].lower()
     if file_ext not in allowed_extensions:
@@ -147,19 +175,23 @@ async def process_uploaded_file(file: UploadFile) -> UploadResponse:
         source_type="file",
         source_url=None,
         status="processing",
+        llm_model=model_spec.id,
     )
 
     try:
         parser = ParserFactory.get_parser(file_path)
         markdown_text = await asyncio.to_thread(parser.parse, file_path)
-        return await _finalize_document(doc, markdown_text)
+        return await _finalize_document(doc, markdown_text, llm_model=model_spec.id)
     except Exception as exc:
         logger.error("Error processing document %s: %s", file.filename, exc, exc_info=True)
         await doc.update_from_dict({"status": "failed", "error_message": str(exc)}).save()
         raise HTTPException(500, f"处理失败: {exc}")
 
 
-async def process_url_document(url: str) -> UploadResponse:
+
+async def process_url_document(url: str, llm_model: str | None = None) -> UploadResponse:
+    """处理 URL 导入，并按当前活动文本模型完成分类与抽取。"""
+    model_spec = resolve_text_model(llm_model)
     logger.info("Start processing url: %s", url)
     try:
         title, markdown_text = await asyncio.to_thread(parse_url_to_markdown, url)
@@ -173,10 +205,11 @@ async def process_url_document(url: str) -> UploadResponse:
         source_type="url",
         source_url=url,
         status="processing",
+        llm_model=model_spec.id,
     )
 
     try:
-        return await _finalize_document(doc, markdown_text)
+        return await _finalize_document(doc, markdown_text, llm_model=model_spec.id)
     except Exception as exc:
         logger.error("Error processing url document %s: %s", url, exc, exc_info=True)
         await doc.update_from_dict({"status": "failed", "error_message": str(exc)}).save()

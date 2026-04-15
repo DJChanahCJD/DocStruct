@@ -52,6 +52,10 @@ LLM_MODEL=qwen-doc-turbo
 EMBEDDING_MODEL=text-embedding-v4
 ```
 
+> [!TIP]
+> 若你的环境已经统一使用阿里云百炼命名，也可以只配置 `DASHSCOPE_API_KEY`；代码会自动回退读取该变量。
+
+
 ### 3. 启动后端
 
 ```powershell
@@ -204,15 +208,17 @@ QA（向量召回 → LLM 生成答案 + 引用片段）
 
 ## 手动验证
 
-当前无自动化测试，以手动验证为主。推荐使用 `static/examples/` 中样例文档，至少覆盖：
+当前提供基础契约测试，同时仍推荐结合 `static/examples/` 做手动验证，至少覆盖：
 
-1. 上传文档后确认状态从 `processing` 转为 `completed` 或 `failed`
+1. 在顶栏切换不同文本模型后，上传新文档并确认状态从 `processing` 转为 `completed` 或 `failed`
 2. 检查 `parsed_content` 是否生成
 3. 检查 `extracted_data` 是否符合对应文类结构
-4. 执行重建索引，确认正常返回
-5. 对当前文档或全库发起问答，检查答案与引用片段
-6. 检查 `db/` 下 SQLite / 向量索引是否正常生成
-7. 对 URL 导入文档，检查 `source_type` 与 `source_url` 是否正确保存
+4. 检查新文档的 `llm_model` 是否保存为当前选择的模型
+5. 执行重建索引，确认正常返回
+6. 对当前文档或全库发起问答，检查答案、引用片段与模型切换是否生效
+7. 检查 `db/` 下 SQLite / 向量索引是否正常生成
+8. 对 URL 导入文档，检查 `source_type`、`source_url` 与 `llm_model` 是否正确保存
+
 
 ---
 

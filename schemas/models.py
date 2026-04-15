@@ -27,13 +27,15 @@ class DocumentRecord(models.Model):
     filename = fields.CharField(max_length=255, description="原始文件名")
     stored_path = fields.CharField(max_length=512, description="文件存储路径")
     upload_time = fields.DatetimeField(auto_now_add=True, description="上传时间")
-    doc_type = fields.CharField(max_length=50, default="unknown", description="文档类型") # 新增字段
+    doc_type = fields.CharField(max_length=50, default="unknown", description="文档类型")
     source_type = fields.CharField(max_length=20, default="file", description="来源类型: file/url")
     source_url = fields.CharField(max_length=1024, null=True, description="URL 来源地址")
+    llm_model = fields.CharField(max_length=100, null=True, description="处理该文档时使用的文本模型")
     parsed_content = fields.TextField(null=True, description="解析后的Markdown内容")
     extracted_data = fields.JSONField(null=True, description="LLM提取的结构化JSON数据")
     status = fields.CharField(max_length=20, default="pending", description="状态: pending/processing/completed/failed")
     error_message = fields.TextField(null=True, description="错误信息")
+
 
     class Meta:
         table = "document_records"
@@ -137,7 +139,8 @@ class TestPlanResource(BaseModel):
     """
     测试资源定义
     """
-    human_resources: Optional[List[dict]] = Field(None, description="人力资源列表")
+    human_resources: Optional[List[dict[str, object]]] = Field(None, description="人力资源列表")
+
     environment: Optional[List[str]] = Field(None, description="测试环境配置")
     tools: Optional[List[str]] = Field(None, description="测试工具列表")
 
@@ -261,23 +264,48 @@ class BugReportDocument(BaseModel):
 # --- API Response Models ---
 
 class UploadResponse(BaseModel):
+    """上传或 URL 导入后的统一响应。"""
+
     id: int
     filename: str
     status: str
     message: str
 
 
+class TextModelOption(BaseModel):
+    """前端可展示的文本模型选项。"""
+
+    id: str
+    label: str
+    description: str
+    is_default: bool = False
+
+
+class TextModelListResponse(BaseModel):
+    """文本模型列表接口响应。"""
+
+    models: List[TextModelOption] = Field(default_factory=list)
+
+
 class UrlUploadRequest(BaseModel):
+    """URL 导入请求。"""
+
     url: str = Field(..., min_length=1, description="待抓取的公开网页 URL")
+    llm_model: Optional[str] = Field(None, description="可选：本次处理使用的文本模型")
 
 
 class QaRequest(BaseModel):
+    """问答请求。"""
+
     question: str = Field(..., min_length=1, description="问题文本")
     doc_id: Optional[int] = Field(None, description="可选：限定文档ID")
     top_k: int = Field(5, ge=1, le=10, description="召回片段数")
+    llm_model: Optional[str] = Field(None, description="可选：本次问答使用的文本模型")
 
 
 class CitationItem(BaseModel):
+    """问答引用项。"""
+
     doc_id: int
     chunk_id: int
     score: float
@@ -286,5 +314,8 @@ class CitationItem(BaseModel):
 
 
 class QaResponse(BaseModel):
+    """问答响应。"""
+
     answer: str
     citations: List[CitationItem] = Field(default_factory=list)
+

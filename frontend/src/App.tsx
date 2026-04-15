@@ -28,6 +28,7 @@ function AppContent() {
   const [previewDocId, setPreviewDocId] = useState<number | null>(null);
   const [citationSnippet, setCitationSnippet] = useState<CitationItem | null>(null);
   const [showQaPanel, setShowQaPanel] = useState(false);
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [activeModelId, setActiveModelId] = useState("");
   const { data: textModelResponse, isLoading: isLoadingTextModels } = useTextModels();
 
@@ -86,7 +87,7 @@ function AppContent() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
+          <DropdownMenu open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>
             <DropdownMenuTrigger
               className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isLoadingTextModels || textModels.length === 0}
@@ -107,7 +108,10 @@ function AppContent() {
                 <DropdownMenuLabel>全局文本模型</DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={activeModelId} onValueChange={setActiveModelId}>
+              <DropdownMenuRadioGroup value={activeModelId} onValueChange={(value) => {
+                setActiveModelId(value);
+                setModelDropdownOpen(false);
+              }}>
                 {textModels.map((model) => (
                   <DropdownMenuRadioItem key={model.id} value={model.id} className="items-start py-2">
                     <div className="flex min-w-0 flex-col gap-0.5">

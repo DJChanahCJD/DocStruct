@@ -5,10 +5,12 @@ from functools import lru_cache
 from dotenv import load_dotenv
 
 
-load_dotenv()
+_ = load_dotenv()
+
 
 
 def _get_int(name: str, default: int) -> int:
+    """读取整数环境变量，解析失败时返回默认值。"""
     value = os.getenv(name)
     if value is None or value == "":
         return default
@@ -40,9 +42,10 @@ class RuntimeSettings:
 
 @lru_cache(maxsize=1)
 def get_settings() -> RuntimeSettings:
+    """读取运行时配置，并在进程内缓存结果。"""
     vector_dir = os.path.join("db", "vector")
     return RuntimeSettings(
-        llm_api_key=os.getenv("LLM_API_KEY"),
+        llm_api_key=os.getenv("LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY"),
         llm_base_url=os.getenv("LLM_BASE_URL"),
         llm_model=os.getenv("LLM_MODEL", "qwen2.5-7b-instruct-1m"),
         embedding_model=os.getenv("EMBEDDING_MODEL") or os.getenv("LLM_EMBED_MODEL") or "text-embedding-v4",
@@ -59,3 +62,4 @@ def get_settings() -> RuntimeSettings:
         embedding_batch_size=_get_int("EMBEDDING_BATCH_SIZE", 10),
         qa_top_k=_get_int("QA_TOP_K", 5),
     )
+
