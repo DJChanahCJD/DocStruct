@@ -100,3 +100,25 @@ class QaResponse(BaseModel):
 
     answer: str
     citations: List[CitationItem] = Field(default_factory=list)
+
+
+class ReExtractRequest(BaseModel):
+    """POST /documents/{id}/re-extract 请求体。"""
+
+    scope: Literal["full", "field"]
+    field_key: Optional[str] = Field(None, description="scope=field 时必填，指定要重提取的顶层字段名")
+    instruction: Optional[str] = Field(None, description="用户补充指示，追加到提取 prompt 末尾")
+
+    @model_validator(mode="after")
+    def _field_key_required_for_field_scope(self) -> "ReExtractRequest":
+        if self.scope == "field" and not self.field_key:
+            raise ValueError("scope=field 时 field_key 不能为空")
+        return self
+
+
+class ReExtractResponse(BaseModel):
+    """POST /documents/{id}/re-extract 响应体，不持久化，由前端决定是否保存。"""
+
+    result: dict[str, Any]
+    scope: Literal["full", "field"]
+    field_key: Optional[str] = None

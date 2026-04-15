@@ -211,3 +211,67 @@ def extract_structure_with_meta(
         logger.error("Extraction failed after fallback: %s", exc, exc_info=True)
         raise RuntimeError(f"LLM Extraction failed: {str(exc)}")
 
+
+def re_extract_with_instruction(
+    parsed_content: str,
+    response_model: type[BaseModel],
+    scope: str,
+    field_key: str | None = None,
+    instruction: str | None = None,
+    llm_model: str | None = None,
+) -> dict[str, object]:
+    """人在环中的重新提取入口。
+
+    - scope='full'：在原 system prompt 末尾追加 instruction，复用完整提取流程。
+    - scope='field'：构造轻量 prompt 仅提取目标字段，返回 {field_key: value}。
+
+    两个分支均不写库，结果直接返回给调用方。
+    """
+    if scope == "full":
+        # 在 system prompt 中追加补充指示，其余复用完整提取流程
+        extra = f"\n\n# 用户补充指示\n{instruction}" if instruction else ""
+        prompt = _render_prompt(
+            EXTRACT_PROMPT_TEMPLATE,
+            content=parsed_content[: settings.extraction_single_max_chars],
+            schema=response_model.model_json_schema(),
+            json_instruction=JSON_FORMAT_INSTRUCTION + extra,
+        )
+        system_msg = "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"
+        response_text = _create_text_completion(
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+            llm_model=llm_model,
+        )
+        logger.info("--- Raw LLM Response (re-extract full) ---\n%s\n---", response_text)
+        data = clean_and_parse_json(response_text)
+        # 用 response_model 验证，确保结构合法，再返回 dict
+        validated = response_model.model_validate(normalize_extracted_data(data))
+        return validated.model_dump()
+
+    # scope == "field"
+    instruction_part = f"\n{instruction}" if instruction else ""
+    field_prompt = (
+        f"你是文档结构提取助手。\n"
+        f"从以下文档中提取字段「{field_key}」的内容，"
+        f'以 JSON 格式返回：{{"{field_key}": ...}}\n'
+        f"{instruction_part}\n\n"
+        f"{JSON_FORMAT_INSTRUCTION}\n\n"
+        f"文档内容：\n{parsed_content[: settings.extraction_single_max_chars]}"
+    )
+    response_text = _create_text_completion(
+        messages=[
+            {"role": "system", "content": "你是一个严谨的文档提取专家，只输出 JSON 数据。"},
+            {"role": "user", "content": field_prompt},
+        ],
+        temperature=0.0,
+        llm_model=llm_model,
+    )
+    logger.info("--- Raw LLM Response (re-extract field=%s) ---\n%s\n---", field_key, response_text)
+    data = clean_and_parse_json(response_text)
+    if field_key not in data:
+        raise ValueError(f"LLM 未返回字段 '{field_key}'，实际返回 keys: {list(data.keys())}")
+    return {field_key: data[field_key]}
+

@@ -6,15 +6,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
-from core.document_service import ensure_document_record_schema, process_uploaded_file, process_url_document
+from core.document_service import TYPE_MODEL_MAP, ensure_document_record_schema, process_uploaded_file, process_url_document
+from core.extractor import re_extract_with_instruction
 from core.retrieval import answer_question, build_retrieval_corpus
 from core.text_models import list_text_models
-from schemas.models import DocumentRecord
+from schemas.models import DocType, DocumentRecord
 from schemas.dto import (
     DocumentRecordDTO,
     DocumentUpdateRequest,
     QaRequest,
     QaResponse,
+    ReExtractRequest,
+    ReExtractResponse,
     TextModelListResponse,
     TextModelOption,
     UploadResponse,
@@ -137,6 +140,37 @@ async def qa(request: QaRequest):
     except Exception as exc:
         logger.error("QA failed: %s", exc, exc_info=True)
         raise HTTPException(500, f"问答失败: {str(exc)}") from exc
+
+
+@app.post("/api/documents/{doc_id}/re-extract", response_model=ReExtractResponse)
+async def re_extract_document(doc_id: int, body: ReExtractRequest):
+    """对已有文档发起重新提取，结果仅返回不持久化，由前端确认后调用 PATCH 保存。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    if not doc.parsed_content:
+        raise HTTPException(400, "文档尚无原文内容，无法重新提取")
+
+    doc_type = DocType(doc.doc_type) if doc.doc_type in DocType._value2member_map_ else None
+    response_model = TYPE_MODEL_MAP.get(doc_type) if doc_type else None
+    if response_model is None:
+        raise HTTPException(400, f"不支持的文档类型 '{doc.doc_type}'，无法重新提取")
+
+    try:
+        result = re_extract_with_instruction(
+            parsed_content=doc.parsed_content,
+            response_model=response_model,
+            scope=body.scope,
+            field_key=body.field_key,
+            instruction=body.instruction,
+            llm_model=doc.llm_model,
+        )
+        return ReExtractResponse(result=result, scope=body.scope, field_key=body.field_key)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        logger.error("Re-extract failed for doc %s: %s", doc_id, exc, exc_info=True)
+        raise HTTPException(500, f"重新提取失败: {str(exc)}") from exc
 
 
 @app.post("/api/upload/url", response_model=UploadResponse)
