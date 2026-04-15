@@ -34,8 +34,7 @@ _PREDEFINED_TEXT_MODELS: tuple[TextModelSpec, ...] = (
     TextModelSpec(
         id="deepseek-v3.2",
         label="DeepSeek V3.2",
-        description="深度思考模型",
-        extra_body={"enable_thinking": True},
+        description="DeepSeek V3.2 模型",
     ),
 )
 
