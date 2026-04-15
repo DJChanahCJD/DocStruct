@@ -7,8 +7,10 @@ re_extract_with_instruction 单元测试。
 - field 模式：正常提取，返回目标字段
 - field 模式：LLM 未返回目标字段 → ValueError
 - full 模式：LLM 返回非法 JSON → 抛出异常
+- field 模式：prompt 包含字段 Schema hint（含枚举约束）
 """
 import unittest
+from typing import Literal
 from unittest.mock import MagicMock, patch
 
 from pydantic import BaseModel
@@ -21,6 +23,12 @@ from core.extractor import re_extract_with_instruction
 class _FakeDoc(BaseModel):
     title: str = ""
     requirements: list[str] = []
+
+
+class _DocWithEnum(BaseModel):
+    """带枚举约束的模型，用于验证 schema hint 注入。"""
+    title: str = ""
+    status: Literal["draft", "approved", "rejected"] = "draft"
 
 
 # ── 测试类 ────────────────────────────────────────────────────────────────────
@@ -131,6 +139,40 @@ class ReExtractWithInstructionTests(unittest.TestCase):
                 )
 
         self.assertIn("requirements", str(ctx.exception))
+
+    def test_field_scope_schema_hint_injected_in_prompt(self) -> None:
+        """field 模式的 prompt 中应包含目标字段的 Schema 约束描述。"""
+        fake_llm_output = '{"status": "approved"}'
+
+        with patch("core.extractor._create_text_completion", return_value=fake_llm_output) as mock_llm:
+            re_extract_with_instruction(
+                parsed_content="# Doc",
+                response_model=_DocWithEnum,
+                scope="field",
+                field_key="status",
+            )
+
+        call_messages = mock_llm.call_args.kwargs["messages"]
+        user_content = call_messages[1]["content"]
+        # prompt 中应包含 schema hint 标记
+        self.assertIn("字段 Schema 约束", user_content)
+        # 枚举值应出现在 prompt 中
+        self.assertIn("approved", user_content)
+        self.assertIn("draft", user_content)
+
+    def test_field_scope_no_schema_hint_for_unknown_key(self) -> None:
+        """field_key 不在 model 属性中时，不注入 schema hint（不报错）。"""
+        fake_llm_output = '{"nonexistent": "value"}'
+
+        with patch("core.extractor._create_text_completion", return_value=fake_llm_output):
+            with self.assertRaises(ValueError):
+                # 会因 field_key 不在返回中而抛 ValueError，但不应因 schema hint 逻辑崩溃
+                re_extract_with_instruction(
+                    parsed_content="# Doc",
+                    response_model=_DocWithEnum,
+                    scope="field",
+                    field_key="unknown_field",
+                )
 
     # ── 异常处理 ──────────────────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Pencil, X, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { useDocument, useUpdateDocument } from "@/hooks/use-api";
 import { ReExtractPanel } from "@/components/re-extract-panel";
+import { FieldJsonView } from "@/components/field-json-view";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
@@ -66,10 +67,22 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
     }
   };
 
-  /** ReExtractPanel 回调：应用新结果并持久化 */
+  /** ReExtractPanel 全量重提取回调：应用新结果并持久化 */
   const handleReExtractApply = async (newData: Record<string, unknown>) => {
     await updateDoc.mutateAsync({ extracted_data: newData });
     setJsonMode("idle");
+  };
+
+  /** 行级追问单字段应用回调：merge 单字段后持久化 */
+  const handleFieldApply = async (fieldKey: string, newValue: unknown) => {
+    const current = (doc?.extracted_data ?? {}) as Record<string, unknown>;
+    const merged = { ...current, [fieldKey]: newValue };
+    try {
+      await updateDoc.mutateAsync({ extracted_data: merged });
+      toast.success(`字段「${fieldKey}」已更新`);
+    } catch {
+      toast.error("保存失败");
+    }
   };
 
   if (!docId) return null;
@@ -216,7 +229,7 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
             {/* 只读模式（idle） */}
             {jsonMode === "idle" && (
               <div className="group relative">
-                <div className="absolute right-2 top-2 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute right-2 top-2 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 z-10">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -236,11 +249,21 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
                     重新提取
                   </Button>
                 </div>
-                <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed">
-                  {doc.extracted_data
-                    ? JSON.stringify(doc.extracted_data, null, 2)
-                    : "暂无结构化数据"}
-                </pre>
+                {doc.extracted_data && typeof doc.extracted_data === "object" && !Array.isArray(doc.extracted_data) ? (
+                  <div className="rounded-md bg-muted/50 p-4">
+                    <FieldJsonView
+                      data={doc.extracted_data as Record<string, unknown>}
+                      docId={doc.id}
+                      onFieldApply={handleFieldApply}
+                    />
+                  </div>
+                ) : (
+                  <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed">
+                    {doc.extracted_data
+                      ? JSON.stringify(doc.extracted_data, null, 2)
+                      : "暂无结构化数据"}
+                  </pre>
+                )}
               </div>
             )}
 

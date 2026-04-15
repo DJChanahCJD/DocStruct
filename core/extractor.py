@@ -253,11 +253,29 @@ def re_extract_with_instruction(
 
     # scope == "field"
     instruction_part = f"\n{instruction}" if instruction else ""
+
+    # 从完整 Schema 中提取目标字段的约束描述，注入 prompt 避免类型/枚举冲突
+    import json as _json
+
+    full_schema = response_model.model_json_schema()
+    properties = full_schema.get("properties", {})
+    field_schema_hint = ""
+    if field_key and field_key in properties:
+        hint_payload: dict = {field_key: properties[field_key]}
+        defs = full_schema.get("$defs", {})
+        if defs:
+            hint_payload["$defs"] = defs  # 保留 $ref 展开所需的嵌套定义
+        field_schema_hint = (
+            f"\n\n# 字段 Schema 约束（必须严格遵守类型与枚举）\n"
+            f"```json\n{_json.dumps(hint_payload, ensure_ascii=False, indent=2)}\n```"
+        )
+
     field_prompt = (
         f"你是文档结构提取助手。\n"
         f"从以下文档中提取字段「{field_key}」的内容，"
         f'以 JSON 格式返回：{{"{field_key}": ...}}\n'
-        f"{instruction_part}\n\n"
+        f"{instruction_part}"
+        f"{field_schema_hint}\n\n"
         f"{JSON_FORMAT_INSTRUCTION}\n\n"
         f"文档内容：\n{parsed_content[: settings.extraction_single_max_chars]}"
     )
