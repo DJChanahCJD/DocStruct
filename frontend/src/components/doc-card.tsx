@@ -141,6 +141,10 @@ export function DocCard({
           <DocMetaRow label="状态" value={getStatusLabel(doc.status)} />
           <DocMetaRow label="处理模型" value={doc.llm_model ?? "-"} />
           <DocMetaRow
+            label="上传时间"
+            value={new Date(doc.upload_time).toLocaleString("zh-CN")}
+          />
+          <DocMetaRow
             label="更新时间"
             value={new Date(doc.updated_at).toLocaleString("zh-CN")}
           />
