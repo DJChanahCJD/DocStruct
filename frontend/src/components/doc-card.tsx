@@ -96,7 +96,7 @@ export function DocCard({
               <span
                 className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${statusColor[doc.status] ?? statusColor.pending}`}
               >
-                {doc.status}
+                {getStatusLabel(doc.status)}
               </span>
             </div>
           </div>
@@ -140,6 +140,10 @@ export function DocCard({
           <DocMetaRow label="来源" value={getSourceTypeLabel(doc.source_type)} />
           <DocMetaRow label="状态" value={getStatusLabel(doc.status)} />
           <DocMetaRow label="处理模型" value={doc.llm_model ?? "-"} />
+          <DocMetaRow
+            label="更新时间"
+            value={new Date(doc.updated_at).toLocaleString("zh-CN")}
+          />
         </div>
       </TooltipContent>
 

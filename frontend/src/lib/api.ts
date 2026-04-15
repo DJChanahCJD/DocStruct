@@ -11,6 +11,7 @@ export interface DocumentRecord {
   filename: string;
   stored_path: string;
   upload_time: string;
+  updated_at: string;
   doc_type: string;
   source_type: string;
   source_url: string | null;
@@ -19,6 +20,10 @@ export interface DocumentRecord {
   extracted_data: Record<string, unknown> | null;
   status: string;
   error_message: string | null;
+}
+
+export interface UpdateDocumentRequest {
+  extracted_data: Record<string, unknown>;
 }
 
 export interface UploadResponse {
@@ -86,6 +91,14 @@ export async function getDocument(id: number): Promise<DocumentRecord> {
   return data;
 }
 
+export async function updateDocument(
+  id: number,
+  req: UpdateDocumentRequest,
+): Promise<DocumentRecord> {
+  const { data } = await api.patch<DocumentRecord>(`/documents/${id}`, req);
+  return data;
+}
+
 export async function deleteDocument(id: number): Promise<void> {
   await api.delete(`/documents/${id}`);
 }
@@ -113,4 +126,3 @@ export async function askQuestion(req: QaRequest): Promise<QaResponse> {
   const { data } = await api.post<QaResponse>("/qa", req);
   return data;
 }
-

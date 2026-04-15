@@ -9,7 +9,17 @@ from core.config import get_settings
 from core.document_service import ensure_document_record_schema, process_uploaded_file, process_url_document
 from core.retrieval import answer_question, build_retrieval_corpus
 from core.text_models import list_text_models
-from schemas.models import DocumentRecord, QaRequest, QaResponse, TextModelListResponse, TextModelOption, UploadResponse, UrlUploadRequest
+from schemas.models import DocumentRecord
+from schemas.dto import (
+    DocumentRecordDTO,
+    DocumentUpdateRequest,
+    QaRequest,
+    QaResponse,
+    TextModelListResponse,
+    TextModelOption,
+    UploadResponse,
+    UrlUploadRequest,
+)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +49,6 @@ async def get_text_models() -> TextModelListResponse:
     return TextModelListResponse(models=[TextModelOption.model_validate(item) for item in list_text_models()])
 
 
-
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_document(file: UploadFile = File(...), llm_model: str | None = Form(None)) -> UploadResponse:
     """处理文件上传，并透传当前活动文本模型。"""
@@ -49,21 +58,33 @@ async def upload_document(file: UploadFile = File(...), llm_model: str | None = 
         raise HTTPException(400, str(exc)) from exc
 
 
-@app.get("/api/documents")
+@app.get("/api/documents", response_model=list[DocumentRecordDTO])
 async def list_documents():
     """按时间倒序返回文档列表。"""
     ensure_document_record_schema()
-    return await DocumentRecord.all().order_by("-id")
+    docs = await DocumentRecord.all().order_by("-id")
+    return [DocumentRecordDTO.model_validate(doc) for doc in docs]
 
 
-@app.get("/api/documents/{doc_id}")
+@app.get("/api/documents/{doc_id}", response_model=DocumentRecordDTO)
 async def get_document(doc_id: int):
     """返回单篇文档详情。"""
     ensure_document_record_schema()
     doc = await DocumentRecord.get_or_none(id=doc_id)
     if not doc:
         raise HTTPException(404, "记录不存在")
-    return doc
+    return DocumentRecordDTO.model_validate(doc)
+
+
+@app.patch("/api/documents/{doc_id}", response_model=DocumentRecordDTO)
+async def update_document(doc_id: int, body: DocumentUpdateRequest):
+    """更新文档的结构化 JSON 数据（extracted_data）。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    doc.extracted_data = body.extracted_data
+    await doc.save(update_fields=["extracted_data", "updated_at"])
+    return DocumentRecordDTO.model_validate(doc)
 
 
 @app.delete("/api/documents/{doc_id}")
@@ -139,4 +160,3 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=False)
-

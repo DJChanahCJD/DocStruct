@@ -6,10 +6,12 @@ import {
   listDocuments,
   listTextModels,
   reindexDocument,
+  updateDocument,
   uploadFile,
   uploadUrl,
   type QaRequest,
   type QaResponse,
+  type UpdateDocumentRequest,
 } from "@/lib/api";
 
 /**
@@ -74,6 +76,20 @@ export function useUploadUrl() {
   return useMutation({
     mutationFn: uploadUrl,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }),
+  });
+}
+
+/**
+ * 更新文档的结构化 JSON 数据（extracted_data），并刷新列表和详情缓存。
+ */
+export function useUpdateDocument(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: UpdateDocumentRequest) => updateDocument(id, req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["document", id] });
+      qc.invalidateQueries({ queryKey: ["documents"] });
+    },
   });
 }
 
