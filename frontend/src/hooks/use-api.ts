@@ -5,12 +5,14 @@ import {
   getDocument,
   listDocuments,
   listTextModels,
+  reExtractDocument,
   reindexDocument,
   updateDocument,
   uploadFile,
   uploadUrl,
   type QaRequest,
   type QaResponse,
+  type ReExtractRequest,
   type UpdateDocumentRequest,
 } from "@/lib/api";
 
@@ -108,6 +110,15 @@ export function useReindex() {
 export function useAskQuestion() {
   return useMutation({
     mutationFn: (req: QaRequest) => askQuestion(req),
+  });
+}
+
+/**
+ * 对已有文档发起重新提取，结果不持久化，由调用方决定是否保存。
+ */
+export function useReExtract(docId: number) {
+  return useMutation({
+    mutationFn: (req: ReExtractRequest) => reExtractDocument(docId, req),
   });
 }
 

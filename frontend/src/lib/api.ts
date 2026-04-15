@@ -74,6 +74,18 @@ export interface QaResponse {
   citations: CitationItem[];
 }
 
+export interface ReExtractRequest {
+  scope: "full" | "field";
+  field_key?: string;
+  instruction?: string;
+}
+
+export interface ReExtractResponse {
+  result: Record<string, unknown>;
+  scope: "full" | "field";
+  field_key?: string | null;
+}
+
 // ============ API Functions ============
 
 export async function listDocuments(): Promise<DocumentRecord[]> {
@@ -124,5 +136,13 @@ export async function reindexDocument(id: number): Promise<void> {
 
 export async function askQuestion(req: QaRequest): Promise<QaResponse> {
   const { data } = await api.post<QaResponse>("/qa", req);
+  return data;
+}
+
+export async function reExtractDocument(
+  id: number,
+  req: ReExtractRequest,
+): Promise<ReExtractResponse> {
+  const { data } = await api.post<ReExtractResponse>(`/documents/${id}/re-extract`, req);
   return data;
 }
