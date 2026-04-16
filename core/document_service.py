@@ -13,7 +13,10 @@ from core.parser import ParserFactory
 from core.retrieval import build_retrieval_corpus
 from core.text_models import resolve_text_model
 from core.url_parser import parse_url_to_markdown
+import json
+
 from schemas.models import (
+    AdrDocument,
     ApiDocument,
     BugReportDocument,
     DesignDocument,
@@ -41,6 +44,7 @@ TYPE_MODEL_MAP = {
     DocType.TEST_REPORT: TestReportDocument,
     DocType.USER_MANUAL: UserManualDocument,
     DocType.BUG_REPORT: BugReportDocument,
+    DocType.ADR: AdrDocument,
 }
 
 REQUIRED_DOCUMENT_COLUMNS: dict[str, str] = {
@@ -48,6 +52,8 @@ REQUIRED_DOCUMENT_COLUMNS: dict[str, str] = {
     "source_url": "TEXT",
     "llm_model": "TEXT",
     "updated_at": "DATETIME",
+    "classification_result": "TEXT",
+    "schema_version": "TEXT",
 }
 
 
@@ -133,6 +139,15 @@ async def _finalize_document(
                 "parsed_content": markdown_text,
                 "extracted_data": extracted.model_dump(),
                 "llm_model": model_spec.id,
+                "classification_result": json.dumps(
+                    {
+                        "doc_type": cls_result.doc_type.value,
+                        "confidence": cls_result.confidence,
+                        "reasoning": cls_result.reasoning,
+                    },
+                    ensure_ascii=False,
+                ),
+                "schema_version": "v2",
             }
         )
 

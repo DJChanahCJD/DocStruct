@@ -34,7 +34,7 @@ def clean_and_parse_json(text: str) -> Dict[str, Any]:
         parsed = ast.literal_eval(text)
         if isinstance(parsed, dict):
             return parsed
-    except (ValueError, SyntaxError):
+    except (ValueError, SyntaxError, TypeError):
         pass
 
     # 4. 如果都失败了，抛出包含原始内容的异常，便于调试

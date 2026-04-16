@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
-from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
+from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION, SRS_EXTRACTION_HINTS
 from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model, CLASSIFY_MODEL_ID
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
 from schemas.models import DocClassification, DocType
@@ -51,15 +51,21 @@ def _extract_once(
     response_model: type[BaseModel],
     context_note: str | None = None,
     llm_model: str | None = None,
+    prompt_override: str | None = None,
 ) -> dict[str, object]:
 
-    """执行单次结构化提取并返回归一化后的 JSON 数据。"""
+    """执行单次结构化提取并返回归一化后的 JSON 数据。
+
+    prompt_override: 若提供，则用该模板替换默认 EXTRACT_PROMPT_TEMPLATE，
+    模板需包含 {content}、{schema}、{json_instruction} 占位符。
+    """
     prompt_content = content
     if context_note:
         prompt_content = f"[Context]\n{context_note}\n\n[Document Chunk]\n{content}"
 
+    template = prompt_override if prompt_override is not None else EXTRACT_PROMPT_TEMPLATE
     prompt = _render_prompt(
-        EXTRACT_PROMPT_TEMPLATE,
+        template,
         content=prompt_content,
         schema=response_model.model_json_schema(),
         json_instruction=JSON_FORMAT_INSTRUCTION,
@@ -121,9 +127,12 @@ def extract_structure(
     markdown_content: str,
     response_model: type[BaseModel],
     llm_model: str | None = None,
+    prompt_override: str | None = None,
 ) -> BaseModel:
     """使用活动文本模型从 Markdown 内容中提取结构化数据。"""
-    extracted, _ = extract_structure_with_meta(markdown_content, response_model, llm_model=llm_model)
+    extracted, _ = extract_structure_with_meta(
+        markdown_content, response_model, llm_model=llm_model, prompt_override=prompt_override
+    )
     return extracted
 
 
@@ -132,9 +141,13 @@ def extract_structure_with_meta(
     markdown_content: str,
     response_model: type[BaseModel],
     llm_model: str | None = None,
+    prompt_override: str | None = None,
 ) -> tuple[BaseModel, dict[str, object]]:
 
-    """按指定文本模型执行结构化提取，并返回提取元信息。"""
+    """按指定文本模型执行结构化提取，并返回提取元信息。
+
+    prompt_override: 若提供，则用该模板替换默认 EXTRACT_PROMPT_TEMPLATE。
+    """
     logger.info("--- Extracting structure for %s ---", response_model.__name__)
 
     threshold = settings.extraction_threshold
@@ -144,6 +157,7 @@ def extract_structure_with_meta(
                 markdown_content[: settings.extraction_single_max_chars],
                 response_model,
                 llm_model=llm_model,
+                prompt_override=prompt_override,
             )
             validated = response_model.model_validate(data)
             return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
@@ -162,6 +176,7 @@ def extract_structure_with_meta(
                 markdown_content[: settings.extraction_single_max_chars],
                 response_model,
                 llm_model=llm_model,
+                prompt_override=prompt_override,
             )
             validated = response_model.model_validate(data)
             return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
@@ -175,7 +190,13 @@ def extract_structure_with_meta(
     for chunk in chunks:
         context_note = f"heading_path={' > '.join(chunk.heading_path) if chunk.heading_path else '(no-heading)'}"
         try:
-            data = _extract_once(chunk.text, response_model, context_note=context_note, llm_model=llm_model)
+            data = _extract_once(
+                chunk.text,
+                response_model,
+                context_note=context_note,
+                llm_model=llm_model,
+                prompt_override=prompt_override,
+            )
             partial_results.append(data)
         except Exception as exc:
             failed_chunks += 1
@@ -199,6 +220,7 @@ def extract_structure_with_meta(
             markdown_content[: settings.extraction_single_max_chars],
             response_model,
             llm_model=llm_model,
+            prompt_override=prompt_override,
         )
         validated = response_model.model_validate(fallback_data)
         return validated, {

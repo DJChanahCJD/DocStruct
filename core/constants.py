@@ -21,13 +21,14 @@ test_case: Test case definitions
 test_report: Test execution report
 user_manual: User guide or manual
 bug_report: Bug report, issue ticket, defect report, incident report
+adr: Architecture Decision Record (design decisions, trade-off analysis, ADR log)
 unknown: None of the above
 
 {json_instruction}
 
 Return JSON:
 {{
-  "doc_type": "srs | api | design | test_plan | test_case | test_report | user_manual | bug_report | unknown",
+  "doc_type": "srs | api | design | test_plan | test_case | test_report | user_manual | bug_report | adr | unknown",
   "confidence": 0.0-1.0
 }}
 """

@@ -26,7 +26,7 @@ class PdfParser(BaseParser):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
         try:
-            return pymupdf4llm.to_markdown(file_path)
+            return pymupdf4llm.to_markdown(file_path, use_ocr=False)
         except Exception as e:
             raise RuntimeError(f"Failed to parse PDF: {str(e)}")
 
@@ -118,7 +118,7 @@ class ParserFactory:
         
         if ext == '.pdf':
             return PdfParser()
-        elif ext in ['.docx',]: # TODO: .doc 其实 python-docx 不支持
+        elif ext in ['.docx']: # python-docx 只支持 .docx, .doc 不支持
              return DocxParser()
         elif ext in ['.md', '.markdown', '.txt']:
             return PlainTextParser()

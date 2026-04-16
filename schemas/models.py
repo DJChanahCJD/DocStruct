@@ -21,7 +21,20 @@ class DocType(str, Enum):
     TEST_REPORT = "test_report"  # 测试报告
     USER_MANUAL = "user_manual"  # 用户手册
     BUG_REPORT = "bug_report"  # 缺陷报告
+    ADR = "adr"  # 架构决策记录
     UNKNOWN = "unknown"  # 未知类型
+
+
+class RequirementCategory(str, Enum):
+    """需求分类枚举（按软件工程语义分层）"""
+    BUSINESS = "business"          # 业务需求
+    USER_ROLE = "user_role"        # 用户角色需求
+    FUNCTIONAL = "functional"      # 功能需求
+    NON_FUNCTIONAL = "non_functional"  # 非功能需求（性能/安全/可靠性等）
+    INTERFACE = "interface"        # 接口需求
+    DATA = "data"                  # 数据需求
+    CONSTRAINT = "constraint"      # 约束条件
+    OTHER = "other"                # 其他
 
 # --- Tortoise ORM Models (Database) ---
 
@@ -90,6 +103,8 @@ class RequirementItem(BaseModel):
     id: str = Field(..., description="需求ID，如 REQ-001")
     description: str = Field(..., description="需求描述文本")
     priority: Literal["low", "medium", "high"] = Field(default="medium", description="优先级")
+    category: RequirementCategory = Field(default=RequirementCategory.OTHER, description="需求分类")
+    title: Optional[str] = Field(None, description="需求标题（简短摘要）")
 
 class SrsDocument(BaseModel):
     """
@@ -98,17 +113,23 @@ class SrsDocument(BaseModel):
     doc_type: Literal["srs"] = Field(default="srs", description="文档类型标识")
     title: str = Field(..., description="文档标题")
     version: Optional[str] = Field(None, description="版本号")
+    overview: Optional[str] = Field(None, description="文档概述")
     requirements: List[RequirementItem] = Field(..., description="提取的需求列表")
+    extras: dict = Field(default_factory=dict, description="其他重要但非核心内容")
 
 # 2. API Documentation
 class ApiEndpoint(BaseModel):
     """
-    API 接口定义
+    API 接口定义（字段对齐 OpenAPI 语义）
     """
     method: Literal["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"] = Field(..., description="HTTP 方法")
     path: str = Field(..., description="接口路径，如 /api/v1/users")
     summary: str = Field(..., description="接口简要说明")
     description: Optional[str] = Field(None, description="详细描述")
+    parameters: Optional[List[dict]] = Field(None, description="路径/查询/Header 参数列表")
+    request_body: Optional[dict] = Field(None, description="请求体 Schema")
+    responses: Optional[dict] = Field(None, description="响应码及 Schema 映射")
+    auth: Optional[str] = Field(None, description="鉴权方式，如 Bearer/API Key/None")
 
 class ApiDocument(BaseModel):
     """
@@ -246,7 +267,30 @@ class UserManualDocument(BaseModel):
     troubleshooting: List[TroubleshootingItem] = Field(default_factory=list, description="故障排除列表")
 
 
-# 6. Bug Report
+# 6. ADR (Architecture Decision Record)
+class AdrDecision(BaseModel):
+    """
+    单条架构决策记录
+    """
+    title: str = Field(..., description="决策标题")
+    status: Optional[Literal["proposed", "accepted", "deprecated", "superseded"]] = Field(None, description="决策状态")
+    context: Optional[str] = Field(None, description="决策背景与约束")
+    decision: str = Field(..., description="具体决策内容")
+    consequences: Optional[str] = Field(None, description="决策影响与后果")
+
+
+class AdrDocument(BaseModel):
+    """
+    架构决策记录文档 (ADR) 结构
+    """
+    doc_type: Literal["adr"] = Field(default="adr", description="文档类型标识")
+    title: str = Field(..., description="文档标题")
+    version: Optional[str] = Field(None, description="版本号")
+    decisions: List[AdrDecision] = Field(default_factory=list, description="架构决策条目列表")
+    extras: dict = Field(default_factory=dict, description="其他重要但非核心内容")
+
+
+# 7. Bug Report
 class BugReportDocument(BaseModel):
     """
     缺陷报告结构
