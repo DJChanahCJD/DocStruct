@@ -1,0 +1,751 @@
+{
+  "summary": {
+    "generated_at": "2026-04-16T23:17:54",
+    "prompt_version": "baseline-v1",
+    "model_name": "qwen-doc-turbo",
+    "embedding_model": "text-embedding-v4",
+    "sample_count": 8,
+    "classification_accuracy": 1.0,
+    "extraction_success_rate": 1.0,
+    "chunked_sample_rate": 0.0,
+    "avg_total_latency_ms": 7244.29,
+    "avg_total_latency_s": 7.244,
+    "avg_completeness_score": 0.937,
+    "extraction_model_source": "expected"
+  },
+  "results": [
+    {
+      "sample_id": "srs-md-001",
+      "source_type": "file",
+      "file_path": "static/examples/srs_example.md",
+      "expected_doc_type": "srs",
+      "predicted_doc_type": "srs",
+      "classification_correct": true,
+      "classification_confidence": 1.0,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "srs",
+      "parse_latency_ms": 0.18,
+      "classification_latency_ms": 1142.47,
+      "extraction_latency_ms": 2841.04,
+      "total_latency_ms": 3983.69,
+      "content_length": 455,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 0.9167,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "srs",
+        "title": "Software Requirements Specification (SRS) for Document System",
+        "version": null,
+        "overview": "This document describes the functional requirement and non-functional requirements for the system.",
+        "requirements": [
+          {
+            "id": "REQ-001",
+            "description": "The system shall allow users to upload PDF files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "PDF File Upload"
+          },
+          {
+            "id": "REQ-002",
+            "description": "The system shall extract text from the uploaded files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "Text Extraction from Files"
+          },
+          {
+            "id": "REQ-003",
+            "description": "User can see the upload button.",
+            "priority": "high",
+            "category": "functional",
+            "title": "Upload Button Visibility"
+          },
+          {
+            "id": "REQ-004",
+            "description": "User receives a success message after upload.",
+            "priority": "high",
+            "category": "functional",
+            "title": "Success Message Display"
+          }
+        ],
+        "extras": {}
+      },
+      "notes": "SRS Markdown 短文档"
+    },
+    {
+      "sample_id": "api-pdf-001",
+      "source_type": "file",
+      "file_path": "static/examples/api_example.pdf",
+      "expected_doc_type": "api",
+      "predicted_doc_type": "api",
+      "classification_correct": true,
+      "classification_confidence": 1.0,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "api",
+      "parse_latency_ms": 162.69,
+      "classification_latency_ms": 488.59,
+      "extraction_latency_ms": 2999.25,
+      "total_latency_ms": 3650.53,
+      "content_length": 300,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 0.7333,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "api",
+        "title": "API Documentation",
+        "version": "1.0",
+        "base_url": null,
+        "endpoints": [
+          {
+            "method": "GET",
+            "path": "/api/v1/documents",
+            "summary": "Retrieve a list of documents.",
+            "description": null,
+            "parameters": null,
+            "request_body": null,
+            "responses": {
+              "200": {
+                "description": "Success",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "auth": "Bearer"
+          },
+          {
+            "method": "POST",
+            "path": "/api/v1/upload",
+            "summary": "Upload a new document.",
+            "description": null,
+            "parameters": null,
+            "request_body": null,
+            "responses": {
+              "201": {
+                "description": "Document uploaded successfully",
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        },
+                        "document_id": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "message",
+                        "document_id"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "auth": null
+          }
+        ]
+      },
+      "notes": "API PDF 样例"
+    },
+    {
+      "sample_id": "design-md-001",
+      "source_type": "file",
+      "file_path": "static/examples/sdd_example.md",
+      "expected_doc_type": "design",
+      "predicted_doc_type": "design",
+      "classification_correct": true,
+      "classification_confidence": 0.99,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "design",
+      "parse_latency_ms": 0.55,
+      "classification_latency_ms": 514.58,
+      "extraction_latency_ms": 4575.35,
+      "total_latency_ms": 5090.48,
+      "content_length": 2204,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 1.0,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "design",
+        "title": "电商平台后端系统设计说明书 (SDD)",
+        "version": "2.3",
+        "architecture_summary": "本系统采用前后端分离的微服务架构。前端通过 Nginx 反向代理访问后端 API 网关（Spring Cloud Gateway）。后端服务划分为多个独立的微服务，包括用户服务、商品服务、订单服务、支付服务和库存服务。",
+        "modules": [
+          {
+            "name": "User Service",
+            "description": "负责用户账号的全生命周期管理及鉴权。",
+            "interfaces": [
+              "POST /api/v1/users/register",
+              "POST /api/v1/users/login",
+              "GET /api/v1/users/profile",
+              "PUT /api/v1/users/address"
+            ]
+          },
+          {
+            "name": "Order Service",
+            "description": "核心交易链路，处理订单状态流转。",
+            "interfaces": [
+              "POST /api/v1/orders/create",
+              "GET /api/v1/orders/{id}",
+              "POST /api/v1/orders/{id}/cancel"
+            ]
+          },
+          {
+            "name": "Product Service",
+            "description": "管理商品信息、类目及属性。",
+            "interfaces": [
+              "GET /api/v1/products/list",
+              "GET /api/v1/products/{id}"
+            ]
+          },
+          {
+            "name": "Payment Service",
+            "description": "对接第三方支付渠道。",
+            "interfaces": [
+              "POST /api/v1/pay/unified",
+              "POST /api/v1/pay/callback"
+            ]
+          }
+        ],
+        "database_design": [
+          {
+            "name": "t_user",
+            "description": "存储用户基础信息。",
+            "columns": [
+              "id",
+              "username",
+              "password_hash",
+              "email",
+              "phone",
+              "status",
+              "created_at"
+            ]
+          },
+          {
+            "name": "t_order",
+            "description": "存储订单概要信息。",
+            "columns": [
+              "id",
+              "user_id",
+              "total_amount",
+              "pay_amount",
+              "status",
+              "address_snapshot",
+              "created_at"
+            ]
+          },
+          {
+            "name": "t_order_item",
+            "description": "存储订单商品明细。",
+            "columns": [
+              "id",
+              "order_id",
+              "sku_id",
+              "sku_name",
+              "price",
+              "quantity"
+            ]
+          }
+        ]
+      },
+      "notes": "设计说明 Markdown 样例"
+    },
+    {
+      "sample_id": "test-report-docx-001",
+      "source_type": "file",
+      "file_path": "static/examples/test_report_example.docx",
+      "expected_doc_type": "test_report",
+      "predicted_doc_type": "test_report",
+      "classification_correct": true,
+      "classification_confidence": 0.95,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "test_report",
+      "parse_latency_ms": 19.67,
+      "classification_latency_ms": 507.4,
+      "extraction_latency_ms": 1421.18,
+      "total_latency_ms": 1948.25,
+      "content_length": 285,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 0.8462,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "test_report",
+        "title": "Test Report",
+        "summary": "This report summarizes the test results for the latest build.",
+        "total_tests": 2,
+        "passed_tests": 1,
+        "failed_tests": 1,
+        "test_cases": [
+          {
+            "id": "TC01",
+            "title": "Upload PDF",
+            "status": "pass",
+            "failure_reason": null
+          },
+          {
+            "id": "TC02",
+            "title": "Extract Text",
+            "status": "fail",
+            "failure_reason": null
+          }
+        ]
+      },
+      "notes": "测试报告 DOCX 样例"
+    },
+    {
+      "sample_id": "user-manual-md-001",
+      "source_type": "file",
+      "file_path": "static/examples/user_manual_example.md",
+      "expected_doc_type": "user_manual",
+      "predicted_doc_type": "user_manual",
+      "classification_correct": true,
+      "classification_confidence": 0.99,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "user_manual",
+      "parse_latency_ms": 0.65,
+      "classification_latency_ms": 526.03,
+      "extraction_latency_ms": 10935.09,
+      "total_latency_ms": 11461.77,
+      "content_length": 1836,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 1.0,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "user_manual",
+        "title": "企业级 CRM 客户关系管理系统用户手册",
+        "target_audience": "销售代表、销售经理、系统管理员",
+        "sections": [
+          {
+            "title": "文档介绍",
+            "content": "适用对象: 销售代表、销售经理、系统管理员\n版本: 1.5.0\n最后更新: 2023-11-15"
+          },
+          {
+            "title": "系统登录与主页",
+            "content": "访问系统: 请使用 Chrome 或 Firefox 浏览器访问 CRM 系统网址：`https://crm.example.com`。\n登录账号: 在登录页面输入您的企业邮箱和密码。点击“登录”按钮。如果是首次登录，系统将强制要求您修改初始密码。\n忘记密码: 点击登录框下方的“忘记密码？”链接，输入注册邮箱，系统将发送重置链接至您的邮箱，请按照邮件指引完成密码重置。"
+          },
+          {
+            "title": "客户管理模块",
+            "content": "新增客户 (Create Lead): 点击左侧导航栏的“客户管理” -> “新增客户”。填写客户基本信息：客户名称（必填）: 完整的公司名称。联系人（必填）: 主要对接人的姓名。联系电话（必填）: 手机或座机。行业: 选择客户所属行业。来源: 选择线索来源（如展会、官网、转介绍）。点击“保存”按钮。\n客户查重 (Duplicate Check): 在录入新客户前，建议使用顶部的搜索框输入客户名称或电话号码，检查系统中是否已存在该客户，避免重复录入导致的撞单。\n客户分配 (Assignment): 销售经理可以在“公海池”中选中待分配的客户，点击“分配”按钮，选择指定的销售代表进行跟进。"
+          },
+          {
+            "title": "销售机会追踪 (Opportunities)",
+            "content": "创建商机: 对于有明确意向的客户，可以将其转化为商机：进入客户详情页。点击“新建商机”按钮。填写预计成交金额、预计成交日期及当前阶段（如初步接触、方案演示、商务谈判）。\n推进销售阶段: 随着跟进的深入，您需要及时更新商机阶段：在商机列表中找到对应商机。点击“编辑”或拖动商机卡片至下一阶段（看板视图）。系统会自动计算销售漏斗转化率。\n赢单与输单: 赢单: 当客户签订合同时，将商机状态改为“赢单”，并上传合同附件。输单: 如果客户明确拒绝或选择了竞品，请将商机改为“输单”，并务必填写输单原因（如价格过高、功能不满足），以便后续分析。"
+          },
+          {
+            "title": "报表分析 (Analytics)",
+            "content": "销售漏斗分析: 点击“报表” -> “销售漏斗”，可以查看当前所有商机在各个阶段的分布情况，以及从线索到赢单的转化率。\n业绩统计: 销售经理可以查看团队成员的业绩排名，包括新增客户数、跟进次数、商机金额及回款金额。支持按周、月、季度筛选。"
+          },
+          {
+            "title": "常见问题排查 (Troubleshooting)",
+            "content": "Q1: 无法登录系统，提示“账号已锁定”\n问题描述: 连续输入错误密码超过 5 次，账号会被临时锁定。\n解决方案: 请等待 15 分钟后自动解锁，或者联系系统管理员手动解锁。\nQ2: 导出客户数据时出现乱码\n问题描述: 导出的 CSV 文件在 Excel 中打开显示为乱码。\n解决方案: 不要直接双击打开 CSV 文件。打开 Excel，选择“数据” -> “自文本/CSV”。在导入向导中，将“文件原始格式”设置为 **UTF-8**。点击“加载”。\nQ3: 页面加载缓慢或显示异常\n问题描述: 点击菜单无反应或页面排版错乱。\n解决方案: 尝试刷新页面 (F5)。清除浏览器缓存 (Ctrl+Shift+Delete)，选择清除“缓存的图片和文件”。检查网络连接是否正常。\nQ4: 收不到系统通知邮件\n问题描述: 重置密码或审批通知邮件未收到。\n解决方案: 检查垃圾邮件箱 (Spam)。确认个人设置中的邮箱地址是否正确。联系 IT 部门将 `noreply@crm.example.com` 添加到白名单。"
+          }
+        ],
+        "troubleshooting": [
+          {
+            "problem": "连续输入错误密码超过 5 次，账号会被临时锁定。",
+            "solution": "请等待 15 分钟后自动解锁，或者联系系统管理员手动解锁。"
+          },
+          {
+            "problem": "导出的 CSV 文件在 Excel 中打开显示为乱码。",
+            "solution": "不要直接双击打开 CSV 文件。打开 Excel，选择“数据” -> “自文本/CSV”。在导入向导中，将“文件原始格式”设置为 **UTF-8**。点击“加载”。"
+          },
+          {
+            "problem": "点击菜单无反应或页面排版错乱。",
+            "solution": "尝试刷新页面 (F5)。清除浏览器缓存 (Ctrl+Shift+Delete)，选择清除“缓存的图片和文件”。检查网络连接是否正常。"
+          },
+          {
+            "problem": "重置密码或审批通知邮件未收到。",
+            "solution": "检查垃圾邮件箱 (Spam)。确认个人设置中的邮箱地址是否正确。联系 IT 部门将 `noreply@crm.example.com` 添加到白名单。"
+          }
+        ]
+      },
+      "notes": "用户手册 Markdown 样例"
+    },
+    {
+      "sample_id": "test-plan-md-001",
+      "source_type": "file",
+      "file_path": "static/examples/test_plan_example.md",
+      "expected_doc_type": "test_plan",
+      "predicted_doc_type": "test_plan",
+      "classification_correct": true,
+      "classification_confidence": 1.0,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "test_plan",
+      "parse_latency_ms": 0.87,
+      "classification_latency_ms": 542.4,
+      "extraction_latency_ms": 10466.18,
+      "total_latency_ms": 11009.45,
+      "content_length": 2077,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 1.0,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "test_plan",
+        "title": "电商平台系统测试计划",
+        "scope": "本测试计划涵盖'易购'电商平台的核心功能模块，包括：用户管理模块（注册、登录、个人信息管理）、商品管理模块（商品展示、搜索、分类）、订单管理模块（购物车、下单、订单状态流转）、支付模块（支付接口、退款处理）、后台管理模块（商品上架、订单处理、数据统计）。不包含范围：第三方物流系统对接、移动端 APP 专项测试。",
+        "resources": {
+          "human_resources": [
+            {
+              "role": "测试负责人",
+              "人数": 1,
+              "职责": "整体测试规划、进度把控、风险管控"
+            },
+            {
+              "role": "功能测试工程师",
+              "人数": 3,
+              "职责": "功能测试用例设计、执行、缺陷跟踪"
+            },
+            {
+              "role": "自动化测试工程师",
+              "人数": 1,
+              "职责": "自动化脚本开发、回归测试执行"
+            },
+            {
+              "role": "性能测试工程师",
+              "人数": 1,
+              "职责": "性能测试方案设计、压测执行、瓶颈分析"
+            }
+          ],
+          "environment": [
+            "测试服务器: 8核16G内存，CentOS 7.9",
+            "数据库: MySQL 8.0 测试实例",
+            "缓存: Redis 6.0 集群",
+            "浏览器: Chrome 120+, Firefox 121+, Edge 120+",
+            "移动设备: iPhone 14 (iOS 17), 华为 Mate 60 (HarmonyOS 4)"
+          ],
+          "tools": [
+            "缺陷管理: Jira",
+            "用例管理: TestRail",
+            "自动化框架: pytest + Selenium + Requests",
+            "性能测试: JMeter 5.6",
+            "接口测试: Postman + Newman"
+          ]
+        },
+        "schedule": "| 阶段 | 起止时间 | 主要工作 | 交付物 |\n|------|----------|----------|--------|\n| 测试准备 | 2024-02-01 ~ 2024-02-07 | 环境搭建、测试数据准备、用例评审 | 测试环境就绪确认单 |\n| 第一轮测试 | 2024-02-08 ~ 2024-02-21 | 功能测试执行、缺陷提交 | 功能测试报告 V1 |\n| 缺陷修复 | 2024-02-22 ~ 2024-02-28 | 开发修复、测试验证 | 缺陷关闭报告 |\n| 第二轮测试 | 2024-03-01 ~ 2024-03-07 | 回归测试、交叉测试 | 功能测试报告 V2 |\n| 性能测试 | 2024-03-08 ~ 2024-03-14 | 压测执行、性能调优 | 性能测试报告 |\n| 验收测试 | 2024-03-15 ~ 2024-03-21 | UAT 支持、用户验收 | 验收测试报告 |\n| 测试总结 | 2024-03-22 ~ 2024-03-25 | 报告汇总、经验总结 | 测试总结报告 |",
+        "strategy": {
+          "functional_test_strategy": "黑盒测试: 基于需求文档设计测试用例，覆盖正常流程与异常流程\n等价类划分: 对输入数据进行有效/无效等价类划分\n边界值分析: 重点测试边界条件（如库存为0、价格为0.01等）\n场景法: 设计用户真实使用场景进行端到端测试",
+          "interface_test_strategy": "覆盖所有 API 接口的正向与反向测试\n验证参数校验（必填项、数据类型、长度限制）\n验证鉴权机制（Token 有效性、权限控制）\n验证异常处理（超时、服务降级、熔断场景）",
+          "performance_test_strategy": "负载测试: 逐步增加并发用户数，确定系统最大承载能力\n压力测试: 超过设计容量运行，验证系统稳定性与恢复能力\n并发测试: 模拟秒杀场景，验证库存扣减准确性\n稳定性测试: 7x24小时持续运行，检测内存泄漏等问题",
+          "compatibility_test_strategy": "浏览器兼容性：覆盖主流浏览器最新两个版本\n分辨率兼容性：1920x1080、1366x768、移动端适配\n操作系统兼容性：Windows 10/11、macOS、iOS、Android"
+        },
+        "deliverables": [
+          "测试计划（本文档）",
+          "测试用例: 覆盖全部功能点的详细测试用例集",
+          "缺陷报告: 包含缺陷描述、复现步骤、严重程度、修复状态",
+          "功能测试报告: 测试执行情况、通过率、遗留问题",
+          "性能测试报告: 响应时间、吞吐量、并发能力、资源占用",
+          "测试总结报告: 整体质量评估、风险评估、改进建议",
+          "自动化测试脚本: 核心业务流程的自动化测试代码"
+        ]
+      },
+      "notes": "测试计划 Markdown 样例"
+    },
+    {
+      "sample_id": "test-case-md-001",
+      "source_type": "file",
+      "file_path": "static/examples/test_case_example.md",
+      "expected_doc_type": "test_case",
+      "predicted_doc_type": "test_case",
+      "classification_correct": true,
+      "classification_confidence": 0.99,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "test_case",
+      "parse_latency_ms": 0.67,
+      "classification_latency_ms": 644.51,
+      "extraction_latency_ms": 16698.29,
+      "total_latency_ms": 17343.47,
+      "content_length": 3294,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 1.0,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "test_case",
+        "title": "电商平台功能测试用例集",
+        "test_cases": [
+          {
+            "id": "TC-USER-001",
+            "title": "验证用户使用有效手机号成功注册",
+            "preconditions": "1. 用户未注册过账号\n2. 测试环境可正常访问\n3. 短信验证码服务可用",
+            "steps": [
+              "打开注册页面",
+              "输入未注册的手机号（如：13800138001）",
+              "点击'获取验证码'按钮",
+              "等待接收短信验证码",
+              "输入正确的6位验证码",
+              "设置密码（8-20位，包含字母和数字）",
+              "勾选用户协议",
+              "点击'注册'按钮"
+            ],
+            "expected_result": "1. 页面成功跳转到注册成功提示页\n2. 系统自动发送欢迎短信\n3. 数据库中新增一条用户记录，状态为'已激活'\n4. 用户可使用该手机号和密码正常登录",
+            "priority": "P0"
+          },
+          {
+            "id": "TC-USER-002",
+            "title": "验证已注册用户通过手机号密码登录",
+            "preconditions": "1. 用户已注册且账号状态正常\n2. 已知正确的手机号和密码",
+            "steps": [
+              "打开登录页面",
+              "输入已注册的手机号",
+              "输入正确的密码",
+              "点击'登录'按钮"
+            ],
+            "expected_result": "1. 页面跳转到系统首页\n2. 页面右上角显示用户昵称\n3. 本地存储生成有效的登录 Token\n4. 记录登录日志（时间、IP地址）",
+            "priority": "P0"
+          },
+          {
+            "id": "TC-PROD-001",
+            "title": "验证通过关键词搜索商品返回正确结果",
+            "preconditions": "1. 系统中存在商品数据\n2. 存在商品名称为'iPhone 15 Pro'的商品",
+            "steps": [
+              "进入首页",
+              "在搜索框中输入'iPhone'",
+              "点击搜索按钮或按回车键"
+            ],
+            "expected_result": "1. 页面显示搜索结果列表\n2. 结果中包含'iPhone 15 Pro'等相关商品\n3. 搜索结果按相关度排序\n4. 页面显示搜索结果总数\n5. 支持分页展示（如结果超过20条）",
+            "priority": "P0"
+          },
+          {
+            "id": "TC-CART-001",
+            "title": "验证用户可将商品加入购物车",
+            "preconditions": "1. 用户已登录\n2. 目标商品库存充足（库存 > 10）",
+            "steps": [
+              "浏览商品列表，选择一个商品进入详情页",
+              "选择商品规格（如：颜色-黑色，内存-256GB）",
+              "设置购买数量为 2",
+              "点击'加入购物车'按钮"
+            ],
+            "expected_result": "1. 页面显示'已成功加入购物车'提示\n2. 购物车图标右上角数字增加 2\n3. 购物车页面显示该商品信息（名称、规格、数量、单价）\n4. 购物车小计金额计算正确",
+            "priority": "P0"
+          },
+          {
+            "id": "TC-ORDER-001",
+            "title": "验证用户可从购物车创建订单",
+            "preconditions": "1. 用户已登录\n2. 购物车中存在商品\n3. 用户已设置默认收货地址",
+            "steps": [
+              "进入购物车页面",
+              "勾选要购买的商品",
+              "点击'去结算'按钮",
+              "确认收货地址",
+              "选择配送方式（普通快递）",
+              "确认订单金额",
+              "点击'提交订单'按钮"
+            ],
+            "expected_result": "1. 页面跳转到订单确认页\n2. 显示订单号（格式：O20240120123456）\n3. 订单状态为'待支付'\n4. 库存相应扣减（预占库存）\n5. 购物车中对应商品被清除\n6. 订单详情页可查看完整订单信息",
+            "priority": "P0"
+          },
+          {
+            "id": "TC-PAY-001",
+            "title": "验证用户可完成订单支付",
+            "preconditions": "1. 存在待支付的订单\n2. 用户余额充足或已绑定支付方式",
+            "steps": [
+              "进入订单详情页或订单列表",
+              "点击'立即支付'按钮",
+              "选择支付方式（支付宝）",
+              "点击'确认支付'",
+              "在支付页面完成支付操作"
+            ],
+            "expected_result": "1. 页面显示'支付成功'\n2. 订单状态更新为'已支付'\n3. 支付记录生成，包含支付时间、支付单号\n4. 用户收到支付成功通知（站内信+短信）\n5. 商家端收到新订单提醒",
+            "priority": "P0"
+          },
+          {
+            "id": "TC-USER-003",
+            "title": "验证连续输入错误密码后账号锁定",
+            "preconditions": "1. 用户已注册且账号状态正常\n2. 已知正确的手机号",
+            "steps": [
+              "打开登录页面",
+              "输入正确的手机号",
+              "连续5次输入错误的密码",
+              "第6次输入正确的密码"
+            ],
+            "expected_result": "1. 前5次提示'密码错误，还剩X次机会'\n2. 第6次提示'账号已锁定，请15分钟后重试'\n3. 账号状态变为'临时锁定'\n4. 15分钟内无法通过正确密码登录\n5. 15分钟后自动解锁，可用正确密码登录",
+            "priority": "P1"
+          },
+          {
+            "id": "TC-PROD-002",
+            "title": "验证商品库存不足时的处理",
+            "preconditions": "1. 目标商品库存为 1",
+            "steps": [
+              "用户A将该商品加入购物车（数量1）",
+              "用户A提交订单（未支付）",
+              "用户B尝试购买该商品"
+            ],
+            "expected_result": "1. 用户B进入商品详情页时显示'库存紧张'\n2. 用户B尝试加入购物车时提示'库存不足'\n3. 用户A取消订单后，库存释放\n4. 库存释放后用户B可正常购买",
+            "priority": "P1"
+          },
+          {
+            "id": "TC-PROMO-001",
+            "title": "验证订单可使用符合条件的优惠券",
+            "preconditions": "1. 用户持有有效的优惠券（满100减20）\n2. 购物车商品总金额 >= 100元",
+            "steps": [
+              "进入购物车，选择商品（金额120元）",
+              "点击'去结算'",
+              "在优惠券区域点击'选择优惠券'",
+              "选择满100减20的优惠券",
+              "查看订单金额变化",
+              "提交订单"
+            ],
+            "expected_result": "1. 优惠券列表显示可用优惠券\n2. 选择优惠券后，订单金额显示为 100元（120-20）\n3. 优惠券状态变为'已使用'\n4. 订单详情显示使用的优惠券信息",
+            "priority": "P1"
+          },
+          {
+            "id": "TC-ORDER-002",
+            "title": "验证用户可取消待支付订单",
+            "preconditions": "1. 存在状态为'待支付'的订单",
+            "steps": [
+              "进入'我的订单'页面",
+              "找到待支付的订单",
+              "点击'取消订单'按钮",
+              "选择取消原因（'不想买了'）",
+              "点击'确认取消'"
+            ],
+            "expected_result": "1. 弹出确认对话框\n2. 取消成功后订单状态变为'已取消'\n3. 预占的库存被释放\n4. 使用的优惠券退回（状态变回'未使用'）\n5. 订单列表显示该订单为已取消状态",
+            "priority": "P1"
+          }
+        ]
+      },
+      "notes": "测试用例 Markdown 样例"
+    },
+    {
+      "sample_id": "bug-report-md-001",
+      "source_type": "file",
+      "file_path": "static/examples/bug_report_example.md",
+      "expected_doc_type": "bug_report",
+      "predicted_doc_type": "bug_report",
+      "classification_correct": true,
+      "classification_confidence": 0.99,
+      "classification_reasoning": null,
+      "prompt_version": "baseline-v1",
+      "model_name": "qwen-doc-turbo",
+      "extraction_model_source": "expected",
+      "extraction_target_doc_type": "bug_report",
+      "parse_latency_ms": 0.41,
+      "classification_latency_ms": 572.12,
+      "extraction_latency_ms": 2894.15,
+      "total_latency_ms": 3466.68,
+      "content_length": 510,
+      "used_chunking": false,
+      "extraction_success": true,
+      "completeness_score": 1.0,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "bug_report",
+        "title": "BUG-1423 商品详情页加入购物车失败",
+        "bug_id": "BUG-1423",
+        "summary": "登录用户在商品详情页点击“加入购物车”按钮后，页面没有成功加入购物车，控制台出现接口 500 错误。",
+        "status": "Open",
+        "severity": "High",
+        "priority": "P1",
+        "environment": "Windows 11 + Chrome 123，测试环境 v2.4.1",
+        "steps_to_reproduce": [
+          "使用测试账号登录商城系统。",
+          "打开商品 “机械键盘 K87” 的详情页。",
+          "选择规格 “黑色 / 青轴”。",
+          "点击 “加入购物车” 按钮。"
+        ],
+        "expected_result": "系统成功将商品加入购物车，并在页面右上角更新购物车数量。",
+        "actual_result": "页面弹出“操作失败，请稍后重试”，购物车数量未变化。控制台显示 `/api/cart/add` 返回 500。",
+        "root_cause": "后端在处理商品规格 ID 时没有兼容空库存快照，导致空对象取值报错。",
+        "workaround": "在商品列表页直接加入购物车可以暂时避开该问题。",
+        "fix_summary": "购物车服务已增加规格库存快照为空时的防御性判断，并补充接口异常日志。"
+      },
+      "notes": "缺陷报告 Markdown 样例"
+    }
+  ]
+}

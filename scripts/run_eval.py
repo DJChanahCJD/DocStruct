@@ -243,6 +243,7 @@ def _build_summary(results: list[dict[str, Any]], args: argparse.Namespace, sett
         "extraction_success_rate": round(extraction_success / total, 4) if total else 0.0,
         "chunked_sample_rate": round(chunked / total, 4) if total else 0.0,
         "avg_total_latency_ms": avg_latency_ms,
+        "avg_total_latency_s": round(avg_latency_ms / 1000, 3),
         "avg_completeness_score": avg_completeness,
         "extraction_model_source": args.extraction_model_source,
     }
@@ -251,7 +252,7 @@ def _build_summary(results: list[dict[str, Any]], args: argparse.Namespace, sett
 def _build_markdown_report(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
     rows = [
-        "| sample_id | expected | predicted | class_ok | extract_ok | completeness | total_ms | mode |",
+        "| sample_id | expected | predicted | class_ok | extract_ok | completeness | total_time | mode |",
         "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
 
@@ -259,11 +260,12 @@ def _build_markdown_report(payload: dict[str, Any]) -> str:
         mode = (item.get("extraction_meta") or {}).get("mode", "-")
         completeness = item["completeness_score"]
         completeness_text = "-" if completeness is None else str(completeness)
+        total_time_s = round(item['total_latency_ms'] / 1000, 3)
         rows.append(
             f"| {item['sample_id']} | {item['expected_doc_type']} | {item['predicted_doc_type']} | "
             f"{'Y' if item['classification_correct'] else 'N'} | "
             f"{'Y' if item['extraction_success'] else 'N'} | {completeness_text} | "
-            f"{item['total_latency_ms']} | {mode} |"
+            f"{total_time_s}s | {mode} |"
         )
 
     lines = [
@@ -275,7 +277,7 @@ def _build_markdown_report(payload: dict[str, Any]) -> str:
         f"- 样本数：`{summary['sample_count']}`",
         f"- 文类识别准确率：`{summary['classification_accuracy']}`",
         f"- 抽取成功率：`{summary['extraction_success_rate']}`",
-        f"- 平均耗时(ms)：`{summary['avg_total_latency_ms']}`",
+        f"- 平均耗时：`{summary['avg_total_latency_s']}s`",
         f"- 平均完整率：`{summary['avg_completeness_score']}`",
         "",
         "## 明细",
