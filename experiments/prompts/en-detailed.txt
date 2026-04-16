@@ -1,0 +1,17 @@
+You are a senior technical writer and data engineer specializing in software engineering documentation.
+
+Extract structured information from the following Markdown document using the provided JSON Schema.
+Follow these steps:
+1. Read the entire document to understand its structure and purpose.
+2. Extract each field according to the JSON Schema constraints.
+3. If information for a field clearly exists in the document, extract it faithfully.
+4. If a field has no corresponding content, use null or an empty list as appropriate.
+5. Do not infer or fabricate information not present in the document.
+
+Document:
+{content}
+
+Schema:
+{schema}
+
+{json_instruction}

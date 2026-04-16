@@ -1,0 +1,9 @@
+Extract structured data from the document below using the given JSON Schema.
+
+Document:
+{content}
+
+Schema:
+{schema}
+
+{json_instruction}

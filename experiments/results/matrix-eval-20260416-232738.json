@@ -1,0 +1,288 @@
+{
+  "summary": {
+    "generated_at": "2026-04-16T23:27:38",
+    "total_cells": 4,
+    "models_tested": [
+      "qwen-doc-turbo",
+      "deepseek-v3.2"
+    ],
+    "prompts_tested": [
+      "en-concise",
+      "en-detailed"
+    ],
+    "by_model": {
+      "qwen-doc-turbo": {
+        "sample_count": 2,
+        "extraction_success_rate": 1.0,
+        "avg_completeness_score": 0.9167,
+        "avg_total_latency_ms": 3289.28
+      },
+      "deepseek-v3.2": {
+        "sample_count": 2,
+        "extraction_success_rate": 1.0,
+        "avg_completeness_score": 0.9167,
+        "avg_total_latency_ms": 10822.81
+      }
+    },
+    "by_prompt": {
+      "en-concise": {
+        "sample_count": 2,
+        "extraction_success_rate": 1.0,
+        "avg_completeness_score": 0.9167,
+        "avg_total_latency_ms": 6999.89
+      },
+      "en-detailed": {
+        "sample_count": 2,
+        "extraction_success_rate": 1.0,
+        "avg_completeness_score": 0.9167,
+        "avg_total_latency_ms": 7112.21
+      }
+    }
+  },
+  "cells": [
+    {
+      "model_id": "qwen-doc-turbo",
+      "prompt_version": "en-concise",
+      "sample_id": "srs-md-001",
+      "expected_doc_type": "srs",
+      "predicted_doc_type": "srs",
+      "classification_correct": true,
+      "classification_confidence": 0.95,
+      "extraction_success": true,
+      "completeness_score": 0.9167,
+      "classification_latency_ms": 1080.05,
+      "extraction_latency_ms": 2421.47,
+      "total_latency_ms": 3501.52,
+      "used_chunking": false,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "srs",
+        "title": "Software Requirements Specification (SRS) for Document System",
+        "version": null,
+        "overview": "This document describes the functional requirement and non-functional requirements for the system.",
+        "requirements": [
+          {
+            "id": "REQ-001",
+            "description": "The system shall allow users to upload PDF files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "Upload PDF Files"
+          },
+          {
+            "id": "REQ-002",
+            "description": "The system shall extract text from the uploaded files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "Extract Text from Files"
+          },
+          {
+            "id": "REQ-003",
+            "description": "User can see the upload button.",
+            "priority": "high",
+            "category": "non_functional",
+            "title": "Visible Upload Button"
+          },
+          {
+            "id": "REQ-004",
+            "description": "User receives a success message after upload.",
+            "priority": "high",
+            "category": "non_functional",
+            "title": "Success Message After Upload"
+          }
+        ],
+        "extras": {}
+      },
+      "estimated_cost_cny": null,
+      "source_ref": "static/examples/srs_example.md"
+    },
+    {
+      "model_id": "qwen-doc-turbo",
+      "prompt_version": "en-detailed",
+      "sample_id": "srs-md-001",
+      "expected_doc_type": "srs",
+      "predicted_doc_type": "srs",
+      "classification_correct": true,
+      "classification_confidence": 1.0,
+      "extraction_success": true,
+      "completeness_score": 0.9167,
+      "classification_latency_ms": 507.32,
+      "extraction_latency_ms": 2569.72,
+      "total_latency_ms": 3077.04,
+      "used_chunking": false,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "srs",
+        "title": "Software Requirements Specification (SRS) for Document System",
+        "version": null,
+        "overview": "This document describes the functional requirement and non-functional requirements for the system.",
+        "requirements": [
+          {
+            "id": "REQ-001",
+            "description": "The system shall allow users to upload PDF files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "PDF File Upload"
+          },
+          {
+            "id": "REQ-002",
+            "description": "The system shall extract text from the uploaded files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "Text Extraction from Files"
+          },
+          {
+            "id": "REQ-003",
+            "description": "User can see the upload button.",
+            "priority": "medium",
+            "category": "non_functional",
+            "title": "Upload Button Visibility"
+          },
+          {
+            "id": "REQ-004",
+            "description": "User receives a success message after upload.",
+            "priority": "medium",
+            "category": "non_functional",
+            "title": "Success Message Display"
+          }
+        ],
+        "extras": {}
+      },
+      "estimated_cost_cny": null,
+      "source_ref": "static/examples/srs_example.md"
+    },
+    {
+      "model_id": "deepseek-v3.2",
+      "prompt_version": "en-concise",
+      "sample_id": "srs-md-001",
+      "expected_doc_type": "srs",
+      "predicted_doc_type": "srs",
+      "classification_correct": true,
+      "classification_confidence": 1.0,
+      "extraction_success": true,
+      "completeness_score": 0.9167,
+      "classification_latency_ms": 482.55,
+      "extraction_latency_ms": 10015.7,
+      "total_latency_ms": 10498.25,
+      "used_chunking": false,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "srs",
+        "title": "Software Requirements Specification (SRS) for Document System",
+        "version": null,
+        "overview": "This document specifies the functional and non-functional requirements for a Document System. The purpose is to define the system's capabilities for handling document upload and text extraction.",
+        "requirements": [
+          {
+            "id": "REQ-001",
+            "description": "The system shall allow users to upload PDF files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "System allows users to upload PDF files."
+          },
+          {
+            "id": "REQ-002",
+            "description": "The system shall extract text from the uploaded files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "System extracts text from uploaded files."
+          },
+          {
+            "id": "REQ-003",
+            "description": "User can see the upload button.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "Upload button is visible to the user."
+          },
+          {
+            "id": "REQ-004",
+            "description": "User receives a success message after upload.",
+            "priority": "medium",
+            "category": "non_functional",
+            "title": "User receives upload success message."
+          }
+        ],
+        "extras": {}
+      },
+      "estimated_cost_cny": null,
+      "source_ref": "static/examples/srs_example.md"
+    },
+    {
+      "model_id": "deepseek-v3.2",
+      "prompt_version": "en-detailed",
+      "sample_id": "srs-md-001",
+      "expected_doc_type": "srs",
+      "predicted_doc_type": "srs",
+      "classification_correct": true,
+      "classification_confidence": 1.0,
+      "extraction_success": true,
+      "completeness_score": 0.9167,
+      "classification_latency_ms": 531.8,
+      "extraction_latency_ms": 10615.58,
+      "total_latency_ms": 11147.38,
+      "used_chunking": false,
+      "extraction_meta": {
+        "mode": "single",
+        "chunk_count": 1,
+        "failed_chunks": 0,
+        "fallback_used": false
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "srs",
+        "title": "Software Requirements Specification (SRS) for Document System",
+        "version": null,
+        "overview": "This document describes the functional and non-functional requirements for a document system, including user upload, text extraction, and associated acceptance criteria.",
+        "requirements": [
+          {
+            "id": "REQ-001",
+            "description": "The system shall allow users to upload PDF files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "System allows PDF file upload by users"
+          },
+          {
+            "id": "REQ-002",
+            "description": "The system shall extract text from the uploaded files.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "System extracts text from uploaded files"
+          },
+          {
+            "id": "REQ-003",
+            "description": "User can see the upload button.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "User interface displays an upload button"
+          },
+          {
+            "id": "REQ-004",
+            "description": "User receives a success message after upload.",
+            "priority": "medium",
+            "category": "functional",
+            "title": "System provides upload success confirmation message"
+          }
+        ],
+        "extras": {}
+      },
+      "estimated_cost_cny": null,
+      "source_ref": "static/examples/srs_example.md"
+    }
+  ]
+}
