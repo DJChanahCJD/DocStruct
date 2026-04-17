@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, Copy, Download } from "lucide-react";
 import { useDocument, useUpdateDocument } from "@/hooks/use-api";
 import { ReExtractPanel } from "@/components/re-extract-panel";
 import { FieldJsonView } from "@/components/field-json-view";
@@ -45,6 +45,32 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
     const merged = { ...current, [fieldKey]: newValue };
     await updateDoc.mutateAsync({ extracted_data: merged });
     toast.success(`字段「${fieldKey}」已更新`);
+  };
+
+  /** 复制 JSON 到剪贴板 */
+  const handleCopyJson = async () => {
+    if (!doc?.extracted_data) return;
+    try {
+      const jsonString = JSON.stringify(doc.extracted_data, null, 2);
+      await navigator.clipboard.writeText(jsonString);
+      toast.success("JSON 已复制到剪贴板");
+    } catch (error) {
+      toast.error("复制失败，请手动复制");
+    }
+  };
+
+  /** 下载 JSON 文件 */
+  const handleDownloadJson = () => {
+    if (!doc?.extracted_data) return;
+    const jsonString = JSON.stringify(doc.extracted_data, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `doc-${doc.id}-extracted-data.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("JSON 已下载");
   };
 
   if (!docId) return null;
@@ -143,7 +169,27 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
             {/* 只读模式（idle） */}
             {jsonMode === "idle" && (
               <div className="space-y-3">
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8"
+                    onClick={handleCopyJson}
+                    disabled={!doc.extracted_data}
+                  >
+                    <Copy className="mr-1.5 h-3.5 w-3.5" />
+                    复制 JSON
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8"
+                    onClick={handleDownloadJson}
+                    disabled={!doc.extracted_data}
+                  >
+                    <Download className="mr-1.5 h-3.5 w-3.5" />
+                    下载 JSON
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"

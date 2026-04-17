@@ -138,6 +138,9 @@ export function DocCard({
           <DocMetaRow label="文件名" value={doc.filename} />
           <DocMetaRow label="类型" value={doc.doc_type ?? "-"} />
           <DocMetaRow label="来源" value={getSourceTypeLabel(doc.source_type)} />
+          {doc.source_type === "url" && doc.source_url && (
+            <DocMetaRow label="来源 URL" value={doc.source_url} />
+          )}
           <DocMetaRow label="状态" value={getStatusLabel(doc.status)} />
           <DocMetaRow label="处理模型" value={doc.llm_model ?? "-"} />
           <DocMetaRow
