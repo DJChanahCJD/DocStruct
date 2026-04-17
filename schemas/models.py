@@ -126,7 +126,7 @@ class ApiEndpoint(BaseModel):
     path: str = Field(..., description="接口路径，如 /api/v1/users")
     summary: str = Field(..., description="接口简要说明")
     description: Optional[str] = Field(None, description="详细描述")
-    parameters: Optional[List[dict]] = Field(None, description="路径/查询/Header 参数列表")
+    parameters: Optional[dict] = Field(None, description="参数对象，包含query/header/path等类型的参数列表")
     request_body: Optional[dict] = Field(None, description="请求体 Schema")
     responses: Optional[dict] = Field(None, description="响应码及 Schema 映射")
     auth: Optional[str] = Field(None, description="鉴权方式，如 Bearer/API Key/None")

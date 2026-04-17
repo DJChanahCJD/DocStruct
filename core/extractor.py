@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
-from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION, SRS_EXTRACTION_HINTS
+from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
 from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model, CLASSIFY_MODEL_ID
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
 from schemas.models import DocClassification, DocType

@@ -3,6 +3,8 @@ import os
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+import mimetypes
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
@@ -77,6 +79,33 @@ async def get_document(doc_id: int):
     if not doc:
         raise HTTPException(404, "记录不存在")
     return DocumentRecordDTO.model_validate(doc)
+
+
+@app.get("/api/documents/{doc_id}/file")
+async def download_document_file(doc_id: int):
+    """下载或重定向文档原始文件。
+
+    - source_type == 'file'：返回本地文件内容（FileResponse）
+    - source_type == 'url'：302 重定向到原始 URL
+    """
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+
+    if doc.source_type == "url":
+        return RedirectResponse(url=doc.stored_path, status_code=302)
+
+    if not doc.stored_path or not os.path.exists(doc.stored_path):
+        raise HTTPException(404, "文件不存在")
+
+    media_type, _ = mimetypes.guess_type(doc.stored_path)
+    media_type = media_type or "application/octet-stream"
+
+    return FileResponse(
+        path=doc.stored_path,
+        media_type=media_type,
+        filename=doc.filename,
+    )
 
 
 @app.patch("/api/documents/{doc_id}", response_model=DocumentRecordDTO)

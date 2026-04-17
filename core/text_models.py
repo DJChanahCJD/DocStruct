@@ -39,16 +39,17 @@ _PREDEFINED_TEXT_MODELS: tuple[TextModelSpec, ...] = (
         label="DeepSeek V3.2",
         description="高性价比推理模型，擅长代码与思考任务。",
     ),
-    TextModelSpec(
-        id="glm-4.7",
-        label="GLM-4.7",
-        description="通用推理与 Agent 任务，平衡性能与成本。",
-    ),
-    TextModelSpec(
-        id="MiniMax-M2.5",
-        label="MiniMax-M2.5",
-        description="200K 上下文，编程与多语言场景优选。",
-    ),
+    # 当前毕设项目只需要保留 3 个模型即可
+    # TextModelSpec(
+    #     id="glm-4.7",
+    #     label="GLM-4.7",
+    #     description="通用推理与 Agent 任务，平衡性能与成本。",
+    # ),
+    # TextModelSpec(
+    #     id="MiniMax-M2.5",
+    #     label="MiniMax-M2.5",
+    #     description="200K 上下文，编程与多语言场景优选。",
+    # ),
 )
 
 
