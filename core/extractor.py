@@ -252,27 +252,45 @@ def extract_structure_with_meta(
         raise RuntimeError(f"LLM Extraction failed: {str(exc)}")
 
 
-def re_extract_with_instruction(
+async def re_extract_with_instruction(
     parsed_content: str,
     response_model: type[BaseModel],
     scope: str,
+    doc_id: int | None = None,
     field_key: str | None = None,
     instruction: str | None = None,
     llm_model: str | None = None,
+    use_rag: bool = True,
 ) -> dict[str, object]:
     """人在环中的重新提取入口。
 
     - scope='full'：在原 system prompt 末尾追加 instruction，复用完整提取流程。
     - scope='field'：构造轻量 prompt 仅提取目标字段，返回 {field_key: value}。
+    - use_rag=True 且 doc_id 有效：RAG 检索相关片段作为 context，减少 token 消耗。
+    - use_rag=False 或 RAG 失败：回退到完整文档截断。
 
     两个分支均不写库，结果直接返回给调用方。
     """
+    # 尝试 RAG 检索相关片段
+    context_content = await _get_rag_context(
+        doc_id=doc_id,
+        scope=scope,
+        field_key=field_key,
+        instruction=instruction,
+        use_rag=use_rag,
+    )
+
+    # RAG 失败时回退到完整文档截断
+    if context_content is None:
+        context_content = parsed_content[: settings.extraction_single_max_chars]
+        logger.info("RAG context unavailable, fallback to full document truncation")
+
     if scope == "full":
         # 在 system prompt 中追加补充指示，其余复用完整提取流程
         extra = f"\n\n# 用户补充指示\n{instruction}" if instruction else ""
         prompt = _render_prompt(
             EXTRACT_PROMPT_TEMPLATE,
-            content=parsed_content[: settings.extraction_single_max_chars],
+            content=context_content,
             schema=_json_schema_text(response_model),
             json_instruction=JSON_FORMAT_INSTRUCTION + extra,
         )
@@ -317,7 +335,7 @@ def re_extract_with_instruction(
         f"{instruction_part}"
         f"{field_schema_hint}\n\n"
         f"{JSON_FORMAT_INSTRUCTION}\n\n"
-        f"文档内容：\n{parsed_content[: settings.extraction_single_max_chars]}"
+        f"文档内容：\n{context_content}"
     )
     response_text = _create_text_completion(
         messages=[
@@ -332,4 +350,49 @@ def re_extract_with_instruction(
     if field_key not in data:
         raise ValueError(f"LLM 未返回字段 '{field_key}'，实际返回 keys: {list(data.keys())}")
     return {field_key: data[field_key]}
+
+
+async def _get_rag_context(
+    doc_id: int | None,
+    scope: str,
+    field_key: str | None,
+    instruction: str | None,
+    use_rag: bool,
+) -> str | None:
+    """通过 RAG 检索相关片段，返回拼接后的上下文文本。
+
+    返回 None 表示 RAG 不可用，调用方应回退到完整文档截断。
+    """
+    if not use_rag or doc_id is None:
+        return None
+
+    # 构造检索 query
+    if scope == "field" and field_key:
+        query = f"{field_key} {instruction or ''}".strip()
+    else:
+        query = instruction or "文档概要"
+
+    try:
+        from core.retrieval import search_similar_chunks
+
+        chunks = await search_similar_chunks(question=query, doc_id=doc_id, top_k=5)
+        if not chunks:
+            logger.warning("RAG returned empty chunks for query: %s", query)
+            return None
+
+        # 按 order_index 排序并拼接
+        sorted_chunks = sorted(chunks, key=lambda x: x.get("order_index", 0))
+        context_parts = [chunk.get("content", "") for chunk in sorted_chunks]
+        context = "\n\n---\n\n".join(context_parts)
+
+        # 仍然超出阈值则截断
+        if len(context) > settings.extraction_single_max_chars:
+            context = context[: settings.extraction_single_max_chars]
+
+        logger.info("RAG context built: %d chars from %d chunks", len(context), len(chunks))
+        return context
+    except Exception as exc:
+        logger.warning("RAG context retrieval failed: %s", exc)
+        return None
+
 

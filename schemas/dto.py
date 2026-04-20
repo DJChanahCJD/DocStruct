@@ -108,6 +108,7 @@ class ReExtractRequest(BaseModel):
     scope: Literal["full", "field"]
     field_key: Optional[str] = Field(None, description="scope=field 时必填，指定要重提取的顶层字段名")
     instruction: Optional[str] = Field(None, description="用户补充指示，追加到提取 prompt 末尾")
+    use_rag: bool = Field(True, description="是否使用 RAG 检索相关片段，默认启用")
 
     @model_validator(mode="after")
     def _field_key_required_for_field_scope(self) -> "ReExtractRequest":

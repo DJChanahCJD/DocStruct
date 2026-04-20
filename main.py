@@ -186,13 +186,15 @@ async def re_extract_document(doc_id: int, body: ReExtractRequest):
         raise HTTPException(400, f"不支持的文档类型 '{doc.doc_type}'，无法重新提取")
 
     try:
-        result = re_extract_with_instruction(
+        result = await re_extract_with_instruction(
             parsed_content=doc.parsed_content,
             response_model=response_model,
             scope=body.scope,
+            doc_id=doc_id,
             field_key=body.field_key,
             instruction=body.instruction,
             llm_model=doc.llm_model,
+            use_rag=body.use_rag,
         )
         return ReExtractResponse(result=result, scope=body.scope, field_key=body.field_key)
     except ValueError as exc:
