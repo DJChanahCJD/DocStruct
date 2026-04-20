@@ -23,12 +23,17 @@ const queryClient = new QueryClient();
 
 function AppContent() {
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
-  const [selectedDocName, setSelectedDocName] = useState("全库检索");
+  const [selectedDocName, setSelectedDocName] = useState("未选中文档");
   const [previewMode, setPreviewMode] = useState<"preview" | "citation">("preview");
   const [previewDocId, setPreviewDocId] = useState<number | null>(null);
   const [citationSnippet, setCitationSnippet] = useState<CitationItem | null>(null);
   const [showQaPanel, setShowQaPanel] = useState(false);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const [qaMentionSeed, setQaMentionSeed] = useState<{
+    docId: number;
+    docName: string;
+    nonce: number;
+  } | null>(null);
   const [activeModelId, setActiveModelId] = useState<string>(
     () => localStorage.getItem("docstruct_active_model_id") ?? ""
   );
@@ -62,11 +67,14 @@ function AppContent() {
     setSelectedDocName(name);
     setPreviewMode("preview");
     setPreviewDocId(id);
+    if (showQaPanel) {
+      setQaMentionSeed({ docId: id, docName: name, nonce: Date.now() });
+    }
   };
 
   const handleClearSelection = () => {
     setSelectedDocId(null);
-    setSelectedDocName("全库检索");
+    setSelectedDocName("未选中文档");
     setPreviewDocId(null);
   };
 
@@ -86,7 +94,7 @@ function AppContent() {
             <span className="font-heading text-lg font-bold">DocStruct</span>
           </div>
           <div className="hidden text-sm text-muted-foreground md:block">
-            当前范围：
+            当前预览：
             <span className="ml-1 font-medium text-foreground">{selectedDocName}</span>
           </div>
         </div>
@@ -147,7 +155,7 @@ function AppContent() {
               onClick={handleClearSelection}
               className="rounded-md border px-2 py-1 text-sm hover:bg-muted"
             >
-              全库模式
+              清除选中
             </button>
           )}
         </div>
@@ -191,7 +199,7 @@ function AppContent() {
               </button>
             </header>
             <QaPanel
-              selectedDocId={selectedDocId}
+              mentionSeed={qaMentionSeed}
               activeModelId={activeModelId || undefined}
               activeModelLabel={activeModel?.label}
               onOpenCitation={handleOpenCitation}

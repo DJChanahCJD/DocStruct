@@ -375,7 +375,7 @@ async def _get_rag_context(
     try:
         from core.retrieval import search_similar_chunks
 
-        chunks = await search_similar_chunks(question=query, doc_id=doc_id, top_k=5)
+        chunks = await search_similar_chunks(question=query, doc_ids=[doc_id], top_k=5)
         if not chunks:
             logger.warning("RAG returned empty chunks for query: %s", query)
             return None
@@ -394,5 +394,4 @@ async def _get_rag_context(
     except Exception as exc:
         logger.warning("RAG context retrieval failed: %s", exc)
         return None
-
 

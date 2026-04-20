@@ -80,7 +80,7 @@ class QaRequest(BaseModel):
     """问答请求。"""
 
     question: str = Field(..., min_length=1, description="问题文本")
-    doc_id: Optional[int] = Field(None, description="可选：限定文档ID")
+    doc_ids: Optional[list[int]] = Field(None, description="可选：限定多个文档ID")
     top_k: int = Field(5, ge=1, le=10, description="召回片段数")
     llm_model: Optional[str] = Field(None, description="可选：本次问答使用的文本模型")
 

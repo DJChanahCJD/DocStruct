@@ -431,11 +431,16 @@ async def build_retrieval_corpus(record_id: int) -> None:
     logger.info("Retrieval index built for doc_id=%s, chunk_count=%s", record_id, len(items))
 
 
-async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top_k: int = 5) -> list[dict]:
+async def search_similar_chunks(
+    question: str,
+    doc_ids: Optional[list[int]] = None,
+    top_k: int = 5,
+) -> list[dict]:
     """
     在全局向量索引中检索相似 chunk，并在返回前做轻量去重。
     """
     _ensure_chunk_record_schema()
+    doc_id_set = set(doc_ids or [])
     index, chunk_ids = _load_index_and_ids()
     if index is None or not chunk_ids:
         return []
@@ -463,7 +468,7 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
         rec = record_map.get(chunk_id)
         if not rec:
             continue
-        if doc_id is not None and rec.doc_id != doc_id:
+        if doc_id_set and rec.doc_id not in doc_id_set:
             continue
 
         title_path = rec.title_path or rec.heading_path
@@ -490,20 +495,20 @@ async def search_similar_chunks(question: str, doc_id: Optional[int] = None, top
 
     result = _merge_ranked_candidates(ranked_candidates)
 
-    if doc_id is None:
+    if not doc_id_set:
         return _select_primary_doc_results(result, top_k=top_k)
     return result[:top_k]
 
 
 async def answer_question(
     question: str,
-    doc_id: Optional[int] = None,
+    doc_ids: Optional[list[int]] = None,
     top_k: int = 5,
     llm_model: str | None = None,
 ) -> dict[str, object]:
     """基于检索片段生成答案，并按请求使用活动文本模型。"""
     model_spec = resolve_text_model(llm_model)
-    retrieved = await search_similar_chunks(question=question, doc_id=doc_id, top_k=top_k)
+    retrieved = await search_similar_chunks(question=question, doc_ids=doc_ids, top_k=top_k)
     if not retrieved:
         return {
             "answer": "未找到足够依据，无法给出可靠答案。请尝试更具体的问题或先上传相关文档。",

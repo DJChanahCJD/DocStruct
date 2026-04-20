@@ -158,7 +158,7 @@ async def qa(request: QaRequest):
     try:
         result = await answer_question(
             question=request.question,
-            doc_id=request.doc_id,
+            doc_ids=request.doc_ids,
             top_k=request.top_k,
             llm_model=request.llm_model,
         )

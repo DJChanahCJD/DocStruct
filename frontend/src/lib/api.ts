@@ -64,7 +64,7 @@ export interface CitationItem {
 
 export interface QaRequest {
   question: string;
-  doc_id?: number | null;
+  doc_ids?: number[] | null;
   top_k?: number;
   llm_model?: string | null;
 }
