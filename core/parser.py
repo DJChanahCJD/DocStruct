@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 import pymupdf4llm
+import fitz  # PyMuPDF
 from docx import Document
 
 # --- Abstract Base Class (Strategy Interface) ---
@@ -20,15 +21,52 @@ class BaseParser(ABC):
 
 class PdfParser(BaseParser):
     """
-    PDF 解析策略：使用 pymupdf4llm
+    PDF 解析策略：使用 pymupdf4llm，支持自动 OCR 检测
     """
-    def parse(self, file_path: str) -> str:
+    # 文本层检测阈值：少于此字符数认为需要 OCR
+    OCR_TEXT_THRESHOLD = 100
+    
+    def parse(self, file_path: str, force_ocr: bool = False) -> str:
+        """
+        解析 PDF，支持自动检测图片型 PDF 并启用 OCR
+        
+        Args:
+            file_path: PDF 文件路径
+            force_ocr: 强制启用 OCR，无视文本层检测
+        """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
+        
         try:
-            return pymupdf4llm.to_markdown(file_path, use_ocr=False)
+            # 自动检测是否需要 OCR
+            use_ocr = force_ocr if force_ocr else self._needs_ocr(file_path)
+            
+            return pymupdf4llm.to_markdown(file_path, use_ocr=use_ocr)
         except Exception as e:
             raise RuntimeError(f"Failed to parse PDF: {str(e)}")
+    
+    def _needs_ocr(self, file_path: str) -> bool:
+        """
+        检测 PDF 是否需要 OCR（基于文本层检测）
+        
+        原理：打开 PDF 检测文本层字符数，如果过少（如扫描件、图片 PDF）
+        则启用 OCR。这样可以避免对纯文本 PDF 进行不必要的 OCR 处理。
+        """
+        try:
+            doc = fitz.open(file_path)
+            total_chars = 0
+            
+            for page in doc:
+                text = page.get_text()
+                total_chars += len(text.strip())
+            
+            doc.close()
+            
+            # 如果整个文档少于阈值字符数，认为需要 OCR
+            return total_chars < self.OCR_TEXT_THRESHOLD
+        except Exception:
+            # 检测失败时，保守起见启用 OCR
+            return True
 
 class DocxParser(BaseParser):
     """

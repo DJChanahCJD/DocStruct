@@ -16,17 +16,14 @@ from core.url_parser import parse_url_to_markdown
 import json
 
 from schemas.models import (
-    AdrDocument,
     ApiDocument,
-    BugReportDocument,
     DesignDocument,
     DocType,
     DocumentRecord,
+    IssueDocument,
+    ManualDocument,
     SrsDocument,
-    TestCaseDocument,
-    TestPlanDocument,
-    TestReportDocument,
-    UserManualDocument,
+    TestDocument,
 )
 from schemas.dto import UploadResponse
 
@@ -39,12 +36,9 @@ TYPE_MODEL_MAP = {
     DocType.SRS: SrsDocument,
     DocType.API: ApiDocument,
     DocType.DESIGN: DesignDocument,
-    DocType.TEST_PLAN: TestPlanDocument,
-    DocType.TEST_CASE: TestCaseDocument,
-    DocType.TEST_REPORT: TestReportDocument,
-    DocType.USER_MANUAL: UserManualDocument,
-    DocType.BUG_REPORT: BugReportDocument,
-    DocType.ADR: AdrDocument,
+    DocType.TEST: TestDocument,
+    DocType.MANUAL: ManualDocument,
+    DocType.ISSUE: IssueDocument,
 }
 
 REQUIRED_DOCUMENT_COLUMNS: dict[str, str] = {
@@ -137,7 +131,7 @@ async def _finalize_document(
                 "status": "completed",
                 "doc_type": cls_result.doc_type.value,
                 "parsed_content": markdown_text,
-                "extracted_data": extracted.model_dump(),
+                "extracted_data": extracted.model_dump(mode="json"),
                 "llm_model": model_spec.id,
                 "classification_result": json.dumps(
                     {
@@ -147,7 +141,7 @@ async def _finalize_document(
                     },
                     ensure_ascii=False,
                 ),
-                "schema_version": "v2",
+                "schema_version": "v3",
             }
         )
 

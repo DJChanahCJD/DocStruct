@@ -519,13 +519,14 @@ def _api_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[st
         )
     ]
 
-    for endpoint in extracted_data.get("endpoints") or []:
+    for endpoint in extracted_data.get("items") or []:
         if not isinstance(endpoint, dict):
             continue
         method = str(endpoint.get("method") or "").strip().upper()
         path = str(endpoint.get("path") or "").strip()
         summary = str(endpoint.get("summary") or "").strip()
-        description = str(endpoint.get("description") or "").strip()
+        request = str(endpoint.get("request") or "").strip()
+        response = str(endpoint.get("response") or "").strip()
         if not method or not path:
             continue
 
@@ -536,8 +537,10 @@ def _api_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[st
         ]
         if summary:
             lines.append(f"Summary: {summary}")
-        if description:
-            lines.append(f"Description: {description}")
+        if request:
+            lines.append(f"Request: {request}")
+        if response:
+            lines.append(f"Response: {response}")
 
         sections.append(
             (
@@ -549,16 +552,14 @@ def _api_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[st
     return sections
 
 
-def _bug_report_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[str], list[_Block]]]:
-    title = str(extracted_data.get("title") or "Bug Report").strip()
-    overview_lines = [f"Bug 标题: {title}"]
+def _issue_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[str], list[_Block]]]:
+    title = str(extracted_data.get("title") or "Issue").strip()
+    overview_lines = [f"问题标题: {title}"]
 
     for label, key in (
-        ("Bug ID", "bug_id"),
+        ("Issue ID", "issue_id"),
         ("状态", "status"),
         ("严重级别", "severity"),
-        ("优先级", "priority"),
-        ("环境", "environment"),
     ):
         value = extracted_data.get(key)
         if value:
@@ -566,14 +567,10 @@ def _bug_report_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[
 
     if extracted_data.get("summary"):
         overview_lines.append(f"摘要: {extracted_data['summary']}")
-    if extracted_data.get("expected_result"):
-        overview_lines.append(f"期望结果: {extracted_data['expected_result']}")
-    if extracted_data.get("actual_result"):
-        overview_lines.append(f"实际结果: {extracted_data['actual_result']}")
-    if extracted_data.get("root_cause"):
-        overview_lines.append(f"根因: {extracted_data['root_cause']}")
-    if extracted_data.get("fix_summary"):
-        overview_lines.append(f"修复摘要: {extracted_data['fix_summary']}")
+    if extracted_data.get("expected"):
+        overview_lines.append(f"期望结果: {extracted_data['expected']}")
+    if extracted_data.get("actual"):
+        overview_lines.append(f"实际结果: {extracted_data['actual']}")
 
     sections: list[tuple[list[str], list[_Block]]] = [
         (
@@ -582,22 +579,13 @@ def _bug_report_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[
         )
     ]
 
-    steps = extracted_data.get("steps_to_reproduce") or []
+    steps = extracted_data.get("steps") or []
     if steps:
         step_lines = [f"{idx}. {step}" for idx, step in enumerate(steps, start=1)]
         sections.append(
             (
                 ["Structured Data", "Reproduction Steps"],
                 [_Block(chunk_type="structured", text="\n".join(step_lines))],
-            )
-        )
-
-    workaround = extracted_data.get("workaround")
-    if workaround:
-        sections.append(
-            (
-                ["Structured Data", "Workaround"],
-                [_Block(chunk_type="structured", text=str(workaround))],
             )
         )
 
@@ -617,8 +605,8 @@ def _build_structured_chunks(
     sections: list[tuple[list[str], list[_Block]]] = []
     if doc_type == "api":
         sections = _api_structured_blocks(extracted_data)
-    elif doc_type == "bug_report":
-        sections = _bug_report_structured_blocks(extracted_data)
+    elif doc_type == "issue":
+        sections = _issue_structured_blocks(extracted_data)
 
     chunks: list[MarkdownChunk] = []
     next_index = start_index

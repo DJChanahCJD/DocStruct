@@ -1,10 +1,16 @@
 import logging
+import json
 
 from pydantic import BaseModel
 
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
-from core.constants import CLASSIFY_PROMPT_TEMPLATE, EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
+from core.constants import (
+    CLASSIFY_PROMPT_TEMPLATE,
+    DOC_TYPE_DESCRIPTIONS,
+    EXTRACT_PROMPT_TEMPLATE,
+    JSON_FORMAT_INSTRUCTION,
+)
 from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model, CLASSIFY_MODEL_ID
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
 from schemas.models import DocClassification, DocType
@@ -16,6 +22,16 @@ if not settings.llm_api_key:
     logger.warning("Warning: LLM_API_KEY not found in environment variables.")
 
 raw_client = get_openai_client()
+
+
+def _json_schema_text(model: type[BaseModel]) -> str:
+    """将 Pydantic JSON Schema 序列化为 prompt 可注入文本。"""
+    return json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2)
+
+
+def _render_doc_type_categories() -> str:
+    """渲染文档类型说明，避免分类 prompt 与 DocType 分散维护。"""
+    return "\n".join(f"{doc_type}: {description}" for doc_type, description in DOC_TYPE_DESCRIPTIONS.items())
 
 
 def _render_prompt(template: str, **kwargs) -> str:
@@ -67,7 +83,7 @@ def _extract_once(
     prompt = _render_prompt(
         template,
         content=prompt_content,
-        schema=response_model.model_json_schema(),
+        schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
     )
 
@@ -97,6 +113,8 @@ def classify_document(markdown_content: str, llm_model: str | None = None) -> Do
     prompt = _render_prompt(
         CLASSIFY_PROMPT_TEMPLATE,
         summary=summary,
+        categories=_render_doc_type_categories(),
+        schema=_json_schema_text(DocClassification),
         json_instruction=JSON_FORMAT_INSTRUCTION,
     )
 
@@ -255,7 +273,7 @@ def re_extract_with_instruction(
         prompt = _render_prompt(
             EXTRACT_PROMPT_TEMPLATE,
             content=parsed_content[: settings.extraction_single_max_chars],
-            schema=response_model.model_json_schema(),
+            schema=_json_schema_text(response_model),
             json_instruction=JSON_FORMAT_INSTRUCTION + extra,
         )
         system_msg = "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"
@@ -271,7 +289,7 @@ def re_extract_with_instruction(
         data = clean_and_parse_json(response_text)
         # 用 response_model 验证，确保结构合法，再返回 dict
         validated = response_model.model_validate(normalize_extracted_data(data))
-        return validated.model_dump()
+        return validated.model_dump(mode="json")
 
     # scope == "field"
     instruction_part = f"\n{instruction}" if instruction else ""

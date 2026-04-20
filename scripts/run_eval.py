@@ -16,14 +16,12 @@ from core.parser import ParserFactory
 from core.url_parser import parse_url_to_markdown
 from schemas.models import (
     ApiDocument,
-    BugReportDocument,
     DesignDocument,
     DocType,
+    IssueDocument,
+    ManualDocument,
     SrsDocument,
-    TestCaseDocument,
-    TestPlanDocument,
-    TestReportDocument,
-    UserManualDocument,
+    TestDocument,
 )
 
 
@@ -31,11 +29,9 @@ TYPE_MODEL_MAP = {
     DocType.SRS: SrsDocument,
     DocType.API: ApiDocument,
     DocType.DESIGN: DesignDocument,
-    DocType.TEST_PLAN: TestPlanDocument,
-    DocType.TEST_CASE: TestCaseDocument,
-    DocType.TEST_REPORT: TestReportDocument,
-    DocType.USER_MANUAL: UserManualDocument,
-    DocType.BUG_REPORT: BugReportDocument,
+    DocType.TEST: TestDocument,
+    DocType.MANUAL: ManualDocument,
+    DocType.ISSUE: IssueDocument,
 }
 
 
@@ -179,7 +175,7 @@ def _evaluate_sample(sample: dict[str, Any], args: argparse.Namespace, settings)
                 markdown_content=markdown,
                 response_model=TYPE_MODEL_MAP[extraction_model],
             )
-            extracted_data = extracted.model_dump()
+            extracted_data = extracted.model_dump(mode="json")
         except Exception as exc:
             extraction_error = str(exc)
         extraction_ms = round((time.perf_counter() - extract_start) * 1000, 2)

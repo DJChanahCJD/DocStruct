@@ -9,7 +9,7 @@
 ## 功能特性
 
 - **多格式输入**：支持 PDF、DOCX、MD、TXT 上传，以及公开 URL 抓取
-- **8 类文档支持**：自动识别软件工程文档类型，按类型输出结构化 JSON
+- **6 类核心文档支持**：自动识别主干软件工程文档类型，按最小必要结构输出 JSON
 - **长文档处理**：分块抽取 + 结果合并 + 三段降级容错机制
 - **语义分块**：识别标题、段落、列表、表格、代码块，生成适合向量化的语义片段
 - **RAG 知识问答**：FAISS 向量召回 + LLM 生成答案，返回带引用证据的回答
@@ -22,16 +22,41 @@
 
 | 文档类型 | `doc_type` | 抽取能力 |
 | --- | --- | --- |
-| 软件需求规格说明书 | `srs` | 需求项、优先级、标题 |
-| API 接口文档 | `api` | 接口方法、路径、摘要、描述 |
-| 系统设计说明书 | `design` | 架构摘要、模块信息、数据库设计 |
-| 测试计划 | `test_plan` | 范围、资源、进度、策略、交付物 |
-| 测试用例 | `test_case` | 用例标题、步骤、预期结果 |
-| 测试报告 | `test_report` | 执行摘要、统计信息、用例结果 |
-| 用户手册 | `user_manual` | 章节内容与故障排除信息 |
-| 缺陷报告 | `bug_report` | 缺陷编号、状态、严重级别、复现步骤、期望/实际结果 |
+| 软件需求规格说明书 | `srs` | 需求项列表 |
+| API 接口文档 | `api` | 接口方法、路径、请求/响应摘要 |
+| 系统设计说明书 | `design` | 架构摘要、模块列表 |
+| 测试文档 | `test` | 测试项、步骤、预期/实际、状态 |
+| 用户手册 | `manual` | 章节列表 |
+| 问题单 / 缺陷单 | `issue` | 问题编号、状态、严重级别、复现步骤、期望/实际结果 |
+| 未知类型 | `unknown` | 仅保留基础元信息 |
 
 ---
+
+## 一、优化原则
+
+1. 统一公共头，减少重复  
+   所有文档统一保留 `doc_type`、`title`、`summary`、`version`、`items`、`extra` 这组公共字段。
+2. 每类只保留最能代表文档价值的字段  
+   SRS 关注需求项，API 关注接口，Design 关注模块，Test 关注测试项，Manual 关注章节，Issue 关注问题核心信息。
+3. 非核心信息全部进入 `extra`  
+   `environment`、`workaround`、`resources`、`strategy`、`database_design` 等增强字段不作为第一阶段核心结构。
+4. 文档类型先收敛到主干工程场景  
+   第一阶段仅保留 `srs`、`api`、`design`、`test`、`manual`、`issue`、`unknown` 七类。
+
+## 二、统一输出结构
+
+```python
+class BaseExtractedDocument(BaseModel):
+    doc_type: DocType
+    title: str | None = None
+    summary: str | None = None
+    version: str | None = None
+    extra: dict[str, Any] = Field(default_factory=dict)
+```
+
+- 大多数文类通过 `items` 承载核心条目列表。
+- `issue` 保留顶层核心字段：`issue_id`、`status`、`severity`、`steps`、`expected`、`actual`。
+- 该设计不追求重建完整原文，而是服务于稳定抽取、统一评测和低成本扩展。
 
 ## 快速开始
 
@@ -40,6 +65,31 @@
 ```powershell
 pip install -r requirements.txt
 ```
+
+#### OCR 依赖（用于图片型 PDF）
+
+系统默认会自动检测图片型 PDF 并启用 OCR。如需此功能，需安装 Tesseract：
+
+**Windows**
+1. 下载安装包：https://github.com/UB-Mannheim/tesseract/wiki
+   - 推荐：`tesseract-ocr-w64-setup-5.5.0.20241111.exe`
+2. 安装需要的语言包（如简体中文等）
+3. 添加 Tesseract 到环境变量 PATH
+4. 环境变量配置（如果 Tesseract 不在 PATH）：
+TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata
+
+**macOS**
+```bash
+brew install tesseract tesseract-lang
+```
+
+**Linux (Ubuntu/Debian)**
+```bash
+sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim
+```
+
+> [!NOTE]
+> 如不需要处理图片型 PDF，可跳过此步骤。纯文本 PDF 不受影响。
 
 ### 2. 配置环境变量
 
@@ -96,7 +146,7 @@ npm run dev
 | 层次 | 技术 |
 | --- | --- |
 | 后端 | `FastAPI` + `Tortoise-ORM` + `SQLite` |
-| 文档解析 | `pymupdf4llm`（PDF）、`python-docx`（DOCX）、原生读取（MD / TXT）|
+| 文档解析 | `pymupdf4llm`（PDF，含 OCR）、`python-docx`（DOCX）、原生读取（MD / TXT）|
 | 结构化抽取 | OpenAI-Compatible API + `Pydantic` Schema 约束 |
 | 向量检索 | `FAISS` + `NumPy` |
 | 前端 | `React` + `TypeScript` + `Vite` + `shadcn/ui` |
@@ -122,7 +172,7 @@ DocStruct/
 │       ├── App.tsx           # 三栏布局：文档侧边栏 + 问答区 + 预览面板
 │       └── components/       # DocSidebar、QaPanel、DocPreviewPanel 等
 ├── static/
-│   └── examples/            # 手动验证样例文档（8 类）
+│   └── examples/            # 手动验证样例文档
 ├── experiments/
 │   ├── datasets/            # 评测清单 baseline_manifest.json
 │   └── results/             # 评测脚本输出（JSON + Markdown 报告）
@@ -243,7 +293,7 @@ python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-sourc
 | Phase 0 | 基线收敛：文档、配置、接口与实现对齐 | ✅ 完成 |
 | Phase 1 | 评测体系：建立可复现实验基线与评测脚本 | ✅ 完成 |
 | Phase 2 | 稳定性优化：长文档成功率提升、异步化改造 | 🚧 进行中 |
-| Phase 3 | 输入扩展：URL 导入、`bug_report` 文类 | ✅ 完成 |
+| Phase 3 | 输入扩展：URL 导入与主干文类收敛 | ✅ 完成 |
 | Phase 4 | 前端与检索增强：React 应用、结构化浏览、关系视图 | 🚧 进行中 |
 
 ---
@@ -252,12 +302,23 @@ python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-sourc
 
 ### 高优先级
 
+- [ ] 明确该系统仅针对中短文档，10w字符以上的长文档不适合。
+
+- [ ] 重构精简系统（Qwen-Doc-Turbo 纯文本仅 9K 输入 ，且肯定有注意力问题，还是要做分块抽取（但能否分块文档内容 + 大致上下文？）），是否对不同模型定制分块大小
+1. 长文档处理慢：分块+串行调用导致耗时高，且合并块时存在信息丢失风险
+2. 文档提取字段混乱且不够细化，暂时无法覆盖大多数工程场景
+3. ✅ ~~图片型 PDF 文档暂时无法处理，需要引入 OCR~~（已支持，基于 Tesseract 自动检测）
+4. 缺乏真实软件工程文档
+
+- [ ] 期望能够参考immersive translate，对照修改原文、json。需要保留上传文档
+- [ ] 评估当前方案能够容器化部署到云端？
 - [ ] **异步化 LLM 调用**：将文类识别、结构化抽取、embedding 生成、索引构建改为异步，提升长文档处理性能与并发能力
 - [ ] **配置集中化**：将散落在 `extractor.py` / `retrieval.py` / `chunker.py` 中的阈值与默认值抽离为统一配置模块
 - [ ] **评测数据集扩充**：为每类文档补充长文档 / 结构混乱文档样本，支撑论文模型与 Prompt 对比实验
 
 ### 中优先级
 
+- [ ] 有没有可能点击json特定区域，能够跳转到原文具体文档位置？
 - [ ] **前端关系视图**：在 React 应用中增加需求项浏览、API 列表、测试结果汇总等结构化展示面板
 - [ ] **检索质量优化**：降低重复引用，提升片段相关性，优化多文档检索排序
 - [ ] **更多输入格式**：图片（OCR）、HTML、XML 等格式按需接入
@@ -266,7 +327,7 @@ python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-sourc
 
 - [ ] 格式化导出渠道（JSON / MD / CSV / YAML）
 - [ ] 多语言支持扩展
-
+- [ ] 简易管理系统？ UUID
 
 ## 其他
 
