@@ -364,3 +364,10 @@ python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-sourc
 - 理解需求语义
 - 自动完成需求分类
 - 抽取复杂结构化信息
+
+
+## TO WRITE
+
+数据结构、接口、重点代码、实验等
+
+## 毕业论文提纲

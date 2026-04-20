@@ -6,7 +6,7 @@
 | MiniMax-M2.5 | 2.1 | 8.4 | 200K | 编程/多语言/Agent | 192K/128K |
 | DeepSeek-V3.2 | 2 | 3 | 128K | 推理/代码/思考 | 96K/64K |
 | Kimi-K2.5 | 4 | 21 | 256K | 长文本/多模态 | 224K/16K |
-| Qwen-Doc-Turbo | 0.6 | 1 | 256K | 文档精读/长文本 | 248K/8K |
+| Qwen-Doc-Turbo | 0.6 | 1 | 256K | 文档精读/长文本 | 248K/8K |   最大20万字文档
 
 https://bailian.console.aliyun.com/cn-beijing?tab=model#/model-market/detail/glm-4.7?serviceSite=asia-pacific-china
 
