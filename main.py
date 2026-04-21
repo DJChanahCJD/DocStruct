@@ -10,16 +10,22 @@ from tortoise.contrib.fastapi import register_tortoise
 from core.config import get_settings
 from core.document_service import TYPE_MODEL_MAP, ensure_document_record_schema, process_uploaded_file, process_url_document
 from core.extractor import re_extract_with_instruction
+from core.review_model import apply_review_changes, build_review_model, preview_reextract_node
 from core.retrieval import answer_question, build_retrieval_corpus
 from core.text_models import list_text_models
 from schemas.models import DocType, DocumentRecord
 from schemas.dto import (
+    DocumentReviewModelDTO,
     DocumentRecordDTO,
     DocumentUpdateRequest,
     QaRequest,
     QaResponse,
     ReExtractRequest,
     ReExtractResponse,
+    ReviewModelReExtractRequest,
+    ReviewModelReExtractResponse,
+    ReviewModelUpdateRequest,
+    ReviewModelUpdateResponse,
     TextModelListResponse,
     TextModelOption,
     UploadResponse,
@@ -85,6 +91,41 @@ async def get_document(doc_id: int):
     return DocumentRecordDTO.model_validate(doc)
 
 
+def _resolve_doc_type(doc: DocumentRecord) -> DocType:
+    if doc.doc_type not in DocType._value2member_map_:
+        raise HTTPException(400, f"不支持的文档类型 '{doc.doc_type}'")
+    return DocType(doc.doc_type)
+
+
+async def _reindex_after_edit(doc: DocumentRecord) -> str | None:
+    try:
+        await build_retrieval_corpus(doc.id)
+    except Exception as exc:
+        warning = f"向量索引构建失败: {exc}"
+        logger.warning("Reindex after edit failed for doc %s: %s", doc.id, exc)
+        doc.error_message = warning
+        await doc.save(update_fields=["error_message", "updated_at"])
+        return warning
+
+    if doc.error_message:
+        doc.error_message = None
+        await doc.save(update_fields=["error_message", "updated_at"])
+    return None
+
+
+async def _persist_extracted_data(
+    doc: DocumentRecord,
+    extracted_data: dict,
+    *,
+    reindex: bool = True,
+) -> tuple[DocumentRecord, str | None]:
+    doc.extracted_data = extracted_data
+    await doc.save(update_fields=["extracted_data", "updated_at"])
+    warning = await _reindex_after_edit(doc) if reindex else None
+    await doc.refresh_from_db()
+    return doc, warning
+
+
 @app.get("/api/documents/{doc_id}/file")
 async def download_document_file(doc_id: int):
     """下载或重定向文档原始文件。
@@ -118,9 +159,78 @@ async def update_document(doc_id: int, body: DocumentUpdateRequest):
     doc = await DocumentRecord.get_or_none(id=doc_id)
     if not doc:
         raise HTTPException(404, "记录不存在")
-    doc.extracted_data = body.extracted_data
-    await doc.save(update_fields=["extracted_data", "updated_at"])
+    doc, _warning = await _persist_extracted_data(doc, body.extracted_data, reindex=True)
     return DocumentRecordDTO.model_validate(doc)
+
+
+@app.get("/api/documents/{doc_id}/review-model", response_model=DocumentReviewModelDTO)
+async def get_document_review_model(doc_id: int):
+    """返回统一审核视图。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    doc_type = _resolve_doc_type(doc)
+    return DocumentReviewModelDTO.model_validate(build_review_model(doc_type, doc.extracted_data))
+
+
+@app.patch("/api/documents/{doc_id}/review-model", response_model=ReviewModelUpdateResponse)
+async def update_document_review_model(doc_id: int, body: ReviewModelUpdateRequest):
+    """按 item/meta 粒度更新审核视图，并同步回写 extracted_data。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    doc_type = _resolve_doc_type(doc)
+
+    try:
+        updated_data = apply_review_changes(
+            doc_type,
+            doc.extracted_data,
+            [change.model_dump(mode="json") for change in body.changes],
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    doc, warning = await _persist_extracted_data(doc, updated_data, reindex=body.reindex)
+    review_model = build_review_model(doc_type, doc.extracted_data)
+    return ReviewModelUpdateResponse(
+        document=DocumentRecordDTO.model_validate(doc),
+        review_model=DocumentReviewModelDTO.model_validate(review_model),
+        warning=warning,
+    )
+
+
+@app.post("/api/documents/{doc_id}/review-model/re-extract", response_model=ReviewModelReExtractResponse)
+async def re_extract_review_model_node(doc_id: int, body: ReviewModelReExtractRequest):
+    """对审核视图中的单个节点发起预览级重提取。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    if not doc.parsed_content:
+        raise HTTPException(400, "文档尚无原文内容，无法重新提取")
+
+    doc_type = _resolve_doc_type(doc)
+    response_model = TYPE_MODEL_MAP.get(doc_type)
+    if response_model is None:
+        raise HTTPException(400, f"不支持的文档类型 '{doc.doc_type}'，无法重新提取")
+
+    try:
+        node = await preview_reextract_node(
+            doc_type=doc_type,
+            extracted_data=doc.extracted_data,
+            parsed_content=doc.parsed_content,
+            response_model=response_model,
+            node_id=body.node_id,
+            instruction=body.instruction,
+            llm_model=doc.llm_model,
+            use_rag=body.use_rag,
+            doc_id=doc_id,
+        )
+        return ReviewModelReExtractResponse(node=node)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        logger.error("Review-model re-extract failed for doc %s: %s", doc_id, exc, exc_info=True)
+        raise HTTPException(500, f"重新提取失败: {str(exc)}") from exc
 
 
 @app.delete("/api/documents/{doc_id}")

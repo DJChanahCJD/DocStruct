@@ -3,15 +3,23 @@ import {
   askQuestion,
   deleteDocument,
   getDocument,
+  getReviewModel,
   listDocuments,
   listTextModels,
+  reExtractReviewNode,
   reExtractDocument,
   reindexDocument,
+  updateReviewModel,
   updateDocument,
   uploadFile,
   uploadUrl,
+  type DocumentReviewModel,
   type QaRequest,
   type QaResponse,
+  type ReviewModelReExtractRequest,
+  type ReviewModelReExtractResponse,
+  type ReviewModelUpdateRequest,
+  type ReviewModelUpdateResponse,
   type ReExtractRequest,
   type UpdateDocumentRequest,
 } from "@/lib/api";
@@ -44,6 +52,17 @@ export function useDocument(id: number | null) {
   return useQuery({
     queryKey: ["document", id],
     queryFn: () => getDocument(id!),
+    enabled: id !== null,
+  });
+}
+
+/**
+ * 获取统一审核视图。
+ */
+export function useReviewModel(id: number | null) {
+  return useQuery({
+    queryKey: ["review-model", id],
+    queryFn: () => getReviewModel(id!),
     enabled: id !== null,
   });
 }
@@ -96,6 +115,21 @@ export function useUpdateDocument(id: number) {
 }
 
 /**
+ * 按 review-model 粒度保存修改。
+ */
+export function useUpdateReviewModel(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: ReviewModelUpdateRequest) => updateReviewModel(id, req),
+    onSuccess: (result) => {
+      qc.setQueryData(["document", id], result.document);
+      qc.setQueryData(["review-model", id], result.review_model);
+      qc.invalidateQueries({ queryKey: ["documents"] });
+    },
+  });
+}
+
+/**
  * 触发文档重建索引。
  */
 export function useReindex() {
@@ -122,5 +156,19 @@ export function useReExtract(docId: number) {
   });
 }
 
-export type { QaResponse };
+/**
+ * 对审核节点进行预览级重提取。
+ */
+export function useReviewNodeReExtract(docId: number) {
+  return useMutation({
+    mutationFn: (req: ReviewModelReExtractRequest) => reExtractReviewNode(docId, req),
+  });
+}
+
+export type {
+  DocumentReviewModel,
+  QaResponse,
+  ReviewModelReExtractResponse,
+  ReviewModelUpdateResponse,
+};
 

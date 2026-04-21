@@ -45,6 +45,92 @@ class DocumentUpdateRequest(BaseModel):
     extracted_data: dict[str, Any] = Field(..., description="用户修改后的结构化 JSON 数据")
 
 
+class ReviewFieldDTO(BaseModel):
+    """审核视图中的可编辑字段。"""
+
+    node_id: str
+    field_key: str
+    label: str
+    value: Any
+    value_type: str
+    editable: bool = True
+
+
+class ReviewItemDTO(BaseModel):
+    """审核视图中的 item。"""
+
+    node_id: str
+    title: str
+    summary: Optional[str] = None
+    order: int
+    fields: list[ReviewFieldDTO] = Field(default_factory=list)
+
+
+class ReviewGroupDTO(BaseModel):
+    """审核视图中的 item 分组。"""
+
+    group_key: str
+    label: str
+    item_type: str
+    items: list[ReviewItemDTO] = Field(default_factory=list)
+
+
+class DocumentReviewModelDTO(BaseModel):
+    """统一审核视图。"""
+
+    doc_type: str
+    meta_fields: list[ReviewFieldDTO] = Field(default_factory=list)
+    groups: list[ReviewGroupDTO] = Field(default_factory=list)
+
+
+class ReviewChangeRequest(BaseModel):
+    """单个审核变更。"""
+
+    node_id: str
+    field_key: str
+    value: Any
+
+
+class ReviewModelUpdateRequest(BaseModel):
+    """PATCH /documents/{id}/review-model 请求体。"""
+
+    changes: list[ReviewChangeRequest] = Field(..., min_length=1)
+    reindex: bool = True
+
+
+class ReviewNodeDTO(BaseModel):
+    """单个审核节点预览。"""
+
+    node_id: str
+    node_type: Literal["meta", "item"]
+    label: str
+    group_key: Optional[str] = None
+    title: str
+    fields: list[ReviewFieldDTO] = Field(default_factory=list)
+
+
+class ReviewModelUpdateResponse(BaseModel):
+    """审核修改后的统一返回。"""
+
+    document: DocumentRecordDTO
+    review_model: DocumentReviewModelDTO
+    warning: Optional[str] = None
+
+
+class ReviewModelReExtractRequest(BaseModel):
+    """POST /documents/{id}/review-model/re-extract 请求体。"""
+
+    node_id: str = Field(..., min_length=1)
+    instruction: Optional[str] = Field(None, description="用户补充指示")
+    use_rag: bool = Field(True, description="是否使用 RAG 检索相关片段")
+
+
+class ReviewModelReExtractResponse(BaseModel):
+    """review-model 节点级重提取预览返回。"""
+
+    node: ReviewNodeDTO
+
+
 class UploadResponse(BaseModel):
     """上传或 URL 导入后的统一响应。"""
 

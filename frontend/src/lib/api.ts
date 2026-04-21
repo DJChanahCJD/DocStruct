@@ -26,6 +26,72 @@ export interface UpdateDocumentRequest {
   extracted_data: Record<string, unknown>;
 }
 
+export interface ReviewField {
+  node_id: string;
+  field_key: string;
+  label: string;
+  value: unknown;
+  value_type: string;
+  editable: boolean;
+}
+
+export interface ReviewItem {
+  node_id: string;
+  title: string;
+  summary?: string | null;
+  order: number;
+  fields: ReviewField[];
+}
+
+export interface ReviewGroup {
+  group_key: string;
+  label: string;
+  item_type: string;
+  items: ReviewItem[];
+}
+
+export interface DocumentReviewModel {
+  doc_type: string;
+  meta_fields: ReviewField[];
+  groups: ReviewGroup[];
+}
+
+export interface ReviewChange {
+  node_id: string;
+  field_key: string;
+  value: unknown;
+}
+
+export interface ReviewNode {
+  node_id: string;
+  node_type: "meta" | "item";
+  label: string;
+  group_key?: string | null;
+  title: string;
+  fields: ReviewField[];
+}
+
+export interface ReviewModelUpdateRequest {
+  changes: ReviewChange[];
+  reindex?: boolean;
+}
+
+export interface ReviewModelUpdateResponse {
+  document: DocumentRecord;
+  review_model: DocumentReviewModel;
+  warning?: string | null;
+}
+
+export interface ReviewModelReExtractRequest {
+  node_id: string;
+  instruction?: string;
+  use_rag?: boolean;
+}
+
+export interface ReviewModelReExtractResponse {
+  node: ReviewNode;
+}
+
 export interface UploadResponse {
   id: number;
   filename: string;
@@ -110,6 +176,30 @@ export async function updateDocument(
   req: UpdateDocumentRequest,
 ): Promise<DocumentRecord> {
   const { data } = await api.patch<DocumentRecord>(`/documents/${id}`, req);
+  return data;
+}
+
+export async function getReviewModel(id: number): Promise<DocumentReviewModel> {
+  const { data } = await api.get<DocumentReviewModel>(`/documents/${id}/review-model`);
+  return data;
+}
+
+export async function updateReviewModel(
+  id: number,
+  req: ReviewModelUpdateRequest,
+): Promise<ReviewModelUpdateResponse> {
+  const { data } = await api.patch<ReviewModelUpdateResponse>(`/documents/${id}/review-model`, req);
+  return data;
+}
+
+export async function reExtractReviewNode(
+  id: number,
+  req: ReviewModelReExtractRequest,
+): Promise<ReviewModelReExtractResponse> {
+  const { data } = await api.post<ReviewModelReExtractResponse>(
+    `/documents/${id}/review-model/re-extract`,
+    req,
+  );
   return data;
 }
 
