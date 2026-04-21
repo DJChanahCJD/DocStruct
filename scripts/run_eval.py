@@ -11,7 +11,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from core.config import get_settings
-from core.extractor import classify_document, extract_structure_with_meta
+from core.extractor import extract_structure_with_meta
 from core.parser import ParserFactory
 from core.url_parser import parse_url_to_markdown
 from schemas.models import (
@@ -53,10 +53,10 @@ def _parse_args() -> argparse.Namespace:
         help="本次实验使用的 Prompt 版本标识",
     )
     parser.add_argument(
-        "--extraction-model-source",
-        choices=["expected", "predicted"],
+        "--doc-type-source",
+        choices=["expected"],
         default="expected",
-        help="抽取时使用期望文类还是分类预测文类",
+        help="抽取时使用评测清单中的指定文类",
     )
     return parser.parse_args()
 
@@ -121,14 +121,9 @@ def _compute_completeness(extracted: dict[str, Any] | None) -> float | None:
     return round(filled / total, 4)
 
 
-def _resolve_target_doc_type(
-    expected_doc_type: str,
-    predicted_doc_type: str,
-    source: str,
-) -> DocType | None:
-    target = expected_doc_type if source == "expected" else predicted_doc_type
+def _resolve_target_doc_type(expected_doc_type: str) -> DocType | None:
     try:
-        return DocType(target)
+        return DocType(expected_doc_type)
     except ValueError:
         return None
 
@@ -150,18 +145,7 @@ def _evaluate_sample(sample: dict[str, Any], args: argparse.Namespace, settings)
         source_ref = str(file_path).replace("\\", "/")
     parse_ms = round((time.perf_counter() - parse_start) * 1000, 2)
 
-    classify_start = time.perf_counter()
-    classification = classify_document(markdown)
-    classify_ms = round((time.perf_counter() - classify_start) * 1000, 2)
-
-    predicted_doc_type = classification.doc_type.value
-    classification_correct = predicted_doc_type == expected_doc_type
-
-    extraction_model = _resolve_target_doc_type(
-        expected_doc_type=expected_doc_type,
-        predicted_doc_type=predicted_doc_type,
-        source=args.extraction_model_source,
-    )
+    extraction_model = _resolve_target_doc_type(expected_doc_type=expected_doc_type)
 
     extracted_data = None
     extraction_meta = None
@@ -180,26 +164,21 @@ def _evaluate_sample(sample: dict[str, Any], args: argparse.Namespace, settings)
             extraction_error = str(exc)
         extraction_ms = round((time.perf_counter() - extract_start) * 1000, 2)
     else:
-        extraction_error = f"无法确定抽取模型: source={args.extraction_model_source}"
+        extraction_error = f"无法确定抽取模型: type={expected_doc_type}"
 
     completeness = _compute_completeness(extracted_data)
-    total_ms = round(parse_ms + classify_ms + (extraction_ms or 0), 2)
+    total_ms = round(parse_ms + (extraction_ms or 0), 2)
 
     return {
         "sample_id": sample_id,
         "source_type": source_type,
         "file_path": source_ref,
         "expected_doc_type": expected_doc_type,
-        "predicted_doc_type": predicted_doc_type,
-        "classification_correct": classification_correct,
-        "classification_confidence": classification.confidence,
-        "classification_reasoning": classification.reasoning,
         "prompt_version": args.prompt_version,
         "model_name": settings.llm_model,
-        "extraction_model_source": args.extraction_model_source,
+        "doc_type_source": args.doc_type_source,
         "extraction_target_doc_type": extraction_model.value if extraction_model else None,
         "parse_latency_ms": parse_ms,
-        "classification_latency_ms": classify_ms,
         "extraction_latency_ms": extraction_ms,
         "total_latency_ms": total_ms,
         "content_length": len(markdown),
@@ -215,7 +194,6 @@ def _evaluate_sample(sample: dict[str, Any], args: argparse.Namespace, settings)
 
 def _build_summary(results: list[dict[str, Any]], args: argparse.Namespace, settings) -> dict[str, Any]:
     total = len(results)
-    classified_correct = sum(1 for item in results if item["classification_correct"])
     extraction_success = sum(1 for item in results if item["extraction_success"])
     chunked = sum(1 for item in results if item["used_chunking"])
     completeness_scores = [
@@ -235,31 +213,29 @@ def _build_summary(results: list[dict[str, Any]], args: argparse.Namespace, sett
         "model_name": settings.llm_model,
         "embedding_model": settings.embedding_model,
         "sample_count": total,
-        "classification_accuracy": round(classified_correct / total, 4) if total else 0.0,
         "extraction_success_rate": round(extraction_success / total, 4) if total else 0.0,
         "chunked_sample_rate": round(chunked / total, 4) if total else 0.0,
         "avg_total_latency_ms": avg_latency_ms,
         "avg_total_latency_s": round(avg_latency_ms / 1000, 3),
         "avg_completeness_score": avg_completeness,
-        "extraction_model_source": args.extraction_model_source,
+        "doc_type_source": args.doc_type_source,
     }
 
 
 def _build_markdown_report(payload: dict[str, Any]) -> str:
     summary = payload["summary"]
     rows = [
-        "| sample_id | expected | predicted | class_ok | extract_ok | completeness | total_time | mode |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| sample_id | doc_type | extract_ok | completeness | total_time | mode |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
 
     for item in payload["results"]:
         mode = (item.get("extraction_meta") or {}).get("mode", "-")
         completeness = item["completeness_score"]
         completeness_text = "-" if completeness is None else str(completeness)
-        total_time_s = round(item['total_latency_ms'] / 1000, 3)
+        total_time_s = round(item["total_latency_ms"] / 1000, 3)
         rows.append(
-            f"| {item['sample_id']} | {item['expected_doc_type']} | {item['predicted_doc_type']} | "
-            f"{'Y' if item['classification_correct'] else 'N'} | "
+            f"| {item['sample_id']} | {item['expected_doc_type']} | "
             f"{'Y' if item['extraction_success'] else 'N'} | {completeness_text} | "
             f"{total_time_s}s | {mode} |"
         )
@@ -271,7 +247,6 @@ def _build_markdown_report(payload: dict[str, Any]) -> str:
         f"- 模型：`{summary['model_name']}`",
         f"- Prompt 版本：`{summary['prompt_version']}`",
         f"- 样本数：`{summary['sample_count']}`",
-        f"- 文类识别准确率：`{summary['classification_accuracy']}`",
         f"- 抽取成功率：`{summary['extraction_success_rate']}`",
         f"- 平均耗时：`{summary['avg_total_latency_s']}s`",
         f"- 平均完整率：`{summary['avg_completeness_score']}`",

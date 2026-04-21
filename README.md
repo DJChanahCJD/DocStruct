@@ -9,12 +9,12 @@
 ## 功能特性
 
 - **多格式输入**：支持 PDF、DOCX、MD、TXT 上传，以及公开 URL 抓取
-- **6 类核心文档支持**：自动识别主干软件工程文档类型，按最小必要结构输出 JSON
+- **6 类核心文档支持**：上传时显式指定主干软件工程文档类型，按最小必要结构输出 JSON
 - **长文档处理**：分块抽取 + 结果合并 + 三段降级容错机制
 - **语义分块**：识别标题、段落、列表、表格、代码块，生成适合向量化的语义片段
 - **RAG 知识问答**：FAISS 向量召回 + LLM 生成答案，返回带引用证据的回答
 - **React 前端**：三栏布局（文档列表 / 问答区 / 原文预览），支持文档管理、结构化结果浏览、引用回溯
-- **离线评测**：可复现的实验脚本，支持模型与 Prompt 多维对比
+- **离线评测**：可复现的实验脚本，基于清单中指定的 `doc_type` 做抽取评测
 
 ---
 
@@ -132,7 +132,7 @@ npm run dev
 | --- | --- | --- |
 | `LLM_API_KEY` | 大模型与 embedding 调用鉴权 | 无（必填） |
 | `LLM_BASE_URL` | OpenAI-Compatible 接口地址 | 无（必填） |
-| `LLM_MODEL` | 文类识别、抽取、问答所用模型 | `qwen2.5-7b-instruct-1m` |
+| `LLM_MODEL` | 结构化抽取、问答所用模型 | `qwen2.5-7b-instruct-1m` |
 | `EMBEDDING_MODEL` | 向量化模型 | `text-embedding-v4` |
 | `LLM_EMBED_MODEL` | embedding 备用配置项 | 仅在 `EMBEDDING_MODEL` 缺失时生效 |
 
@@ -160,7 +160,7 @@ DocStruct/
 ├── main.py                  # FastAPI 入口，路由、上传、编排与 ORM 注册
 ├── core/
 │   ├── parser.py            # 文档解析器工厂，统一处理 PDF / DOCX / MD / TXT / URL
-│   ├── extractor.py         # 文类识别与结构化抽取（含分块抽取与回退策略）
+│   ├── extractor.py         # 结构化抽取（含分块抽取与回退策略）
 │   ├── chunker.py           # Markdown 语义分块
 │   ├── retrieval.py         # 向量化、FAISS 索引、检索与问答
 │   ├── constants.py         # Prompt 与常量
@@ -191,7 +191,7 @@ DocStruct/
     ↓
 Parser（PDF / DOCX / MD / TXT / HTML → Markdown）
     ↓
-Extractor（文类识别 → 结构化抽取 → Pydantic 校验）
+用户指定 doc_type → Extractor（结构化抽取 → Pydantic 校验）
     ↓
 Chunker（语义分块）+ Retrieval（向量化 → FAISS 索引）
     ↓
@@ -221,8 +221,8 @@ QA（向量召回 → LLM 生成答案 + 引用片段）
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | `GET` | `/` | 前端主页 |
-| `POST` | `/api/upload` | 上传文件（PDF / DOCX / MD / TXT） |
-| `POST` | `/api/upload-url` | 导入公开静态网页 URL |
+| `POST` | `/api/upload` | 上传文件（PDF / DOCX / MD / TXT，需传 `doc_type`） |
+| `POST` | `/api/upload/url` | 导入公开静态网页 URL（需传 `doc_type`） |
 | `GET` | `/api/documents` | 获取全部文档列表 |
 | `GET` | `/api/documents/{doc_id}` | 获取文档详情（解析内容 + 结构化数据） |
 | `DELETE` | `/api/documents/{doc_id}` | 删除文档记录与上传文件 |
@@ -260,14 +260,14 @@ QA（向量召回 → LLM 生成答案 + 引用片段）
 
 当前提供基础契约测试，同时仍推荐结合 `static/examples/` 做手动验证，至少覆盖：
 
-1. 在顶栏切换不同文本模型后，上传新文档并确认状态从 `processing` 转为 `completed` 或 `failed`
+1. 在顶栏切换不同文本模型后，选择 `doc_type` 并上传新文档，确认状态从 `processing` 转为 `completed` 或 `failed`
 2. 检查 `parsed_content` 是否生成
-3. 检查 `extracted_data` 是否符合对应文类结构
+3. 检查 `extracted_data` 是否符合用户指定的文类结构；当 `doc_type=unknown` 时应跳过结构化抽取
 4. 检查新文档的 `llm_model` 是否保存为当前选择的模型
 5. 执行重建索引，确认正常返回
 6. 对当前文档或全库发起问答，检查答案、引用片段与模型切换是否生效
 7. 检查 `db/` 下 SQLite / 向量索引是否正常生成
-8. 对 URL 导入文档，检查 `source_type`、`source_url` 与 `llm_model` 是否正确保存
+8. 对 URL 导入文档，检查 `doc_type`、`source_type`、`source_url` 与 `llm_model` 是否正确保存
 
 
 ---
@@ -279,10 +279,10 @@ QA（向量召回 → LLM 生成答案 + 引用片段）
 python scripts/run_eval.py
 
 # 指定参数
-python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-source predicted
+python scripts/run_eval.py --prompt-version baseline-v2
 ```
 
-评测结果输出到 `experiments/results/`，包含结构化 JSON 和 Markdown 报告，记录：样本 ID、期望 / 预测文类、抽取成功率、耗时、结构完整率等。
+评测结果输出到 `experiments/results/`，包含结构化 JSON 和 Markdown 报告，记录：样本 ID、指定文类、抽取成功率、耗时、结构完整率等。
 
 ---
 
@@ -312,7 +312,7 @@ python scripts/run_eval.py --prompt-version baseline-v2 --extraction-model-sourc
 
 - [ ] 期望能够参考immersive translate，对照修改原文、json。需要保留上传文档
 - [ ] 评估当前方案能够容器化部署到云端？
-- [ ] **异步化 LLM 调用**：将文类识别、结构化抽取、embedding 生成、索引构建改为异步，提升长文档处理性能与并发能力
+- [ ] **异步化 LLM 调用**：将结构化抽取、embedding 生成、索引构建改为异步，提升长文档处理性能与并发能力
 - [ ] **配置集中化**：将散落在 `extractor.py` / `retrieval.py` / `chunker.py` 中的阈值与默认值抽离为统一配置模块
 - [ ] **评测数据集扩充**：为每类文档补充长文档 / 结构混乱文档样本，支撑论文模型与 Prompt 对比实验
 

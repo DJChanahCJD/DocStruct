@@ -46,11 +46,13 @@ export interface TextModelListResponse {
 
 export interface UploadFileRequest {
   file: File;
+  doc_type: string;
   llm_model?: string | null;
 }
 
 export interface UploadUrlRequest {
   url: string;
+  doc_type: string;
   llm_model?: string | null;
 }
 
@@ -118,6 +120,7 @@ export async function deleteDocument(id: number): Promise<void> {
 export async function uploadFile(req: UploadFileRequest): Promise<UploadResponse> {
   const form = new FormData();
   form.append("file", req.file);
+  form.append("doc_type", req.doc_type);
   if (req.llm_model) {
     form.append("llm_model", req.llm_model);
   }

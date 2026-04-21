@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+const DOC_TYPE_OPTIONS = [
+  { value: "srs", label: "SRS 需求文档" },
+  { value: "api", label: "API 文档" },
+  { value: "design", label: "设计文档" },
+  { value: "test", label: "测试文档" },
+  { value: "manual", label: "用户手册" },
+  { value: "issue", label: "问题单" },
+  { value: "unknown", label: "未知类型" },
+] as const;
+
 interface UploadZoneProps {
   activeModelId?: string | null;
   activeModelLabel?: string;
@@ -18,12 +28,17 @@ interface UploadZoneProps {
 export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [docType, setDocType] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadFile = useUploadDocument();
   const uploadUrl = useUploadUrl();
 
   const handleFile = useCallback(
     async (file: File) => {
+      if (!docType) {
+        toast.error("请先选择文档类型");
+        return;
+      }
       const allowed = [".pdf", ".docx", ".md", ".txt"];
       const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
       if (!allowed.includes(ext)) {
@@ -33,6 +48,7 @@ export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps)
       try {
         const res = await uploadFile.mutateAsync({
           file,
+          doc_type: docType,
           llm_model: activeModelId ?? undefined,
         });
         toast.success(res.message);
@@ -40,7 +56,7 @@ export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps)
         toast.error("上传失败");
       }
     },
-    [activeModelId, uploadFile],
+    [activeModelId, docType, uploadFile],
   );
 
   const handleUrlSubmit = useCallback(async () => {
@@ -49,9 +65,14 @@ export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps)
       toast.error("请输入 URL");
       return;
     }
+    if (!docType) {
+      toast.error("请先选择文档类型");
+      return;
+    }
     try {
       const res = await uploadUrl.mutateAsync({
         url,
+        doc_type: docType,
         llm_model: activeModelId ?? undefined,
       });
       toast.success(res.message);
@@ -59,7 +80,7 @@ export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps)
     } catch {
       toast.error("URL 上传失败");
     }
-  }, [activeModelId, urlInput, uploadUrl]);
+  }, [activeModelId, docType, urlInput, uploadUrl]);
 
   const isPending = uploadFile.isPending || uploadUrl.isPending;
 
@@ -75,6 +96,23 @@ export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps)
       </div>
 
       <Tabs defaultValue="file" className="w-full">
+        <div className="mb-2 space-y-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">文档类型</p>
+          <select
+            value={docType}
+            onChange={(e) => setDocType(e.target.value)}
+            disabled={isPending}
+            className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none ring-offset-background"
+          >
+            <option value="">请选择上传类型</option>
+            {DOC_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] text-muted-foreground/60">上传时显式指定类型，系统将直接按该类型抽取</p>
+        </div>
         <TabsList className="h-8 w-full">
           <TabsTrigger value="file" className="flex-1 text-xs">
             <FileUp className="mr-1 h-3.5 w-3.5" />
@@ -145,7 +183,7 @@ export function UploadZone({ activeModelId, activeModelLabel }: UploadZoneProps)
               <Button
                 size="sm"
                 onClick={handleUrlSubmit}
-                disabled={isPending || !urlInput.trim()}
+                disabled={isPending || !urlInput.trim() || !docType}
                 className="h-8 px-3"
               >
                 {uploadUrl.isPending ? (

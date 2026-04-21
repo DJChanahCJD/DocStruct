@@ -25,7 +25,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from core.extractor import classify_document, extract_structure_with_meta
+from core.extractor import extract_structure_with_meta
 from core.parser import ParserFactory
 from core.url_parser import parse_url_to_markdown
 from schemas.models import (
@@ -47,18 +47,15 @@ TYPE_MODEL_MAP = {
     DocType.ISSUE: IssueDocument,
 }
 
-# 所有可用模型及其单价（元/百万 Token）
 MODEL_PRICING: dict[str, dict[str, float]] = {
     "qwen-doc-turbo": {"input": 0.6, "output": 1.0},
-    "deepseek-v3.2":  {"input": 2.0, "output": 3.0},
-    "kimi-k2.5":      {"input": 4.0, "output": 21.0},
-    "glm-4.7":        {"input": 3.0, "output": 14.0},
-    "MiniMax-M2.5":   {"input": 2.1, "output": 8.4},
+    "deepseek-v3.2": {"input": 2.0, "output": 3.0},
+    "kimi-k2.5": {"input": 4.0, "output": 21.0},
+    "glm-4.7": {"input": 3.0, "output": 14.0},
+    "MiniMax-M2.5": {"input": 2.1, "output": 8.4},
 }
 
 DEFAULT_MODELS = list(MODEL_PRICING.keys())
-
-# Prompt 版本与文件的映射（相对于 PROMPTS_DIR）
 DEFAULT_PROMPTS = ["en-concise", "en-detailed", "zh-concise", "zh-detailed"]
 PROMPTS_DIR = ROOT_DIR / "experiments" / "prompts"
 
@@ -88,10 +85,10 @@ def _parse_args() -> argparse.Namespace:
         help="参与对比的 Prompt 版本标识列表",
     )
     parser.add_argument(
-        "--extraction-model-source",
-        choices=["expected", "predicted"],
+        "--doc-type-source",
+        choices=["expected"],
         default="expected",
-        help="抽取时使用期望文类还是预测文类",
+        help="抽取时使用评测清单中的指定文类",
     )
     parser.add_argument(
         "--samples",
@@ -108,7 +105,6 @@ def _load_manifest(path: Path) -> dict[str, Any]:
 
 
 def _load_prompt_template(prompt_version: str) -> str:
-    """从 experiments/prompts/{version}.txt 加载 Prompt 模板。"""
     prompt_file = PROMPTS_DIR / f"{prompt_version}.txt"
     if not prompt_file.exists():
         raise FileNotFoundError(f"Prompt 文件不存在: {prompt_file}")
@@ -126,7 +122,6 @@ def _is_empty_value(value: Any) -> bool:
 
 
 def _count_fields(value: Any) -> tuple[int, int]:
-    """递归统计字段总数与已填充数。"""
     if isinstance(value, dict):
         total, filled = 0, 0
         for key, item in value.items():
@@ -170,7 +165,6 @@ def _compute_completeness(extracted: dict[str, Any] | None) -> float | None:
 
 
 def _estimate_cost_cny(model_id: str, input_tokens: int, output_tokens: int) -> float | None:
-    """按官方单价估算费用（元），Token 数从 LLM 响应获取时使用，否则返回 None。"""
     pricing = MODEL_PRICING.get(model_id)
     if not pricing:
         return None
@@ -179,7 +173,6 @@ def _estimate_cost_cny(model_id: str, input_tokens: int, output_tokens: int) -> 
 
 
 def _parse_document(sample: dict[str, Any]) -> tuple[str, str]:
-    """解析文档并返回 (markdown, source_ref)。"""
     source_type = sample.get("source_type", "file")
     if source_type == "url":
         source_url = sample["url"]
@@ -197,23 +190,10 @@ def _run_single_cell(
     model_id: str,
     prompt_version: str,
     prompt_template: str,
-    extraction_model_source: str,
 ) -> dict[str, Any]:
-    """运行单个实验格（一个模型 × 一个 Prompt 版本）。"""
     expected_doc_type = sample["expected_doc_type"]
-
-    # 分类（固定使用 qwen-doc-turbo，不受模型参数影响）
-    classify_start = time.perf_counter()
-    classification = classify_document(markdown)
-    classify_ms = round((time.perf_counter() - classify_start) * 1000, 2)
-
-    predicted_doc_type = classification.doc_type.value
-    classification_correct = predicted_doc_type == expected_doc_type
-
-    # 确定用于抽取的文类
-    target_type_str = expected_doc_type if extraction_model_source == "expected" else predicted_doc_type
     try:
-        target_doc_type = DocType(target_type_str)
+        target_doc_type = DocType(expected_doc_type)
     except ValueError:
         target_doc_type = None
 
@@ -238,10 +218,10 @@ def _run_single_cell(
             extraction_error = str(exc)
         extraction_ms = round((time.perf_counter() - extract_start) * 1000, 2)
     else:
-        extraction_error = f"无法确定抽取文类: source={extraction_model_source}, type={target_type_str}"
+        extraction_error = f"无法确定抽取文类: type={expected_doc_type}"
 
     completeness = _compute_completeness(extracted_data)
-    total_ms = round(classify_ms + (extraction_ms or 0), 2)
+    total_ms = round(extraction_ms or 0, 2)
     estimated_cost = _estimate_cost_cny(model_id, input_tokens, output_tokens) if input_tokens else None
 
     return {
@@ -249,12 +229,8 @@ def _run_single_cell(
         "prompt_version": prompt_version,
         "sample_id": sample["sample_id"],
         "expected_doc_type": expected_doc_type,
-        "predicted_doc_type": predicted_doc_type,
-        "classification_correct": classification_correct,
-        "classification_confidence": classification.confidence,
         "extraction_success": extraction_error is None and extracted_data is not None,
         "completeness_score": completeness,
-        "classification_latency_ms": classify_ms,
         "extraction_latency_ms": extraction_ms,
         "total_latency_ms": total_ms,
         "used_chunking": bool(extraction_meta and extraction_meta.get("mode") in {"chunked", "single_fallback"}),
@@ -270,8 +246,6 @@ def _build_matrix_summary(
     models: list[str],
     prompts: list[str],
 ) -> dict[str, Any]:
-    """构建按模型和 Prompt 分组的聚合摘要。"""
-
     def _agg(group: list[dict]) -> dict[str, Any]:
         total = len(group)
         if total == 0:
@@ -361,8 +335,8 @@ def _build_markdown_report(payload: dict[str, Any]) -> str:
         "",
         "## 完整明细（模型 × Prompt × 样本）",
         "",
-        "| 模型 | Prompt | 样本 | 抽取成功 | 完整率 | 耗时(ms) | 模式 |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| 模型 | Prompt | 样本 | doc_type | 抽取成功 | 完整率 | 耗时(ms) | 模式 |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for cell in cells:
         mode = (cell.get("extraction_meta") or {}).get("mode", "-")
@@ -371,6 +345,7 @@ def _build_markdown_report(payload: dict[str, Any]) -> str:
             f"| {cell['model_id']} "
             f"| {cell['prompt_version']} "
             f"| {cell['sample_id']} "
+            f"| {cell['expected_doc_type']} "
             f"| {'Y' if cell['extraction_success'] else 'N'} "
             f"| {completeness if completeness is not None else '-'} "
             f"| {cell['total_latency_ms']} "
@@ -391,12 +366,10 @@ def main() -> None:
     if args.samples:
         samples = [s for s in samples if s["sample_id"] in args.samples]
 
-    # 预加载所有 Prompt 模板
     prompt_templates: dict[str, str] = {}
     for pv in args.prompts:
         prompt_templates[pv] = _load_prompt_template(pv)
 
-    # 预解析所有文档（避免重复 parse）
     parsed_docs: dict[str, tuple[str, str]] = {}
     for sample in samples:
         sid = sample["sample_id"]
@@ -422,7 +395,6 @@ def main() -> None:
                     model_id=model_id,
                     prompt_version=prompt_version,
                     prompt_template=prompt_template,
-                    extraction_model_source=args.extraction_model_source,
                 )
                 cell["source_ref"] = source_ref
                 cells.append(cell)
@@ -444,7 +416,6 @@ def main() -> None:
     print(f"  JSON: {json_path}", flush=True)
     print(f"  报告: {md_path}", flush=True)
 
-    # 打印快速摘要
     print("\n=== 模型对比 ===", flush=True)
     for model_id in args.models:
         agg = summary["by_model"].get(model_id, {})

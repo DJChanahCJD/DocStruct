@@ -55,10 +55,14 @@ async def get_text_models() -> TextModelListResponse:
 
 
 @app.post("/api/upload", response_model=UploadResponse)
-async def upload_document(file: UploadFile = File(...), llm_model: str | None = Form(None)) -> UploadResponse:
+async def upload_document(
+    file: UploadFile = File(...),
+    doc_type: str | None = Form(None),
+    llm_model: str | None = Form(None),
+) -> UploadResponse:
     """处理文件上传，并透传当前活动文本模型。"""
     try:
-        return await process_uploaded_file(file, llm_model=llm_model)
+        return await process_uploaded_file(file, doc_type=doc_type, llm_model=llm_model)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -208,7 +212,11 @@ async def re_extract_document(doc_id: int, body: ReExtractRequest):
 async def upload_from_url(request: UrlUploadRequest):
     """从公开 URL 导入文档，并沿用统一的文档处理服务。"""
     try:
-        return await process_url_document(request.url.strip(), llm_model=request.llm_model)
+        return await process_url_document(
+            request.url.strip(),
+            doc_type=request.doc_type,
+            llm_model=request.llm_model,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 

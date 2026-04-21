@@ -73,6 +73,7 @@ class UrlUploadRequest(BaseModel):
     """URL 导入请求。"""
 
     url: str = Field(..., min_length=1, description="待抓取的公开网页 URL")
+    doc_type: Optional[str] = Field(None, description="上传时指定的文档类型")
     llm_model: Optional[str] = Field(None, description="可选：本次处理使用的文本模型")
 
 

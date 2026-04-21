@@ -6,14 +6,11 @@ from pydantic import BaseModel
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
 from core.constants import (
-    CLASSIFY_PROMPT_TEMPLATE,
-    DOC_TYPE_DESCRIPTIONS,
     EXTRACT_PROMPT_TEMPLATE,
     JSON_FORMAT_INSTRUCTION,
 )
-from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model, CLASSIFY_MODEL_ID
+from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
-from schemas.models import DocClassification, DocType
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -27,11 +24,6 @@ raw_client = get_openai_client()
 def _json_schema_text(model: type[BaseModel]) -> str:
     """将 Pydantic JSON Schema 序列化为 prompt 可注入文本。"""
     return json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2)
-
-
-def _render_doc_type_categories() -> str:
-    """渲染文档类型说明，避免分类 prompt 与 DocType 分散维护。"""
-    return "\n".join(f"{doc_type}: {description}" for doc_type, description in DOC_TYPE_DESCRIPTIONS.items())
 
 
 def _render_prompt(template: str, **kwargs) -> str:
@@ -99,45 +91,6 @@ def _extract_once(
     logger.info("--- Raw LLM Response (Extraction) ---\n%s\n----------------------------------", response_text)
     data = clean_and_parse_json(response_text)
     return normalize_extracted_data(data)
-
-
-
-def classify_document(markdown_content: str, llm_model: str | None = None) -> DocClassification:
-    """使用固定分类模型（qwen-doc-turbo）对文档进行快速分类。
-
-    llm_model 参数保留以兼容调用方签名，但分类任务始终使用 CLASSIFY_MODEL_ID，
-    原因：分类只需文档前 2000 字符，qwen-doc-turbo 性价比最高且专为文档理解设计。
-    """
-    model_spec = resolve_text_model(CLASSIFY_MODEL_ID)
-    summary = markdown_content[:2000]
-    prompt = _render_prompt(
-        CLASSIFY_PROMPT_TEMPLATE,
-        summary=summary,
-        categories=_render_doc_type_categories(),
-        schema=_json_schema_text(DocClassification),
-        json_instruction=JSON_FORMAT_INSTRUCTION,
-    )
-
-    try:
-        logger.info("--- Classifying document using %s ---", model_spec.id)
-        response_text = _create_text_completion(
-            messages=[
-                {"role": "system", "content": "你是一个资深的软件文档分类专家。"},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-            llm_model=model_spec.id,
-        )
-        logger.info("--- Raw LLM Response (Classification) ---\n%s\n--------------------------------------", response_text)
-        data = clean_and_parse_json(response_text)
-        return DocClassification.model_validate(data)
-    except Exception as exc:
-        logger.error("Classification failed: %s", exc, exc_info=True)
-        return DocClassification(
-            doc_type=DocType.UNKNOWN,
-            confidence=0.0,
-            reasoning=f"Error: {str(exc)}",
-        )
 
 
 
@@ -394,4 +347,3 @@ async def _get_rag_context(
     except Exception as exc:
         logger.warning("RAG context retrieval failed: %s", exc)
         return None
-

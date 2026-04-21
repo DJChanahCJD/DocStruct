@@ -61,7 +61,7 @@ class QaContractTests(unittest.TestCase):
                 "/api/qa",
                 json={
                     "question": "系统支持哪些 API？",
-                    "doc_id": 1,
+                    "doc_ids": [1],
                     "top_k": 3,
                     "llm_model": "kimi/kimi-k2.5",
                 },
@@ -71,7 +71,7 @@ class QaContractTests(unittest.TestCase):
         self.assertEqual(response.json()["answer"], "测试回答")
         mock_qa.assert_awaited_once_with(
             question="系统支持哪些 API？",
-            doc_id=1,
+            doc_ids=[1],
             top_k=3,
             llm_model="kimi/kimi-k2.5",
         )
@@ -92,7 +92,7 @@ class QaContractTests(unittest.TestCase):
         self.assertEqual(response.json()["answer"], "默认模型回答")
         mock_qa.assert_awaited_once_with(
             question="默认模型会被使用吗？",
-            doc_id=None,
+            doc_ids=None,
             top_k=5,
             llm_model=None,
         )
@@ -111,7 +111,7 @@ class QaContractTests(unittest.TestCase):
         self.assertIn("不支持的文本模型", response.text)
 
     def test_api_qa_rejects_missing_question(self) -> None:
-        response = self._client().post("/api/qa", json={"doc_id": 1, "top_k": 3})
+        response = self._client().post("/api/qa", json={"doc_ids": [1], "top_k": 3})
 
         self.assertEqual(response.status_code, 422)
         self.assertIn("question", response.text)
@@ -131,11 +131,49 @@ class QaContractTests(unittest.TestCase):
     def test_upload_rejects_unsupported_extension(self) -> None:
         response = self._client().post(
             "/api/upload",
+            data={"doc_type": "srs"},
             files={"file": ("notes.csv", b"id,name\n1,test\n", "text/csv")},
         )
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("不支持的文件类型", response.text)
+
+    def test_upload_rejects_missing_doc_type(self) -> None:
+        response = self._client().post(
+            "/api/upload",
+            files={"file": ("notes.txt", b"hello", "text/plain")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("doc_type", response.text)
+
+    def test_upload_rejects_invalid_doc_type(self) -> None:
+        response = self._client().post(
+            "/api/upload",
+            data={"doc_type": "project"},
+            files={"file": ("notes.txt", b"hello", "text/plain")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("非法 doc_type", response.text)
+
+    def test_upload_url_rejects_missing_doc_type(self) -> None:
+        response = self._client().post(
+            "/api/upload/url",
+            json={"url": "https://example.com"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("doc_type", response.text)
+
+    def test_upload_url_rejects_invalid_doc_type(self) -> None:
+        response = self._client().post(
+            "/api/upload/url",
+            json={"url": "https://example.com", "doc_type": "project"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("非法 doc_type", response.text)
 
 
 if __name__ == "__main__":
