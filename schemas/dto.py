@@ -131,6 +131,17 @@ class ReviewModelReExtractResponse(BaseModel):
     node: ReviewNodeDTO
 
 
+class DocumentSourceMetaDTO(BaseModel):
+    """源文件预览元信息。"""
+
+    source_type: str
+    filename: str
+    mime_type: str
+    preview_mode: Literal["pdf", "office", "text", "external_url", "unsupported"]
+    download_url: str
+    source_url: Optional[str] = None
+
+
 class UploadResponse(BaseModel):
     """上传或 URL 导入后的统一响应。"""
 

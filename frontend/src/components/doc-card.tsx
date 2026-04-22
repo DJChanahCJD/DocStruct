@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { MouseEvent } from "react";
-import { MoreVertical, RotateCcw, Trash2 } from "lucide-react";
+import { MoreVertical, RotateCcw, Trash2, FileText, Link2, Bot, Clock } from "lucide-react";
 import type { DocumentRecord } from "@/lib/api";
 
 const statusColor: Record<string, string> = {
@@ -41,24 +41,15 @@ interface DocCardProps {
   onReindex: () => void;
 }
 
-/**
- * 返回面向用户显示的文档状态文案。
- */
 function getStatusLabel(status: string) {
   return statusLabel[status] ?? status;
 }
 
-/**
- * 返回面向用户显示的文档来源文案。
- */
 function getSourceTypeLabel(sourceType: string | null) {
   if (!sourceType) return "-";
   return sourceTypeLabel[sourceType] ?? sourceType;
 }
 
-/**
- * 渲染侧栏文档卡片，并在 hover 时展示基础元数据。
- */
 export function DocCard({
   doc,
   selected,
@@ -84,9 +75,6 @@ export function DocCard({
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium">
               {doc.filename}
-              <span className="ml-1 font-mono text-sm text-muted-foreground/60">
-                #{doc.id}
-              </span>
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -101,78 +89,136 @@ export function DocCard({
             </div>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md opacity-0 hover:bg-muted group-hover:opacity-100"
-              onClick={(e: MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+          {/* 右端操作区：ID / 更多按钮 */}
+          <div className="relative shrink-0 h-6 w-6 flex items-center justify-center">
+            {/* ID - 默认显示，hover 隐藏 */}
+            <span 
+              className={`absolute text-xs font-mono text-muted-foreground/60 transition-all duration-150 ease-out group-hover:opacity-0 group-hover:scale-90 ${
+                selected ? "text-primary/60" : ""
+              }`}
             >
-              <MoreVertical className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e: MouseEvent<HTMLDivElement>) => {
-                  e.stopPropagation();
-                  onReindex();
-                }}
-              >
-                <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                重建索引
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={(e: MouseEvent<HTMLDivElement>) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                删除
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              #{doc.id}
+            </span>
+            
+            {/* 菜单按钮 - hover 显示 */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-90 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:scale-100">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                  onClick={(e: MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e: MouseEvent<HTMLDivElement>) => {
+                      e.stopPropagation();
+                      onReindex();
+                    }}
+                  >
+                    <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                    重建索引
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={(e: MouseEvent<HTMLDivElement>) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-3.5 w-3.5" />
+                    删除
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
       </TooltipTrigger>
 
-      <TooltipContent side="right" className="max-w-80">
-        <div className="flex flex-col gap-1.5">
-          <DocMetaRow label="文件名" value={doc.filename} />
-          <DocMetaRow label="类型" value={doc.doc_type ?? "-"} />
-          <DocMetaRow label="来源" value={getSourceTypeLabel(doc.source_type)} />
-          {doc.source_type === "url" && doc.source_url && (
-            <DocMetaRow label="来源 URL" value={doc.source_url} />
-          )}
-          <DocMetaRow label="状态" value={getStatusLabel(doc.status)} />
-          <DocMetaRow label="处理模型" value={doc.llm_model ?? "-"} />
-          <DocMetaRow
-            label="上传时间"
-            value={new Date(doc.upload_time).toLocaleString("zh-CN")}
-          />
-          <DocMetaRow
-            label="更新时间"
-            value={new Date(doc.updated_at).toLocaleString("zh-CN")}
-          />
+      <TooltipContent side="right" className="max-w-72 p-3">
+        <div className="space-y-2">
+          {/* 标题：文件名 */}
+          <div className="font-semibold text-sm truncate pr-1" title={doc.filename}>
+            {doc.filename}
+          </div>
+          
+          {/* 元信息行：ID · 类型 · 状态 */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="font-mono text-muted-foreground">#{doc.id}</span>
+            <span className="text-muted-foreground/50">·</span>
+            <Badge variant="secondary" className="text-[10px] h-4 px-1">
+              {doc.doc_type || "unknown"}
+            </Badge>
+            <span className="text-muted-foreground/50">·</span>
+            <span className={`text-[10px] font-medium ${statusColor[doc.status]?.split(' ')[1] ?? 'text-slate-600'}`}>
+              {getStatusLabel(doc.status)}
+            </span>
+          </div>
+          
+          {/* 分隔线 */}
+          <div className="border-t border-border/60 my-1.5" />
+          
+          {/* 次要信息 */}
+          <div className="space-y-1">
+            <DocMetaItem 
+              icon={<FileText className="h-3 w-3" />}
+              label="来源"
+              value={getSourceTypeLabel(doc.source_type)}
+            />
+            {doc.source_type === "url" && doc.source_url && (
+              <DocMetaItem 
+                icon={<Link2 className="h-3 w-3" />}
+                label="URL"
+                value={doc.source_url}
+                truncate
+              />
+            )}
+            <DocMetaItem 
+              icon={<Bot className="h-3 w-3" />}
+              label="模型"
+              value={doc.llm_model ?? "-"}
+            />
+            <DocMetaItem 
+              icon={<Clock className="h-3 w-3" />}
+              label="上传"
+              value={new Date(doc.upload_time).toLocaleString("zh-CN", {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            />
+          </div>
         </div>
       </TooltipContent>
-
     </Tooltip>
   );
 }
 
 /**
- * 渲染 Tooltip 内的单行元数据。
+ * 渲染 Tooltip 内的元数据项（图标 + 标签 + 值）。
  */
-function DocMetaRow({
+function DocMetaItem({
+  icon,
   label,
   value,
+  truncate = false,
 }: {
+  icon: React.ReactNode;
   label: string;
   value: string | null;
+  truncate?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[auto_1fr] items-start gap-2 text-xs">
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-muted-foreground flex items-center">
+        {icon}
+      </span>
       <span className="text-muted-foreground">{label}</span>
-      <span className="break-all font-medium text-background">{value ?? "-"}</span>
+      <span className={`font-medium ${truncate ? 'truncate flex-1' : ''}`}>
+        {value ?? "-"}
+      </span>
     </div>
   );
 }
-

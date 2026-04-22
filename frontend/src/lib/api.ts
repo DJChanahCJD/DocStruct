@@ -92,6 +92,16 @@ export interface ReviewModelReExtractResponse {
   node: ReviewNode;
 }
 
+export interface DocumentSourceMeta {
+  source_type: string;
+  filename: string;
+  mime_type: string;
+  preview_mode: "pdf" | "office" | "text" | "external_url" | "unsupported";
+  download_url: string;
+  raw_text_available: boolean;
+  source_url: string | null;
+}
+
 export interface UploadResponse {
   id: number;
   filename: string;
@@ -168,6 +178,11 @@ export async function listTextModels(): Promise<TextModelListResponse> {
 
 export async function getDocument(id: number): Promise<DocumentRecord> {
   const { data } = await api.get<DocumentRecord>(`/documents/${id}`);
+  return data;
+}
+
+export async function getDocumentSourceMeta(id: number): Promise<DocumentSourceMeta> {
+  const { data } = await api.get<DocumentSourceMeta>(`/documents/${id}/source-meta`);
   return data;
 }
 

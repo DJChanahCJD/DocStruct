@@ -4,7 +4,6 @@ import os
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
-import mimetypes
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
@@ -12,9 +11,11 @@ from core.document_service import TYPE_MODEL_MAP, ensure_document_record_schema,
 from core.extractor import re_extract_with_instruction
 from core.review_model import apply_review_changes, build_review_model, preview_reextract_node
 from core.retrieval import answer_question, build_retrieval_corpus
+from core.source_service import build_source_meta, get_local_source_path
 from core.text_models import list_text_models
 from schemas.models import DocType, DocumentRecord
 from schemas.dto import (
+    DocumentSourceMetaDTO,
     DocumentReviewModelDTO,
     DocumentRecordDTO,
     DocumentUpdateRequest,
@@ -126,31 +127,36 @@ async def _persist_extracted_data(
     return doc, warning
 
 
-@app.get("/api/documents/{doc_id}/file")
-async def download_document_file(doc_id: int):
-    """下载或重定向文档原始文件。
-
-    - source_type == 'file'：返回本地文件内容（FileResponse）
-    - source_type == 'url'：302 重定向到原始 URL
-    """
+@app.get("/api/documents/{doc_id}/source-meta", response_model=DocumentSourceMetaDTO)
+async def get_document_source_meta(doc_id: int):
+    """返回源文件预览元信息。"""
     doc = await DocumentRecord.get_or_none(id=doc_id)
     if not doc:
         raise HTTPException(404, "记录不存在")
+    return DocumentSourceMetaDTO.model_validate(build_source_meta(doc))
 
+
+@app.get("/api/documents/{doc_id}/source")
+async def download_document_source(doc_id: int):
+    """下载或重定向文档原始文件。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
     if doc.source_type == "url":
-        return RedirectResponse(url=doc.stored_path, status_code=302)
+        return RedirectResponse(url=doc.source_url or doc.stored_path, status_code=302)
 
-    if not doc.stored_path or not os.path.exists(doc.stored_path):
-        raise HTTPException(404, "文件不存在")
-
-    media_type, _ = mimetypes.guess_type(doc.stored_path)
-    media_type = media_type or "application/octet-stream"
-
+    source_meta = build_source_meta(doc)
     return FileResponse(
-        path=doc.stored_path,
-        media_type=media_type,
-        filename=doc.filename,
+        path=get_local_source_path(doc),
+        media_type=source_meta["mime_type"],
+        content_disposition_type="inline",
     )
+
+
+@app.get("/api/documents/{doc_id}/file")
+async def download_document_file(doc_id: int):
+    """兼容旧前端：复用 source 接口。"""
+    return await download_document_source(doc_id)
 
 
 @app.patch("/api/documents/{doc_id}", response_model=DocumentRecordDTO)

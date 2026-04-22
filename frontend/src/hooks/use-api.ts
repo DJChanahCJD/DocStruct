@@ -3,6 +3,7 @@ import {
   askQuestion,
   deleteDocument,
   getDocument,
+  getDocumentSourceMeta,
   getReviewModel,
   listDocuments,
   listTextModels,
@@ -14,6 +15,7 @@ import {
   uploadFile,
   uploadUrl,
   type DocumentReviewModel,
+  type DocumentSourceMeta,
   type QaRequest,
   type QaResponse,
   type ReviewModelReExtractRequest,
@@ -52,6 +54,14 @@ export function useDocument(id: number | null) {
   return useQuery({
     queryKey: ["document", id],
     queryFn: () => getDocument(id!),
+    enabled: id !== null,
+  });
+}
+
+export function useDocumentSourceMeta(id: number | null) {
+  return useQuery({
+    queryKey: ["document-source-meta", id],
+    queryFn: () => getDocumentSourceMeta(id!),
     enabled: id !== null,
   });
 }
@@ -167,6 +177,7 @@ export function useReviewNodeReExtract(docId: number) {
 
 export type {
   DocumentReviewModel,
+  DocumentSourceMeta,
   QaResponse,
   ReviewModelReExtractResponse,
   ReviewModelUpdateResponse,

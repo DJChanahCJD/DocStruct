@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Copy, Download } from "lucide-react";
-import { useDocument } from "@/hooks/use-api";
+import { Loader2, AlertCircle, Copy, Download, ExternalLink, FileText } from "lucide-react";
+import { useDocument, useDocumentSourceMeta } from "@/hooks/use-api";
 import { ReviewModelPanel } from "@/components/review-model-panel";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
-import type { CitationItem } from "@/lib/api";
+import type { CitationItem, DocumentSourceMeta } from "@/lib/api";
 
 const Markdown = ReactMarkdown as React.FC<{
   remarkPlugins?: unknown[];
@@ -23,6 +23,7 @@ interface DocPreviewPanelProps {
 
 export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPanelProps) {
   const { data: doc, isLoading } = useDocument(docId);
+  const { data: sourceMeta } = useDocumentSourceMeta(docId);
   const [tab, setTab] = useState("review");
 
   useEffect(() => {
@@ -83,8 +84,9 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
 
         {/* 顶部 Tab 导航 */}
         <div className="shrink-0 border-b px-4 py-2">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="review">审核</TabsTrigger>
+            <TabsTrigger value="source">源文件</TabsTrigger>
             <TabsTrigger value="json">JSON</TabsTrigger>
             <TabsTrigger value="raw">原文</TabsTrigger>
           </TabsList>
@@ -116,6 +118,12 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
             <span>{doc.error_message}</span>
           </div>
         )}
+
+        <TabsContent value="source" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
+          <ScrollArea className="h-full px-5 py-4">
+            <SourcePreview docId={doc.id} sourceMeta={sourceMeta} />
+          </ScrollArea>
+        </TabsContent>
 
         {/* 原文视图 */}
         <TabsContent value="raw" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
@@ -169,6 +177,97 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
           </ScrollArea>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function SourcePreview({ docId, sourceMeta }: { docId: number; sourceMeta?: DocumentSourceMeta }) {
+  if (!sourceMeta) {
+    return (
+      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        正在加载源文件信息...
+      </div>
+    );
+  }
+
+  const downloadUrl = sourceMeta.download_url;
+
+  if (sourceMeta.preview_mode === "pdf") {
+    return (
+      <div className="space-y-3">
+        <SourceHeader sourceMeta={sourceMeta} />
+        <iframe
+          title={`doc-source-${docId}`}
+          src={downloadUrl}
+          className="h-[72vh] w-full rounded-md border bg-background"
+        />
+      </div>
+    );
+  }
+
+  if (sourceMeta.preview_mode === "text") {
+    return (
+      <div className="space-y-3">
+        <SourceHeader sourceMeta={sourceMeta} />
+        <iframe
+          title={`doc-source-${docId}`}
+          src={downloadUrl}
+          className="h-[72vh] w-full rounded-md border bg-background"
+        />
+      </div>
+    );
+  }
+
+  if (sourceMeta.preview_mode === "external_url") {
+    return (
+      <div className="rounded-md border bg-muted/20 p-4">
+        <SourceHeader sourceMeta={sourceMeta} />
+        <p className="mt-3 text-sm text-muted-foreground">
+          该文档来源于外部网页，系统保留原始地址，不做本地文件预览。
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/20 p-4">
+      <SourceHeader sourceMeta={sourceMeta} />
+      <p className="mt-3 text-sm text-muted-foreground">
+        当前类型暂不支持浏览器内高保真预览，可直接下载查看源文件。
+      </p>
+    </div>
+  );
+}
+
+function SourceHeader({ sourceMeta }: { sourceMeta: DocumentSourceMeta }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
+      <div>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <FileText className="h-4 w-4" />
+          <span>{sourceMeta.filename}</span>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {sourceMeta.mime_type} · {sourceMeta.source_type}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        {sourceMeta.source_url && (
+          <Button size="sm" variant="secondary" className="h-8">
+            <a href={sourceMeta.source_url} target="_blank" rel="noreferrer">
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              打开来源
+            </a>
+          </Button>
+        )}
+        <Button size="sm" variant="secondary" className="h-8">
+          <a href={sourceMeta.download_url} target="_blank" rel="noreferrer">
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            打开源文件
+          </a>
+        </Button>
+      </div>
     </div>
   );
 }
