@@ -65,7 +65,7 @@ def _extract_once(
     """执行单次结构化提取并返回归一化后的 JSON 数据。
 
     prompt_override: 若提供，则用该模板替换默认 EXTRACT_PROMPT_TEMPLATE，
-    模板需包含 {content}、{schema}、{json_instruction} 占位符。
+    模板需包含 {content}、{schema}、{extra_instruction} 占位符。
     """
     prompt_content = content
     if context_note:
@@ -76,7 +76,6 @@ def _extract_once(
         template,
         content=prompt_content,
         schema=_json_schema_text(response_model),
-        json_instruction=JSON_FORMAT_INSTRUCTION,
     )
 
     response_text = _create_text_completion(
@@ -245,7 +244,7 @@ async def re_extract_with_instruction(
             EXTRACT_PROMPT_TEMPLATE,
             content=context_content,
             schema=_json_schema_text(response_model),
-            json_instruction=JSON_FORMAT_INSTRUCTION + extra,
+            extra_instruction=extra,
         )
         system_msg = "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"
         response_text = _create_text_completion(

@@ -12,4 +12,4 @@
 Schema：
 {schema}
 
-{json_instruction}
+{extra_instruction}

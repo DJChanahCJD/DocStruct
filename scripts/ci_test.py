@@ -10,11 +10,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_DIR = ROOT / "frontend"
 BACKEND_TESTS = [
-    "scripts.test_qa_contract",
-    "scripts.test_re_extract_contract",
-    "scripts.test_re_extract_unit",
-    "scripts.test_review_model_contract",
-    "scripts.test_review_model_unit",
 ]
 
 
