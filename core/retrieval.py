@@ -31,8 +31,6 @@ DB_PATH = settings.db_path
 REQUIRED_CHUNK_COLUMNS: dict[str, str] = {
     "title_path": "TEXT",
     "section_title": "TEXT",
-    "chunk_type": "TEXT",
-    "order_index": "INTEGER",
     "embed_text": "TEXT",
     "display_text": "TEXT",
 }
@@ -138,7 +136,7 @@ def _normalize_snippet_line(line: str) -> str:
     return cleaned.strip(" -|")
 
 
-def _normalize_snippet_text(display_text: str, chunk_type: str | None) -> str:
+def _normalize_snippet_text(display_text: str) -> str:
     """
     规范化 snippet 文本，仅处理 display_text 内容。
     title_path 由调用方单独传递，不再混入 snippet。
@@ -146,9 +144,6 @@ def _normalize_snippet_text(display_text: str, chunk_type: str | None) -> str:
     lines = [line for line in (display_text or "").splitlines() if line.strip()]
     normalized_lines = [_normalize_snippet_line(line) for line in lines]
     normalized_lines = [line for line in normalized_lines if line]
-
-    if chunk_type == "table":
-        normalized_lines = [line for line in normalized_lines if "---" not in line]
 
     return "\n".join(normalized_lines).strip()
 
@@ -210,20 +205,12 @@ def _normalize_for_compare(text: str) -> str:
 
 def _content_density(item: dict) -> tuple[int, int]:
     display_text = item.get("display_text") or ""
-    chunk_type = item.get("chunk_type") or ""
     lower_text = display_text.lower()
     fact_hits = sum(
         token in lower_text
         for token in ("failed", "error", "pass", "passed", "bug #", "bug id", "/api/", "method:", "path:", "tc", "req-")
     )
-    type_weight = {
-        "table": 4,
-        "list": 3,
-        "structured": 3,
-        "code": 2,
-        "paragraph": 1,
-    }.get(chunk_type, 0)
-    return type_weight + fact_hits, len(display_text)
+    return fact_hits, len(display_text)
 
 
 def _prefer_candidate(candidate: dict, chosen: dict) -> bool:
@@ -284,37 +271,21 @@ def _is_duplicate_candidate(candidate: dict, chosen: dict) -> bool:
     chosen_path = chosen.get("title_path") or ""
     candidate_section = candidate.get("section_title") or ""
     chosen_section = chosen.get("section_title") or ""
-    candidate_order = candidate.get("order_index")
-    chosen_order = chosen.get("order_index")
     if (
         candidate_path
         and candidate_path == chosen_path
-        and candidate_order is not None
-        and chosen_order is not None
-        and abs(candidate_order - chosen_order) <= 1
     ):
         return True
 
-    if (
-        _title_paths_related(candidate_path, chosen_path)
-        and candidate_order is not None
-        and chosen_order is not None
-        and abs(candidate_order - chosen_order) <= 3
-    ):
+    if _title_paths_related(candidate_path, chosen_path):
         return True
 
     if (
         candidate_section
         and chosen_section
         and candidate_section == chosen_section
-        and candidate_order is not None
-        and chosen_order is not None
-        and abs(candidate_order - chosen_order) <= 2
     ):
-        candidate_type = candidate.get("chunk_type")
-        chosen_type = chosen.get("chunk_type")
-        if {candidate_type, chosen_type} & {"table", "list", "structured", "code"}:
-            return True
+        return True
 
     candidate_text = _normalize_for_compare(candidate["display_text"])
     chosen_text = _normalize_for_compare(chosen["display_text"])
@@ -415,12 +386,8 @@ async def build_retrieval_corpus(record_id: int) -> None:
             ChunkRecord(
                 doc_id=record_id,
                 chunk_index=idx,
-                heading_path=title_path,
                 title_path=title_path,
                 section_title=chunk.section_title,
-                chunk_type=chunk.chunk_type,
-                order_index=chunk.order_index,
-                content=chunk.display_text,
                 embed_text=chunk.embed_text,
                 display_text=chunk.display_text,
                 vector=vectors[idx],
@@ -471,21 +438,16 @@ async def search_similar_chunks(
         if doc_id_set and rec.doc_id not in doc_id_set:
             continue
 
-        title_path = rec.title_path or rec.heading_path
-        display_text = rec.display_text or rec.content
+        title_path = rec.title_path
+        display_text = rec.display_text
         content = _compose_display_text(title_path=title_path, display_text=display_text)
-        snippet_source = _normalize_snippet_text(
-            display_text=display_text,
-            chunk_type=rec.chunk_type,
-        )
+        snippet_source = _normalize_snippet_text(display_text=display_text)
         item = {
             "doc_id": rec.doc_id,
             "chunk_id": rec.id,
             "score": round(score, 6),
             "title_path": _normalize_title_path(title_path) or None,
             "section_title": rec.section_title,
-            "chunk_type": rec.chunk_type,
-            "order_index": rec.order_index if rec.order_index is not None else rec.chunk_index,
             "snippet": _build_snippet(snippet_source, question=question),
             "display_text": display_text,
             "content": content,

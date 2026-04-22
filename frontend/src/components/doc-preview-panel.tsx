@@ -1,34 +1,62 @@
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Copy, Download, ExternalLink, FileText } from "lucide-react";
-import { useDocument, useDocumentSourceMeta } from "@/hooks/use-api";
-import { ReviewModelPanel } from "@/components/review-model-panel";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  Copy,
+  Download,
+  ExternalLink,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Save,
+} from "lucide-react";
 import { toast } from "sonner";
-import type { CitationItem, DocumentSourceMeta } from "@/lib/api";
 
-const Markdown = ReactMarkdown as React.FC<{
-  remarkPlugins?: unknown[];
-  children?: string;
-}>;
+import { ReviewModelPanel } from "@/components/review-model-panel";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useDocument, useDocumentSourceMeta, useUpdateDocument } from "@/hooks/use-api";
+import type { CitationItem, DocumentSourceMeta } from "@/lib/api";
 
 interface DocPreviewPanelProps {
   docId: number | null;
   mode: "preview" | "citation";
   citationSnippet?: CitationItem | null;
+  onRawDirtyChange?: (dirty: boolean) => void;
 }
 
-export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPanelProps) {
+export function DocPreviewPanel({
+  docId,
+  mode,
+  citationSnippet,
+  onRawDirtyChange,
+}: DocPreviewPanelProps) {
   const { data: doc, isLoading } = useDocument(docId);
   const { data: sourceMeta } = useDocumentSourceMeta(docId);
   const [tab, setTab] = useState("review");
+  const [rawDraft, setRawDraft] = useState("");
+  const [savedRawContent, setSavedRawContent] = useState("");
+  const updateDocument = useUpdateDocument(docId ?? -1);
+
+  const hasRawChanges = useMemo(
+    () => rawDraft !== savedRawContent,
+    [rawDraft, savedRawContent],
+  );
 
   useEffect(() => {
     setTab("review");
   }, [docId]);
+
+  useEffect(() => {
+    const nextContent = doc?.parsed_content ?? "";
+    setRawDraft(nextContent);
+    setSavedRawContent(nextContent);
+  }, [doc?.id, doc?.parsed_content]);
+
+  useEffect(() => {
+    onRawDirtyChange?.(tab === "raw" && hasRawChanges);
+  }, [hasRawChanges, onRawDirtyChange, tab]);
 
   /** 复制 JSON 到剪贴板 */
   const handleCopyJson = async () => {
@@ -37,7 +65,7 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
       const jsonString = JSON.stringify(doc.extracted_data, null, 2);
       await navigator.clipboard.writeText(jsonString);
       toast.success("JSON 已复制到剪贴板");
-    } catch (error) {
+    } catch {
       toast.error("复制失败，请手动复制");
     }
   };
@@ -56,9 +84,44 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
     toast.success("JSON 已下载");
   };
 
+  const handleTabChange = (nextTab: string) => {
+    if (tab === "raw" && nextTab !== "raw" && hasRawChanges) {
+      const confirmed = window.confirm("当前 Markdown 校对内容尚未保存，确定要离开这个标签页吗？");
+      if (!confirmed) {
+        return;
+      }
+    }
+    setTab(nextTab);
+  };
+
+  const handleResetRaw = () => {
+    setRawDraft(savedRawContent);
+    toast.info("已恢复到最近一次保存的 Markdown");
+  };
+
+  const handleSaveRaw = async () => {
+    if (!doc) {
+      return;
+    }
+    try {
+      const updatedDoc = await updateDocument.mutateAsync({
+        parsed_content: rawDraft,
+      });
+      const nextContent = updatedDoc.parsed_content ?? "";
+      setRawDraft(nextContent);
+      setSavedRawContent(nextContent);
+      if (updatedDoc.error_message) {
+        toast.warning(`Markdown 已保存，但索引更新异常：${updatedDoc.error_message}`);
+      } else {
+        toast.success("Markdown 已保存，并已同步重建索引");
+      }
+    } catch {
+      toast.error("Markdown 保存失败");
+    }
+  };
+
   if (!docId) return null;
 
-  // --- 状态处理：加载中 ---
   if (isLoading) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-background text-muted-foreground">
@@ -68,7 +131,6 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
     );
   }
 
-  // --- 状态处理：无数据 ---
   if (!doc) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-background text-muted-foreground">
@@ -77,12 +139,9 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
     );
   }
 
-  // --- 主渲染逻辑 ---
   return (
     <div className="flex h-full w-full flex-1 flex-col overflow-hidden bg-background">
-      <Tabs value={tab} onValueChange={setTab} className="flex flex-1 flex-col overflow-hidden">
-
-        {/* 顶部 Tab 导航 */}
+      <Tabs value={tab} onValueChange={handleTabChange} className="flex flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b px-4 py-2">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="review">审核</TabsTrigger>
@@ -92,7 +151,6 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
           </TabsList>
         </div>
 
-        {/* 引用片段 (仅在 citation 模式下显示) */}
         {mode === "citation" && citationSnippet && (
           <div className="shrink-0 border-b bg-muted/30 px-5 py-4">
             <div className="border-l-4 border-primary pl-4">
@@ -111,9 +169,8 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
           </div>
         )}
 
-        {/* 错误提示区 (全局错误) */}
         {doc.error_message && (
-          <div className="shrink-0 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-2 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4" />
             <span>{doc.error_message}</span>
           </div>
@@ -125,15 +182,73 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
           </ScrollArea>
         </TabsContent>
 
-        {/* 原文视图 */}
         <TabsContent value="raw" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <ScrollArea className="h-full px-5 py-4">
-            <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
-              <Markdown remarkPlugins={[remarkGfm]}>
-                {doc.parsed_content || "暂无原文内容"}
-              </Markdown>
+          <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <div className="min-h-0 border-r bg-muted/10">
+              <ScrollArea className="h-full px-5 py-4">
+                <SourcePreview docId={doc.id} sourceMeta={sourceMeta} fillHeight />
+              </ScrollArea>
             </div>
-          </ScrollArea>
+
+            <div className="flex min-h-0 flex-col bg-background">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Markdown 校对
+                  </p>
+                  <h3 className="mt-1 text-base font-semibold text-foreground">解析结果可人工修正</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    保存后会回写正式原文，并同步重建后续检索索引。
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                    {updateDocument.isPending
+                      ? "保存中..."
+                      : hasRawChanges
+                        ? "未保存修改"
+                        : "已同步"}
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleResetRaw}
+                    disabled={!hasRawChanges || updateDocument.isPending}
+                  >
+                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                    恢复
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveRaw}
+                    disabled={!hasRawChanges || updateDocument.isPending}
+                  >
+                    {updateDocument.isPending ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    保存 Markdown
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid shrink-0 grid-cols-2 gap-3 border-b px-5 py-3 text-xs text-muted-foreground">
+                <div>字符数：{rawDraft.length}</div>
+                <div>行数：{rawDraft ? rawDraft.split(/\r?\n/).length : 0}</div>
+              </div>
+
+              <div className="min-h-0 flex-1 p-5">
+                <Textarea
+                  value={rawDraft}
+                  onChange={(event) => setRawDraft(event.target.value)}
+                  placeholder="这里显示解析后的 Markdown，用户可以直接修正。"
+                  spellCheck={false}
+                  className="h-full min-h-full resize-none bg-muted/10 font-mono text-sm leading-6"
+                />
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="review" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
@@ -142,7 +257,6 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
           </ScrollArea>
         </TabsContent>
 
-        {/* JSON 视图 */}
         <TabsContent value="json" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
           <ScrollArea className="h-full px-5 py-4">
             <div className="space-y-3">
@@ -181,7 +295,15 @@ export function DocPreviewPanel({ docId, mode, citationSnippet }: DocPreviewPane
   );
 }
 
-function SourcePreview({ docId, sourceMeta }: { docId: number; sourceMeta?: DocumentSourceMeta }) {
+function SourcePreview({
+  docId,
+  sourceMeta,
+  fillHeight = false,
+}: {
+  docId: number;
+  sourceMeta?: DocumentSourceMeta;
+  fillHeight?: boolean;
+}) {
   if (!sourceMeta) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
@@ -192,28 +314,18 @@ function SourcePreview({ docId, sourceMeta }: { docId: number; sourceMeta?: Docu
   }
 
   const downloadUrl = sourceMeta.download_url;
+  const frameClassName = fillHeight
+    ? "h-full min-h-[32rem] w-full rounded-md border bg-background"
+    : "h-[72vh] w-full rounded-md border bg-background";
 
-  if (sourceMeta.preview_mode === "pdf") {
+  if (sourceMeta.preview_mode === "pdf" || sourceMeta.preview_mode === "text") {
     return (
-      <div className="space-y-3">
+      <div className={`space-y-3 ${fillHeight ? "flex h-full min-h-0 flex-col" : ""}`}>
         <SourceHeader sourceMeta={sourceMeta} />
         <iframe
           title={`doc-source-${docId}`}
           src={downloadUrl}
-          className="h-[72vh] w-full rounded-md border bg-background"
-        />
-      </div>
-    );
-  }
-
-  if (sourceMeta.preview_mode === "text") {
-    return (
-      <div className="space-y-3">
-        <SourceHeader sourceMeta={sourceMeta} />
-        <iframe
-          title={`doc-source-${docId}`}
-          src={downloadUrl}
-          className="h-[72vh] w-full rounded-md border bg-background"
+          className={frameClassName}
         />
       </div>
     );
@@ -264,7 +376,7 @@ function SourceHeader({ sourceMeta }: { sourceMeta: DocumentSourceMeta }) {
         <Button size="sm" variant="secondary" className="h-8">
           <a href={sourceMeta.download_url} target="_blank" rel="noreferrer">
             <Download className="mr-1.5 h-3.5 w-3.5" />
-            打开源文件
+            源文件
           </a>
         </Button>
       </div>

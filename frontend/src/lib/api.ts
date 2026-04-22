@@ -11,7 +11,6 @@ export interface DocumentRecord {
   filename: string;
   stored_path: string;
   upload_time: string;
-  updated_at: string;
   doc_type: string;
   source_type: string;
   source_url: string | null;
@@ -23,7 +22,8 @@ export interface DocumentRecord {
 }
 
 export interface UpdateDocumentRequest {
-  extracted_data: Record<string, unknown>;
+  parsed_content?: string;
+  extracted_data?: Record<string, unknown>;
 }
 
 export interface ReviewField {

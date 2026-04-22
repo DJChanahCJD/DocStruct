@@ -43,8 +43,6 @@ REQUIRED_DOCUMENT_COLUMNS: dict[str, str] = {
     "source_type": "TEXT DEFAULT 'file'",
     "source_url": "TEXT",
     "llm_model": "TEXT",
-    "updated_at": "DATETIME",
-    "classification_result": "TEXT",
     "schema_version": "TEXT",
 }
 
@@ -67,7 +65,6 @@ def ensure_document_record_schema() -> None:
             conn.execute(f"ALTER TABLE document_records ADD COLUMN {column_name} {column_type}")
 
         conn.execute("UPDATE document_records SET source_type = 'file' WHERE source_type IS NULL OR source_type = ''")
-        conn.execute("UPDATE document_records SET updated_at = upload_time WHERE updated_at IS NULL")
         conn.commit()
     finally:
         conn.close()

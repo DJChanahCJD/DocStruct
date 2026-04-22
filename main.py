@@ -105,12 +105,12 @@ async def _reindex_after_edit(doc: DocumentRecord) -> str | None:
         warning = f"向量索引构建失败: {exc}"
         logger.warning("Reindex after edit failed for doc %s: %s", doc.id, exc)
         doc.error_message = warning
-        await doc.save(update_fields=["error_message", "updated_at"])
+        await doc.save(update_fields=["error_message"])
         return warning
 
     if doc.error_message:
         doc.error_message = None
-        await doc.save(update_fields=["error_message", "updated_at"])
+        await doc.save(update_fields=["error_message"])
     return None
 
 
@@ -121,7 +121,7 @@ async def _persist_extracted_data(
     reindex: bool = True,
 ) -> tuple[DocumentRecord, str | None]:
     doc.extracted_data = extracted_data
-    await doc.save(update_fields=["extracted_data", "updated_at"])
+    await doc.save(update_fields=["extracted_data"])
     warning = await _reindex_after_edit(doc) if reindex else None
     await doc.refresh_from_db()
     return doc, warning
@@ -161,11 +161,31 @@ async def download_document_file(doc_id: int):
 
 @app.patch("/api/documents/{doc_id}", response_model=DocumentRecordDTO)
 async def update_document(doc_id: int, body: DocumentUpdateRequest):
-    """更新文档的结构化 JSON 数据（extracted_data）。"""
+    """更新文档的 Markdown 原文或结构化 JSON 数据。"""
     doc = await DocumentRecord.get_or_none(id=doc_id)
     if not doc:
         raise HTTPException(404, "记录不存在")
-    doc, _warning = await _persist_extracted_data(doc, body.extracted_data, reindex=True)
+
+    should_reindex = False
+    update_fields: list[str] = []
+
+    if body.parsed_content is not None and body.parsed_content != doc.parsed_content:
+        doc.parsed_content = body.parsed_content
+        update_fields.append("parsed_content")
+        should_reindex = True
+
+    if body.extracted_data is not None and body.extracted_data != doc.extracted_data:
+        doc.extracted_data = body.extracted_data
+        update_fields.append("extracted_data")
+        should_reindex = True
+
+    if update_fields:
+        await doc.save(update_fields=update_fields)
+
+    if should_reindex:
+        await _reindex_after_edit(doc)
+
+    await doc.refresh_from_db()
     return DocumentRecordDTO.model_validate(doc)
 
 

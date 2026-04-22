@@ -34,6 +34,7 @@ function AppContent() {
     docName: string;
     nonce: number;
   } | null>(null);
+  const [hasUnsavedRawChanges, setHasUnsavedRawChanges] = useState(false);
   const [activeModelId, setActiveModelId] = useState<string>(
     () => localStorage.getItem("docstruct_active_model_id") ?? ""
   );
@@ -62,27 +63,46 @@ function AppContent() {
     });
   }, [textModels]);
 
+  const confirmDiscardRawChanges = () => {
+    if (!hasUnsavedRawChanges) {
+      return true;
+    }
+    return window.confirm("当前 Markdown 校对内容尚未保存，确定要离开吗？");
+  };
+
   const handleSelectDoc = (id: number, name: string) => {
+    if (!confirmDiscardRawChanges()) {
+      return;
+    }
     setSelectedDocId(id);
     setSelectedDocName(name);
     setPreviewMode("preview");
     setPreviewDocId(id);
+    setHasUnsavedRawChanges(false);
     if (showQaPanel) {
       setQaMentionSeed({ docId: id, docName: name, nonce: Date.now() });
     }
   };
 
-  const handleClearSelection = () => {
-    setSelectedDocId(null);
-    setSelectedDocName("未选中文档");
-    setPreviewDocId(null);
-  };
-
   const handleOpenCitation = (citation: CitationItem) => {
+    if (!confirmDiscardRawChanges()) {
+      return;
+    }
     setPreviewMode("citation");
     setPreviewDocId(citation.doc_id);
     setCitationSnippet(citation);
+    setHasUnsavedRawChanges(false);
     setShowQaPanel(true);
+  };
+
+  const handleClearSelection = () => {
+    if (!confirmDiscardRawChanges()) {
+      return;
+    }
+    setSelectedDocId(null);
+    setSelectedDocName("未选中文档");
+    setPreviewDocId(null);
+    setHasUnsavedRawChanges(false);
   };
 
   return (
@@ -177,6 +197,7 @@ function AppContent() {
               docId={previewDocId}
               mode={previewMode}
               citationSnippet={citationSnippet}
+              onRawDirtyChange={setHasUnsavedRawChanges}
             />
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-muted-foreground">

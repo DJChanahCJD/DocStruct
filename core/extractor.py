@@ -159,7 +159,7 @@ def extract_structure_with_meta(
     failed_chunks = 0
 
     for chunk in chunks:
-        context_note = f"heading_path={' > '.join(chunk.heading_path) if chunk.heading_path else '(no-heading)'}"
+        context_note = f"title_path={' > '.join(chunk.title_path) if chunk.title_path else '(no-heading)'}"
         try:
             data = _extract_once(
                 chunk.text,
@@ -333,9 +333,9 @@ async def _get_rag_context(
             logger.warning("RAG returned empty chunks for query: %s", query)
             return None
 
-        # 按 order_index 排序并拼接
-        sorted_chunks = sorted(chunks, key=lambda x: x.get("order_index", 0))
-        context_parts = [chunk.get("content", "") for chunk in sorted_chunks]
+        # 按 score 排序并拼接
+        sorted_chunks = sorted(chunks, key=lambda x: x.get("score", 0), reverse=True)
+        context_parts = [chunk.get("display_text", "") for chunk in sorted_chunks]
         context = "\n\n---\n\n".join(context_parts)
 
         # 仍然超出阈值则截断

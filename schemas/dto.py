@@ -21,14 +21,6 @@ class DocumentRecordDTO(BaseModel):
     filename: str
     stored_path: str
     upload_time: datetime
-    updated_at: Optional[datetime] = None
-
-    @model_validator(mode="after")
-    def _fallback_updated_at(self) -> "DocumentRecordDTO":
-        """旧记录 updated_at 为 NULL 时，回退到 upload_time。"""
-        if self.updated_at is None:
-            self.updated_at = self.upload_time
-        return self
     doc_type: str
     source_type: str
     source_url: Optional[str] = None
@@ -40,9 +32,16 @@ class DocumentRecordDTO(BaseModel):
 
 
 class DocumentUpdateRequest(BaseModel):
-    """PATCH /documents/{id} 请求体，仅允许更新 extracted_data。"""
+    """PATCH /documents/{id} 请求体，允许更新 Markdown 或结构化 JSON。"""
 
-    extracted_data: dict[str, Any] = Field(..., description="用户修改后的结构化 JSON 数据")
+    parsed_content: Optional[str] = Field(None, description="用户修订后的 Markdown 内容")
+    extracted_data: Optional[dict[str, Any]] = Field(None, description="用户修改后的结构化 JSON 数据")
+
+    @model_validator(mode="after")
+    def _at_least_one_field_required(self) -> "DocumentUpdateRequest":
+        if self.parsed_content is None and self.extracted_data is None:
+            raise ValueError("parsed_content 和 extracted_data 至少需要提供一个")
+        return self
 
 
 class ReviewFieldDTO(BaseModel):

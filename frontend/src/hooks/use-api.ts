@@ -111,7 +111,7 @@ export function useUploadUrl() {
 }
 
 /**
- * 更新文档的结构化 JSON 数据（extracted_data），并刷新列表和详情缓存。
+ * 更新文档的 Markdown 原文或结构化 JSON 数据，并刷新列表和详情缓存。
  */
 export function useUpdateDocument(id: number) {
   const qc = useQueryClient();
