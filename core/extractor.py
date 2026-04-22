@@ -1,51 +1,41 @@
-import logging
+from __future__ import annotations
+
+import asyncio
 import json
+import logging
 
 from pydantic import BaseModel
 
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
-from core.constants import (
-    EXTRACT_PROMPT_TEMPLATE,
-    JSON_FORMAT_INSTRUCTION,
-)
-from core.text_models import build_chat_completion_kwargs, get_openai_client, resolve_text_model
+from core.constants import EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
+from core.llm import build_chat_completion_kwargs, get_openai_client
 from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
+
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-if not settings.llm_api_key:
-    logger.warning("Warning: LLM_API_KEY not found in environment variables.")
-
 raw_client = get_openai_client()
 
 
 def _json_schema_text(model: type[BaseModel]) -> str:
-    """将 Pydantic JSON Schema 序列化为 prompt 可注入文本。"""
     return json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2)
 
 
-def _render_prompt(template: str, **kwargs) -> str:
-    """仅替换显式占位符，避免 JSON 示例中的花括号被误解析。"""
+def _render_prompt(template: str, **kwargs: str) -> str:
     rendered = template
     for key, value in kwargs.items():
-        rendered = rendered.replace(f"{{{key}}}", str(value))
+        rendered = rendered.replace(f"{{{key}}}", value)
     return rendered
-
 
 
 def _create_text_completion(
     messages: list[dict[str, str]],
     *,
     temperature: float,
-    llm_model: str | None = None,
 ) -> str:
-    """按指定文本模型执行一次非流式补全，并返回文本内容。"""
-    model_spec = resolve_text_model(llm_model)
     response = raw_client.chat.completions.create(
         **build_chat_completion_kwargs(
-            llm_model=model_spec.id,
             messages=messages,
             temperature=temperature,
         )
@@ -53,87 +43,66 @@ def _create_text_completion(
     return response.choices[0].message.content or ""
 
 
-
 def _extract_once(
     content: str,
     response_model: type[BaseModel],
+    *,
     context_note: str | None = None,
-    llm_model: str | None = None,
-    prompt_override: str | None = None,
 ) -> dict[str, object]:
-
-    """执行单次结构化提取并返回归一化后的 JSON 数据。
-
-    prompt_override: 若提供，则用该模板替换默认 EXTRACT_PROMPT_TEMPLATE，
-    模板需包含 {content}、{schema}、{extra_instruction} 占位符。
-    """
     prompt_content = content
     if context_note:
         prompt_content = f"[Context]\n{context_note}\n\n[Document Chunk]\n{content}"
 
-    template = prompt_override if prompt_override is not None else EXTRACT_PROMPT_TEMPLATE
     prompt = _render_prompt(
-        template,
+        EXTRACT_PROMPT_TEMPLATE,
         content=prompt_content,
         schema=_json_schema_text(response_model),
+        json_instruction=JSON_FORMAT_INSTRUCTION,
     )
-
     response_text = _create_text_completion(
         messages=[
             {"role": "system", "content": "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.0,
-        llm_model=llm_model,
     )
-
-    logger.info("--- Raw LLM Response (Extraction) ---\n%s\n----------------------------------", response_text)
     data = clean_and_parse_json(response_text)
     return normalize_extracted_data(data)
 
 
+async def _extract_chunk(
+    semaphore: asyncio.Semaphore,
+    chunk_text: str,
+    response_model: type[BaseModel],
+    *,
+    context_note: str | None = None,
+) -> dict[str, object]:
+    async with semaphore:
+        return await asyncio.to_thread(
+            _extract_once,
+            chunk_text,
+            response_model,
+            context_note=context_note,
+        )
 
-def extract_structure(
+
+async def extract_structure_with_meta(
     markdown_content: str,
     response_model: type[BaseModel],
-    llm_model: str | None = None,
-    prompt_override: str | None = None,
-) -> BaseModel:
-    """使用活动文本模型从 Markdown 内容中提取结构化数据。"""
-    extracted, _ = extract_structure_with_meta(
-        markdown_content, response_model, llm_model=llm_model, prompt_override=prompt_override
-    )
-    return extracted
-
-
-
-def extract_structure_with_meta(
-    markdown_content: str,
-    response_model: type[BaseModel],
-    llm_model: str | None = None,
-    prompt_override: str | None = None,
 ) -> tuple[BaseModel, dict[str, object]]:
+    logger.info("Extracting structure for %s", response_model.__name__)
+    content_length = len(markdown_content)
 
-    """按指定文本模型执行结构化提取，并返回提取元信息。
+    if content_length > settings.extraction_max_chars:
+        raise ValueError(
+            f"文档长度为 {content_length} 字符，超过系统上限 {settings.extraction_max_chars}。"
+            "当前系统仅面向中短文档。"
+        )
 
-    prompt_override: 若提供，则用该模板替换默认 EXTRACT_PROMPT_TEMPLATE。
-    """
-    logger.info("--- Extracting structure for %s ---", response_model.__name__)
-
-    threshold = settings.extraction_threshold
-    if len(markdown_content) <= threshold:
-        try:
-            data = _extract_once(
-                markdown_content[: settings.extraction_single_max_chars],
-                response_model,
-                llm_model=llm_model,
-                prompt_override=prompt_override,
-            )
-            validated = response_model.model_validate(data)
-            return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
-        except Exception as exc:
-            logger.error("Single extraction failed: %s", exc, exc_info=True)
-            raise RuntimeError(f"LLM Extraction failed: {str(exc)}")
+    if content_length <= settings.extraction_threshold:
+        data = await asyncio.to_thread(_extract_once, markdown_content, response_model)
+        validated = response_model.model_validate(data)
+        return validated, {"mode": "single", "chunk_count": 1}
 
     chunks = split_markdown_into_chunks(
         markdown_text=markdown_content,
@@ -141,208 +110,43 @@ def extract_structure_with_meta(
         overlap_chars=settings.extraction_chunk_overlap_chars,
     )
     if not chunks:
-        try:
-            data = _extract_once(
-                markdown_content[: settings.extraction_single_max_chars],
-                response_model,
-                llm_model=llm_model,
-                prompt_override=prompt_override,
-            )
-            validated = response_model.model_validate(data)
-            return validated, {"mode": "single", "chunk_count": 1, "failed_chunks": 0, "fallback_used": False}
-        except Exception as exc:
-            logger.error("Extraction failed on empty chunk fallback: %s", exc, exc_info=True)
-            raise RuntimeError(f"LLM Extraction failed: {str(exc)}")
+        raise ValueError("文档分块失败，无法继续提取")
 
-    partial_results = []
-    failed_chunks = 0
-
-    for chunk in chunks:
-        context_note = f"title_path={' > '.join(chunk.title_path) if chunk.title_path else '(no-heading)'}"
-        try:
-            data = _extract_once(
-                chunk.text,
-                response_model,
-                context_note=context_note,
-                llm_model=llm_model,
-                prompt_override=prompt_override,
-            )
-            partial_results.append(data)
-        except Exception as exc:
-            failed_chunks += 1
-            logger.warning("Chunk extraction failed at index=%s: %s", chunk.index, exc)
-
-    if partial_results:
-        try:
-            merged = merge_extraction_results(partial_results)
-            validated = response_model.model_validate(merged)
-            return validated, {
-                "mode": "chunked",
-                "chunk_count": len(chunks),
-                "failed_chunks": failed_chunks,
-                "fallback_used": False,
-            }
-        except Exception as exc:
-            logger.warning("Merged chunk validation failed, fallback to single extraction: %s", exc)
-
-    try:
-        fallback_data = _extract_once(
-            markdown_content[: settings.extraction_single_max_chars],
+    semaphore = asyncio.Semaphore(max(1, settings.extraction_concurrency))
+    tasks = [
+        _extract_chunk(
+            semaphore,
+            chunk.text,
             response_model,
-            llm_model=llm_model,
-            prompt_override=prompt_override,
+            context_note=f"title_path={' > '.join(chunk.title_path) if chunk.title_path else '(no-heading)'}",
         )
-        validated = response_model.model_validate(fallback_data)
-        return validated, {
-            "mode": "single_fallback",
-            "chunk_count": len(chunks),
-            "failed_chunks": failed_chunks,
-            "fallback_used": True,
-        }
-    except Exception as exc:
-        logger.error("Extraction failed after fallback: %s", exc, exc_info=True)
-        raise RuntimeError(f"LLM Extraction failed: {str(exc)}")
+        for chunk in chunks
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    partial_results: list[dict[str, object]] = []
+    failed_chunks = 0
+    for result in results:
+        if isinstance(result, Exception):
+            failed_chunks += 1
+            logger.warning("Chunk extraction failed: %s", result)
+            continue
+        partial_results.append(result)
+
+    if failed_chunks > 0:
+        raise RuntimeError(f"分块提取失败，失败块数: {failed_chunks}/{len(chunks)}")
+    if not partial_results:
+        raise RuntimeError("分块提取失败，未返回有效结果")
+
+    merged = merge_extraction_results(partial_results)
+    validated = response_model.model_validate(merged)
+    return validated, {
+        "mode": "chunked",
+        "chunk_count": len(chunks),
+        "failed_chunks": failed_chunks,
+    }
 
 
-async def re_extract_with_instruction(
-    parsed_content: str,
-    response_model: type[BaseModel],
-    scope: str,
-    doc_id: int | None = None,
-    field_key: str | None = None,
-    instruction: str | None = None,
-    llm_model: str | None = None,
-    use_rag: bool = True,
-) -> dict[str, object]:
-    """人在环中的重新提取入口。
-
-    - scope='full'：在原 system prompt 末尾追加 instruction，复用完整提取流程。
-    - scope='field'：构造轻量 prompt 仅提取目标字段，返回 {field_key: value}。
-    - use_rag=True 且 doc_id 有效：RAG 检索相关片段作为 context，减少 token 消耗。
-    - use_rag=False 或 RAG 失败：回退到完整文档截断。
-
-    两个分支均不写库，结果直接返回给调用方。
-    """
-    # 尝试 RAG 检索相关片段
-    context_content = await _get_rag_context(
-        doc_id=doc_id,
-        scope=scope,
-        field_key=field_key,
-        instruction=instruction,
-        use_rag=use_rag,
-    )
-
-    # RAG 失败时回退到完整文档截断
-    if context_content is None:
-        context_content = parsed_content[: settings.extraction_single_max_chars]
-        logger.info("RAG context unavailable, fallback to full document truncation")
-
-    if scope == "full":
-        # 在 system prompt 中追加补充指示，其余复用完整提取流程
-        extra = f"\n\n# 用户补充指示\n{instruction}" if instruction else ""
-        prompt = _render_prompt(
-            EXTRACT_PROMPT_TEMPLATE,
-            content=context_content,
-            schema=_json_schema_text(response_model),
-            extra_instruction=extra,
-        )
-        system_msg = "你是一个严谨的文档提取专家，只输出符合 Schema 的 JSON 数据。"
-        response_text = _create_text_completion(
-            messages=[
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-            llm_model=llm_model,
-        )
-        logger.info("--- Raw LLM Response (re-extract full) ---\n%s\n---", response_text)
-        data = clean_and_parse_json(response_text)
-        # 用 response_model 验证，确保结构合法，再返回 dict
-        validated = response_model.model_validate(normalize_extracted_data(data))
-        return validated.model_dump(mode="json")
-
-    # scope == "field"
-    instruction_part = f"\n{instruction}" if instruction else ""
-
-    # 从完整 Schema 中提取目标字段的约束描述，注入 prompt 避免类型/枚举冲突
-    import json as _json
-
-    full_schema = response_model.model_json_schema()
-    properties = full_schema.get("properties", {})
-    field_schema_hint = ""
-    if field_key and field_key in properties:
-        hint_payload: dict = {field_key: properties[field_key]}
-        defs = full_schema.get("$defs", {})
-        if defs:
-            hint_payload["$defs"] = defs  # 保留 $ref 展开所需的嵌套定义
-        field_schema_hint = (
-            f"\n\n# 字段 Schema 约束（必须严格遵守类型与枚举）\n"
-            f"```json\n{_json.dumps(hint_payload, ensure_ascii=False, indent=2)}\n```"
-        )
-
-    field_prompt = (
-        f"你是文档结构提取助手。\n"
-        f"从以下文档中提取字段「{field_key}」的内容，"
-        f'以 JSON 格式返回：{{"{field_key}": ...}}\n'
-        f"{instruction_part}"
-        f"{field_schema_hint}\n\n"
-        f"{JSON_FORMAT_INSTRUCTION}\n\n"
-        f"文档内容：\n{context_content}"
-    )
-    response_text = _create_text_completion(
-        messages=[
-            {"role": "system", "content": "你是一个严谨的文档提取专家，只输出 JSON 数据。"},
-            {"role": "user", "content": field_prompt},
-        ],
-        temperature=0.0,
-        llm_model=llm_model,
-    )
-    logger.info("--- Raw LLM Response (re-extract field=%s) ---\n%s\n---", field_key, response_text)
-    data = clean_and_parse_json(response_text)
-    if field_key not in data:
-        raise ValueError(f"LLM 未返回字段 '{field_key}'，实际返回 keys: {list(data.keys())}")
-    return {field_key: data[field_key]}
-
-
-async def _get_rag_context(
-    doc_id: int | None,
-    scope: str,
-    field_key: str | None,
-    instruction: str | None,
-    use_rag: bool,
-) -> str | None:
-    """通过 RAG 检索相关片段，返回拼接后的上下文文本。
-
-    返回 None 表示 RAG 不可用，调用方应回退到完整文档截断。
-    """
-    if not use_rag or doc_id is None:
-        return None
-
-    # 构造检索 query
-    if scope == "field" and field_key:
-        query = f"{field_key} {instruction or ''}".strip()
-    else:
-        query = instruction or "文档概要"
-
-    try:
-        from core.retrieval import search_similar_chunks
-
-        chunks = await search_similar_chunks(question=query, doc_ids=[doc_id], top_k=5)
-        if not chunks:
-            logger.warning("RAG returned empty chunks for query: %s", query)
-            return None
-
-        # 按 score 排序并拼接
-        sorted_chunks = sorted(chunks, key=lambda x: x.get("score", 0), reverse=True)
-        context_parts = [chunk.get("display_text", "") for chunk in sorted_chunks]
-        context = "\n\n---\n\n".join(context_parts)
-
-        # 仍然超出阈值则截断
-        if len(context) > settings.extraction_single_max_chars:
-            context = context[: settings.extraction_single_max_chars]
-
-        logger.info("RAG context built: %d chars from %d chunks", len(context), len(chunks))
-        return context
-    except Exception as exc:
-        logger.warning("RAG context retrieval failed: %s", exc)
-        return None
+def extract_structure(markdown_content: str, response_model: type[BaseModel]) -> BaseModel:
+    extracted, _ = asyncio.run(extract_structure_with_meta(markdown_content, response_model))
+    return extracted

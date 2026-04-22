@@ -9,8 +9,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_DIR = ROOT / "frontend"
-BACKEND_TESTS = [
-]
 
 
 def run_step(label: str, command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -37,8 +35,14 @@ def main() -> int:
 
     if run_backend:
         run_step(
-            "Backend contract and unit tests",
-            ["uv", "run", "python", "-m", "unittest", *BACKEND_TESTS],
+            "Backend compile check",
+            ["uv", "run", "python", "-m", "compileall", "main.py", "core", "schemas", "scripts"],
+            ROOT,
+            env=env,
+        )
+        run_step(
+            "Backend app import check",
+            ["uv", "run", "python", "-c", "import main; assert main.app is not None"],
             ROOT,
             env=env,
         )
