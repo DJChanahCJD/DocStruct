@@ -3,6 +3,7 @@ import os
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
@@ -14,6 +15,11 @@ from schemas.models import DocumentRecord
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+db_dir = os.path.dirname(settings.db_path)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
+os.makedirs(settings.upload_dir, exist_ok=True)
 
 app = FastAPI(title="DocStruct Backend")
 
@@ -82,6 +88,17 @@ async def delete_document(doc_id: int) -> dict[str, object]:
 
     await doc.delete()
     return {"message": "删除成功", "id": doc_id}
+
+
+@app.get("/api/documents/{doc_id}/file")
+async def get_document_file(doc_id: int) -> FileResponse:
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+    if not doc.stored_path or not os.path.exists(doc.stored_path):
+        raise HTTPException(404, "原始文件不存在")
+
+    return FileResponse(path=doc.stored_path, filename=doc.filename)
 
 
 register_tortoise(

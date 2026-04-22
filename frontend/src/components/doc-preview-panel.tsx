@@ -1,42 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  ExternalLink,
   Copy,
   Download,
-  ExternalLink,
   FileText,
   Loader2,
   RotateCcw,
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
+import "katex/dist/katex.min.css";
 
-import { ReviewModelPanel } from "@/components/review-model-panel";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useDocument, useDocumentSourceMeta, useUpdateDocument } from "@/hooks/use-api";
-import type { CitationItem, DocumentSourceMeta } from "@/lib/api";
+import { useDocument, useDocumentFile, useUpdateDocument } from "@/hooks/use-api";
 
 interface DocPreviewPanelProps {
   docId: number | null;
-  mode: "preview" | "citation";
-  citationSnippet?: CitationItem | null;
   onRawDirtyChange?: (dirty: boolean) => void;
 }
 
 export function DocPreviewPanel({
   docId,
-  mode,
-  citationSnippet,
   onRawDirtyChange,
 }: DocPreviewPanelProps) {
   const { data: doc, isLoading } = useDocument(docId);
-  const { data: sourceMeta } = useDocumentSourceMeta(docId);
-  const [tab, setTab] = useState("review");
+  const { data: documentFile, isLoading: isFileLoading } = useDocumentFile(docId);
+  const [tab, setTab] = useState("json");
   const [rawDraft, setRawDraft] = useState("");
   const [savedRawContent, setSavedRawContent] = useState("");
+  const [jsonDraft, setJsonDraft] = useState("");
+  const [savedJsonContent, setSavedJsonContent] = useState("");
+  const [sourcePreview, setSourcePreview] = useState<SourcePreviewState>({
+    kind: "empty",
+  });
   const updateDocument = useUpdateDocument(docId ?? -1);
 
   const hasRawChanges = useMemo(
@@ -44,42 +50,99 @@ export function DocPreviewPanel({
     [rawDraft, savedRawContent],
   );
 
+  const hasJsonChanges = useMemo(
+    () => jsonDraft !== savedJsonContent,
+    [jsonDraft, savedJsonContent],
+  );
+
   useEffect(() => {
-    setTab("review");
+    setTab("raw");
   }, [docId]);
 
   useEffect(() => {
-    const nextContent = doc?.parsed_content ?? "";
-    setRawDraft(nextContent);
-    setSavedRawContent(nextContent);
-  }, [doc?.id, doc?.parsed_content]);
+    const nextRawContent = doc?.parsed_content ?? "";
+    const nextJsonContent = doc?.extracted_data
+      ? JSON.stringify(doc.extracted_data, null, 2)
+      : "";
+    setRawDraft(nextRawContent);
+    setSavedRawContent(nextRawContent);
+    setJsonDraft(nextJsonContent);
+    setSavedJsonContent(nextJsonContent);
+  }, [doc?.id, doc?.parsed_content, doc?.extracted_data]);
 
   useEffect(() => {
     onRawDirtyChange?.(tab === "raw" && hasRawChanges);
   }, [hasRawChanges, onRawDirtyChange, tab]);
 
-  /** 复制 JSON 到剪贴板 */
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let disposed = false;
+
+    async function loadPreview() {
+      if (!documentFile || !doc) {
+        setSourcePreview({ kind: "empty" });
+        return;
+      }
+
+      const extension = getFileExtension(documentFile.fileName);
+      const blob = documentFile.blob;
+
+      if (extension === "pdf" || documentFile.contentType.includes("pdf")) {
+        objectUrl = URL.createObjectURL(blob);
+        if (!disposed) {
+          setSourcePreview({ kind: "pdf", url: objectUrl });
+        }
+        return;
+      }
+
+      if (extension === "txt" || extension === "md" || documentFile.contentType.startsWith("text/")) {
+        const text = await blob.text();
+        if (!disposed) {
+          setSourcePreview({ kind: extension === "md" ? "markdown" : "text", text });
+        }
+        return;
+      }
+
+      objectUrl = URL.createObjectURL(blob);
+      if (!disposed) {
+        setSourcePreview({ kind: "download", url: objectUrl, fileName: documentFile.fileName });
+      }
+    }
+
+    loadPreview().catch(() => {
+      setSourcePreview({ kind: "error" });
+    });
+
+    return () => {
+      disposed = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [docId, documentFile]);
+
   const handleCopyJson = async () => {
-    if (!doc?.extracted_data) return;
+    if (!jsonDraft) {
+      return;
+    }
     try {
-      const jsonString = JSON.stringify(doc.extracted_data, null, 2);
-      await navigator.clipboard.writeText(jsonString);
+      await navigator.clipboard.writeText(jsonDraft);
       toast.success("JSON 已复制到剪贴板");
     } catch {
       toast.error("复制失败，请手动复制");
     }
   };
 
-  /** 下载 JSON 文件 */
   const handleDownloadJson = () => {
-    if (!doc?.extracted_data) return;
-    const jsonString = JSON.stringify(doc.extracted_data, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
+    if (!jsonDraft) {
+      return;
+    }
+    const blob = new Blob([jsonDraft], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `doc-${doc.id}-extracted-data.json`;
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `doc-${docId}-extracted-data.json`;
+    link.click();
     URL.revokeObjectURL(url);
     toast.success("JSON 已下载");
   };
@@ -110,17 +173,50 @@ export function DocPreviewPanel({
       const nextContent = updatedDoc.parsed_content ?? "";
       setRawDraft(nextContent);
       setSavedRawContent(nextContent);
-      if (updatedDoc.error_message) {
-        toast.warning(`Markdown 已保存，但索引更新异常：${updatedDoc.error_message}`);
-      } else {
-        toast.success("Markdown 已保存，并已同步重建索引");
-      }
+      toast.success("Markdown 已保存");
     } catch {
       toast.error("Markdown 保存失败");
     }
   };
 
-  if (!docId) return null;
+  const handleResetJson = () => {
+    setJsonDraft(savedJsonContent);
+    toast.info("已恢复到最近一次保存的 JSON");
+  };
+
+  const handleSaveJson = async () => {
+    if (!doc) {
+      return;
+    }
+
+    let extractedData: Record<string, unknown> | undefined;
+    if (jsonDraft.trim()) {
+      try {
+        extractedData = JSON.parse(jsonDraft) as Record<string, unknown>;
+      } catch {
+        toast.error("JSON 格式无效，无法保存");
+        return;
+      }
+    }
+
+    try {
+      const updatedDoc = await updateDocument.mutateAsync({
+        extracted_data: extractedData,
+      });
+      const nextContent = updatedDoc.extracted_data
+        ? JSON.stringify(updatedDoc.extracted_data, null, 2)
+        : "";
+      setJsonDraft(nextContent);
+      setSavedJsonContent(nextContent);
+      toast.success("JSON 已保存");
+    } catch {
+      toast.error("JSON 保存失败");
+    }
+  };
+
+  if (!docId) {
+    return null;
+  }
 
   if (isLoading) {
     return (
@@ -143,31 +239,11 @@ export function DocPreviewPanel({
     <div className="flex h-full w-full flex-1 flex-col overflow-hidden bg-background">
       <Tabs value={tab} onValueChange={handleTabChange} className="flex flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b px-4 py-2">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="review">审核</TabsTrigger>
-            <TabsTrigger value="source">源文件</TabsTrigger>
-            <TabsTrigger value="json">JSON</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="raw">原文</TabsTrigger>
+            <TabsTrigger value="json">JSON</TabsTrigger>
           </TabsList>
         </div>
-
-        {mode === "citation" && citationSnippet && (
-          <div className="shrink-0 border-b bg-muted/30 px-5 py-4">
-            <div className="border-l-4 border-primary pl-4">
-              <div className="mb-1 text-xs font-semibold tracking-wider text-primary">
-                引用片段
-              </div>
-              {citationSnippet.title_path && (
-                <p className="mb-1.5 text-xs text-muted-foreground/80">
-                  {citationSnippet.title_path}
-                </p>
-              )}
-              <p className="text-sm leading-relaxed text-foreground/90">
-                {citationSnippet.snippet}
-              </p>
-            </div>
-          </div>
-        )}
 
         {doc.error_message && (
           <div className="shrink-0 flex items-center gap-2 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -176,210 +252,271 @@ export function DocPreviewPanel({
           </div>
         )}
 
-        <TabsContent value="source" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <ScrollArea className="h-full px-5 py-4">
-            <SourcePreview docId={doc.id} sourceMeta={sourceMeta} />
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="raw" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-            <div className="min-h-0 border-r bg-muted/10">
-              <ScrollArea className="h-full px-5 py-4">
-                <SourcePreview docId={doc.id} sourceMeta={sourceMeta} fillHeight />
-              </ScrollArea>
+        <TabsContent value="json" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  结构化结果
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-foreground">可直接编辑 JSON</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyJson}
+                  disabled={!jsonDraft}
+                >
+                  <Copy className="mr-1.5 h-3.5 w-3.5" />
+                  复制
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownloadJson}
+                  disabled={!jsonDraft}
+                >
+                  <Download className="mr-1.5 h-3.5 w-3.5" />
+                  下载
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleResetJson}
+                  disabled={!hasJsonChanges || updateDocument.isPending}
+                >
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  恢复
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveJson}
+                  disabled={!hasJsonChanges || updateDocument.isPending}
+                >
+                  {updateDocument.isPending ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  保存 JSON
+                </Button>
+              </div>
             </div>
-
-            <div className="flex min-h-0 flex-col bg-background">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Markdown 校对
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold text-foreground">解析结果可人工修正</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    保存后会回写正式原文，并同步重建后续检索索引。
+            <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <section className="flex min-h-0 flex-col rounded-2xl border bg-muted/15 shadow-sm">
+                <div className="border-b px-4 py-3">
+                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                    Markdown 对照
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
-                    {updateDocument.isPending
-                      ? "保存中..."
-                      : hasRawChanges
-                        ? "未保存修改"
-                        : "已同步"}
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleResetRaw}
-                    disabled={!hasRawChanges || updateDocument.isPending}
-                  >
-                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                    恢复
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSaveRaw}
-                    disabled={!hasRawChanges || updateDocument.isPending}
-                  >
-                    {updateDocument.isPending ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                <ScrollArea className="min-h-0 flex-1">
+                  <div className="prose prose-sm max-w-none px-5 py-4 text-foreground prose-headings:font-semibold prose-pre:bg-muted">
+                    {rawDraft ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkMath]}
+                        rehypePlugins={[rehypeKatex, rehypeHighlight]}
+                      >
+                        {rawDraft}
+                      </ReactMarkdown>
                     ) : (
-                      <Save className="mr-1.5 h-3.5 w-3.5" />
+                      <div className="text-sm text-muted-foreground">暂无 Markdown 内容</div>
                     )}
-                    保存 Markdown
-                  </Button>
+                  </div>
+                </ScrollArea>
+              </section>
+              <section className="flex min-h-0 flex-col rounded-2xl border bg-background shadow-sm">
+                <div className="border-b px-4 py-3">
+                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                    结构化结果
+                  </p>
                 </div>
-              </div>
-
-              <div className="grid shrink-0 grid-cols-2 gap-3 border-b px-5 py-3 text-xs text-muted-foreground">
-                <div>字符数：{rawDraft.length}</div>
-                <div>行数：{rawDraft ? rawDraft.split(/\r?\n/).length : 0}</div>
-              </div>
-
-              <div className="min-h-0 flex-1 p-5">
-                <Textarea
-                  value={rawDraft}
-                  onChange={(event) => setRawDraft(event.target.value)}
-                  placeholder="这里显示解析后的 Markdown，用户可以直接修正。"
-                  spellCheck={false}
-                  className="h-full min-h-full resize-none bg-muted/10 font-mono text-sm leading-6"
-                />
-              </div>
+                <div className="min-h-0 flex-1 p-4">
+                  <Textarea
+                    value={jsonDraft}
+                    onChange={(event) => setJsonDraft(event.target.value)}
+                    placeholder="这里显示结构化提取结果，可直接修正 JSON。"
+                    spellCheck={false}
+                    className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                  />
+                </div>
+              </section>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="review" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <ScrollArea className="h-full px-5 py-4">
-            <ReviewModelPanel docId={doc.id} />
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="json" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <ScrollArea className="h-full px-5 py-4">
-            <div className="space-y-3">
-              <div className="flex justify-end gap-2">
+        <TabsContent value="raw" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
+          <div className="flex h-full min-h-0 flex-col bg-background">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Markdown 校对
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-foreground">解析结果可人工修正</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                  {updateDocument.isPending
+                    ? "保存中..."
+                    : hasRawChanges
+                      ? "未保存修改"
+                      : "已同步"}
+                </div>
                 <Button
-                  size="sm"
                   variant="secondary"
-                  className="h-8"
-                  onClick={handleCopyJson}
-                  disabled={!doc.extracted_data}
+                  size="sm"
+                  onClick={handleResetRaw}
+                  disabled={!hasRawChanges || updateDocument.isPending}
                 >
-                  <Copy className="mr-1.5 h-3.5 w-3.5" />
-                  复制 JSON
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  恢复
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
-                  className="h-8"
-                  onClick={handleDownloadJson}
-                  disabled={!doc.extracted_data}
+                  onClick={handleSaveRaw}
+                  disabled={!hasRawChanges || updateDocument.isPending}
                 >
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  下载 JSON
+                  {updateDocument.isPending ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  保存 Markdown
                 </Button>
               </div>
-              <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted/50 p-4 font-mono text-sm leading-relaxed">
-                {doc.extracted_data
-                  ? JSON.stringify(doc.extracted_data, null, 2)
-                  : "暂无结构化数据"}
-              </pre>
             </div>
-          </ScrollArea>
+
+            <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-muted/15 shadow-sm">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                    原始文档对照
+                  </p>
+                  {sourcePreview.kind === "download" && sourcePreview.url && (
+                    <a
+                      href={sourcePreview.url}
+                      download={sourcePreview.fileName}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                      打开原文件
+                    </a>
+                  )}
+                </div>
+                <div className="min-h-0 flex-1">
+                  <SourcePreview
+                    preview={sourcePreview}
+                    isLoading={isFileLoading}
+                  />
+                </div>
+              </section>
+              <section className="flex min-h-0 flex-col rounded-2xl border bg-background shadow-sm">
+                <div className="border-b px-4 py-3">
+                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                    Markdown 编辑
+                  </p>
+                </div>
+                <div className="min-h-0 flex-1 p-4">
+                  <Textarea
+                    value={rawDraft}
+                    onChange={(event) => setRawDraft(event.target.value)}
+                    placeholder="这里显示解析后的 Markdown，用户可以直接修正。"
+                    spellCheck={false}
+                    className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                  />
+                </div>
+              </section>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
+type SourcePreviewState =
+  | { kind: "empty" }
+  | { kind: "pdf"; url: string }
+  | { kind: "text"; text: string }
+  | { kind: "markdown"; text: string }
+  | { kind: "download"; url: string; fileName: string }
+  | { kind: "error" };
+
 function SourcePreview({
-  docId,
-  sourceMeta,
-  fillHeight = false,
+  preview,
+  isLoading,
 }: {
-  docId: number;
-  sourceMeta?: DocumentSourceMeta;
-  fillHeight?: boolean;
+  preview: SourcePreviewState;
+  isLoading: boolean;
 }) {
-  if (!sourceMeta) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+      <div className="flex h-full min-h-0 items-center justify-center text-sm text-muted-foreground">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        正在加载源文件信息...
+        加载原文件中...
       </div>
     );
   }
 
-  const downloadUrl = sourceMeta.download_url;
-  const frameClassName = fillHeight
-    ? "h-full min-h-[32rem] w-full rounded-md border bg-background"
-    : "h-[72vh] w-full rounded-md border bg-background";
+  if (preview.kind === "pdf") {
+    return <iframe title="原始 PDF 预览" src={preview.url} className="h-full w-full" />;
+  }
 
-  if (sourceMeta.preview_mode === "pdf" || sourceMeta.preview_mode === "text") {
+  if (preview.kind === "text") {
     return (
-      <div className={`space-y-3 ${fillHeight ? "flex h-full min-h-0 flex-col" : ""}`}>
-        <SourceHeader sourceMeta={sourceMeta} />
-        <iframe
-          title={`doc-source-${docId}`}
-          src={downloadUrl}
-          className={frameClassName}
-        />
+      <ScrollArea className="h-full">
+        <pre className="whitespace-pre-wrap px-5 py-4 font-mono text-sm leading-6 text-foreground">
+          {preview.text}
+        </pre>
+      </ScrollArea>
+    );
+  }
+
+  if (preview.kind === "markdown") {
+    return (
+      <ScrollArea className="h-full">
+        <div className="prose prose-sm max-w-none px-5 py-4 text-foreground prose-headings:font-semibold prose-pre:bg-muted">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex, rehypeHighlight]}
+          >
+            {preview.text}
+          </ReactMarkdown>
+        </div>
+      </ScrollArea>
+    );
+  }
+
+  if (preview.kind === "download") {
+    return (
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
+        <FileText className="h-10 w-10 opacity-40" />
+        <div>
+          <p className="font-medium text-foreground">当前文件类型不支持内嵌预览</p>
+          <p className="mt-1">可直接打开原始文件进行对照。</p>
+        </div>
       </div>
     );
   }
 
-  if (sourceMeta.preview_mode === "external_url") {
+  if (preview.kind === "error") {
     return (
-      <div className="rounded-md border bg-muted/20 p-4">
-        <SourceHeader sourceMeta={sourceMeta} />
-        <p className="mt-3 text-sm text-muted-foreground">
-          该文档来源于外部网页，系统保留原始地址，不做本地文件预览。
-        </p>
+      <div className="flex h-full min-h-0 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+        原始文件加载失败
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border bg-muted/20 p-4">
-      <SourceHeader sourceMeta={sourceMeta} />
-      <p className="mt-3 text-sm text-muted-foreground">
-        当前类型暂不支持浏览器内高保真预览，可直接下载查看源文件。
-      </p>
+    <div className="flex h-full min-h-0 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+      暂无原始文件预览
     </div>
   );
 }
 
-function SourceHeader({ sourceMeta }: { sourceMeta: DocumentSourceMeta }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-background p-3">
-      <div>
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <FileText className="h-4 w-4" />
-          <span>{sourceMeta.filename}</span>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {sourceMeta.mime_type} · {sourceMeta.source_type}
-        </p>
-      </div>
-      <div className="flex gap-2">
-        {sourceMeta.source_url && (
-          <Button size="sm" variant="secondary" className="h-8">
-            <a href={sourceMeta.source_url} target="_blank" rel="noreferrer">
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-              打开来源
-            </a>
-          </Button>
-        )}
-        <Button size="sm" variant="secondary" className="h-8">
-          <a href={sourceMeta.download_url} target="_blank" rel="noreferrer">
-            <Download className="mr-1.5 h-3.5 w-3.5" />
-            源文件
-          </a>
-        </Button>
-      </div>
-    </div>
-  );
+function getFileExtension(fileName: string): string {
+  const ext = fileName.split(".").pop();
+  return ext ? ext.toLowerCase() : "";
 }

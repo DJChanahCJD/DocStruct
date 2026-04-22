@@ -1,67 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrainCircuit, ChevronsUpDown, MessageSquare, X } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Toaster } from "sonner";
 
-import { useTextModels } from "./hooks/use-api";
 import { DocPreviewPanel } from "./components/doc-preview-panel";
 import { DocSidebar } from "./components/doc-sidebar";
-import { QaPanel } from "./components/qa-panel";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type { CitationItem } from "./lib/api";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
-  const [selectedDocName, setSelectedDocName] = useState("未选中文档");
-  const [previewMode, setPreviewMode] = useState<"preview" | "citation">("preview");
-  const [previewDocId, setPreviewDocId] = useState<number | null>(null);
-  const [citationSnippet, setCitationSnippet] = useState<CitationItem | null>(null);
-  const [showQaPanel, setShowQaPanel] = useState(false);
-  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const [qaMentionSeed, setQaMentionSeed] = useState<{
-    docId: number;
-    docName: string;
-    nonce: number;
-  } | null>(null);
   const [hasUnsavedRawChanges, setHasUnsavedRawChanges] = useState(false);
-  const [activeModelId, setActiveModelId] = useState<string>(
-    () => localStorage.getItem("docstruct_active_model_id") ?? ""
-  );
-  const { data: textModelResponse, isLoading: isLoadingTextModels } = useTextModels();
-
-  const textModels = textModelResponse?.models ?? [];
-  const activeModel = useMemo(() => {
-    return (
-      textModels.find((model) => model.id === activeModelId) ??
-      textModels.find((model) => model.is_default) ??
-      null
-    );
-  }, [activeModelId, textModels]);
-
-  useEffect(() => {
-    if (!textModels.length) {
-      return;
-    }
-    setActiveModelId((current) => {
-      const next =
-        current && textModels.some((model) => model.id === current)
-          ? current
-          : textModels.find((model) => model.is_default)?.id ?? textModels[0].id;
-      localStorage.setItem("docstruct_active_model_id", next);
-      return next;
-    });
-  }, [textModels]);
 
   const confirmDiscardRawChanges = () => {
     if (!hasUnsavedRawChanges) {
@@ -70,164 +19,38 @@ function AppContent() {
     return window.confirm("当前 Markdown 校对内容尚未保存，确定要离开吗？");
   };
 
-  const handleSelectDoc = (id: number, name: string) => {
+  const handleSelectDoc = (id: number) => {
     if (!confirmDiscardRawChanges()) {
       return;
     }
     setSelectedDocId(id);
-    setSelectedDocName(name);
-    setPreviewMode("preview");
-    setPreviewDocId(id);
-    setHasUnsavedRawChanges(false);
-    if (showQaPanel) {
-      setQaMentionSeed({ docId: id, docName: name, nonce: Date.now() });
-    }
-  };
-
-  const handleOpenCitation = (citation: CitationItem) => {
-    if (!confirmDiscardRawChanges()) {
-      return;
-    }
-    setPreviewMode("citation");
-    setPreviewDocId(citation.doc_id);
-    setCitationSnippet(citation);
-    setHasUnsavedRawChanges(false);
-    setShowQaPanel(true);
-  };
-
-  const handleClearSelection = () => {
-    if (!confirmDiscardRawChanges()) {
-      return;
-    }
-    setSelectedDocId(null);
-    setSelectedDocName("未选中文档");
-    setPreviewDocId(null);
     setHasUnsavedRawChanges(false);
   };
 
   return (
-    <div className="flex h-screen flex-col">
-      <header className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
-            <span className="font-heading text-lg font-bold">DocStruct</span>
-          </div>
-          <div className="hidden text-sm text-muted-foreground md:block">
-            当前预览：
-            <span className="ml-1 font-medium text-foreground">{selectedDocName}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <DropdownMenu open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>
-            <DropdownMenuTrigger
-              className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isLoadingTextModels || textModels.length === 0}
-            >
-              <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-              <div className="hidden min-w-0 text-left sm:block">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  文本模型
-                </div>
-                <div className="max-w-[180px] truncate font-medium text-foreground">
-                  {activeModel?.label ?? (isLoadingTextModels ? "加载中..." : "默认模型")}
-                </div>
-              </div>
-              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>全局文本模型</DropdownMenuLabel>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={activeModelId}                 onValueChange={(value) => {
-                setActiveModelId(value);
-                localStorage.setItem("docstruct_active_model_id", value);
-                setModelDropdownOpen(false);
-              }}>
-                {textModels.map((model) => (
-                  <DropdownMenuRadioItem key={model.id} value={model.id} className="items-start py-2">
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate font-medium text-foreground">{model.label}</span>
-                      <span className="text-xs leading-5 text-muted-foreground">
-                        {model.description}
-                      </span>
-                    </div>
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="flex h-screen overflow-hidden bg-background">
+      <aside className="h-screen w-[280px] shrink-0 border-r bg-muted/20">
+        <DocSidebar selectedId={selectedDocId} onSelectDoc={handleSelectDoc} />
+      </aside>
 
-          <button
-            onClick={() => setShowQaPanel(!showQaPanel)}
-            className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors ${
-              showQaPanel
-                ? "border-primary bg-primary text-primary-foreground"
-                : "hover:bg-muted"
-            }`}
-          >
-            <MessageSquare className="h-4 w-4" />
-            {showQaPanel ? "关闭问答" : "开始问答"}
-          </button>
-          {selectedDocId && (
-            <button
-              onClick={handleClearSelection}
-              className="rounded-md border px-2 py-1 text-sm hover:bg-muted"
-            >
-              清除选中
-            </button>
-          )}
-        </div>
-      </header>
-
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="w-[280px] shrink-0 border-r">
-          <DocSidebar
-            selectedId={selectedDocId}
-            activeModelId={activeModelId || undefined}
-            activeModelLabel={activeModel?.label}
-            onSelectDoc={handleSelectDoc}
+      <main className="min-w-0 flex-1">
+        {selectedDocId ? (
+          <DocPreviewPanel
+            docId={selectedDocId}
+            onRawDirtyChange={setHasUnsavedRawChanges}
           />
-        </aside>
-
-        <main className="min-w-0 flex-1">
-          {previewDocId ? (
-            <DocPreviewPanel
-              docId={previewDocId}
-              mode={previewMode}
-              citationSnippet={citationSnippet}
-              onRawDirtyChange={setHasUnsavedRawChanges}
-            />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-              <MessageSquare className="h-16 w-16 opacity-20" />
-              <p className="mt-4 text-sm">选择文档查看内容</p>
-              <p className="mt-1 text-xs opacity-60">或点击“开始问答”进行提问</p>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center text-muted-foreground">
+            <div className="rounded-3xl border border-dashed border-border/70 bg-muted/20 p-6">
+              <FileText className="h-14 w-14 opacity-30" />
             </div>
-          )}
-        </main>
-
-        {showQaPanel && (
-          <aside className="animate-in slide-in-from-right flex h-full w-[420px] shrink-0 flex-col overflow-hidden border-l bg-background duration-200">
-            <header className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-              <h2 className="text-sm font-semibold">文档问答</h2>
-              <button
-                onClick={() => setShowQaPanel(false)}
-                className="rounded-md p-1 transition-colors hover:bg-muted"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </header>
-            <QaPanel
-              mentionSeed={qaMentionSeed}
-              activeModelId={activeModelId || undefined}
-              activeModelLabel={activeModel?.label}
-              onOpenCitation={handleOpenCitation}
-            />
-          </aside>
+            <div className="space-y-2">
+              <p className="text-base font-medium text-foreground">选择左侧文档开始校对</p>
+              <p className="text-sm">上传后可直接在右侧对照原文修订 Markdown 和结构化 JSON。</p>
+            </div>
+          </div>
         )}
-      </div>
+      </main>
 
       <Toaster position="top-center" />
     </div>
