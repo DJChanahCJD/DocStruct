@@ -269,6 +269,26 @@ QA（向量召回 → LLM 生成答案 + 引用片段）
 7. 检查 `db/` 下 SQLite / 向量索引是否正常生成
 8. 对 URL 导入文档，检查 `doc_type`、`source_type`、`source_url` 与 `llm_model` 是否正确保存
 
+## CI Test
+
+每次改动后，建议先执行统一回归入口：
+
+```bash
+uv run python scripts/ci_test.py
+```
+
+默认会执行：
+
+1. 后端契约/单元测试：`qa`、`re-extract`、`review-model`
+2. 前端构建：`frontend` 下 `npm run build`
+
+如果只需要跑单侧检查：
+
+```bash
+uv run python scripts/ci_test.py --backend-only
+uv run python scripts/ci_test.py --frontend-only
+```
+
 
 ---
 
