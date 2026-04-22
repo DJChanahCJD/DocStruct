@@ -85,3 +85,8 @@ export async function getDocumentFile(id: number): Promise<DocumentFilePayload> 
     fileName,
   };
 }
+
+export async function retryExtraction(id: number): Promise<DocumentRecord> {
+  const { data } = await api.post<DocumentRecord>(`/documents/${id}/retry-extraction`);
+  return data;
+}

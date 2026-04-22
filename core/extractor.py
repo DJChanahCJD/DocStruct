@@ -33,11 +33,13 @@ def _create_text_completion(
     messages: list[dict[str, str]],
     *,
     temperature: float,
+    model_name: str | None = None,
 ) -> str:
     response = raw_client.chat.completions.create(
         **build_chat_completion_kwargs(
             messages=messages,
             temperature=temperature,
+            model_name=model_name,
         )
     )
     return response.choices[0].message.content or ""
@@ -48,16 +50,20 @@ def _extract_once(
     response_model: type[BaseModel],
     *,
     context_note: str | None = None,
+    prompt_template: str | None = None,
+    model_name: str | None = None,
 ) -> dict[str, object]:
     prompt_content = content
     if context_note:
         prompt_content = f"[Context]\n{context_note}\n\n[Document Chunk]\n{content}"
 
+    template = prompt_template or EXTRACT_PROMPT_TEMPLATE
     prompt = _render_prompt(
-        EXTRACT_PROMPT_TEMPLATE,
+        template,
         content=prompt_content,
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
+        extra_instruction=JSON_FORMAT_INSTRUCTION,
     )
     response_text = _create_text_completion(
         messages=[
@@ -65,6 +71,7 @@ def _extract_once(
             {"role": "user", "content": prompt},
         ],
         temperature=0.0,
+        model_name=model_name,
     )
     data = clean_and_parse_json(response_text)
     return normalize_extracted_data(data)
@@ -76,6 +83,8 @@ async def _extract_chunk(
     response_model: type[BaseModel],
     *,
     context_note: str | None = None,
+    prompt_template: str | None = None,
+    model_name: str | None = None,
 ) -> dict[str, object]:
     async with semaphore:
         return await asyncio.to_thread(
@@ -83,12 +92,17 @@ async def _extract_chunk(
             chunk_text,
             response_model,
             context_note=context_note,
+            prompt_template=prompt_template,
+            model_name=model_name,
         )
 
 
 async def extract_structure_with_meta(
     markdown_content: str,
     response_model: type[BaseModel],
+    *,
+    prompt_template: str | None = None,
+    model_name: str | None = None,
 ) -> tuple[BaseModel, dict[str, object]]:
     logger.info("Extracting structure for %s", response_model.__name__)
     content_length = len(markdown_content)
@@ -100,7 +114,13 @@ async def extract_structure_with_meta(
         )
 
     if content_length <= settings.extraction_threshold:
-        data = await asyncio.to_thread(_extract_once, markdown_content, response_model)
+        data = await asyncio.to_thread(
+            _extract_once,
+            markdown_content,
+            response_model,
+            prompt_template=prompt_template,
+            model_name=model_name,
+        )
         validated = response_model.model_validate(data)
         return validated, {"mode": "single", "chunk_count": 1}
 
@@ -119,6 +139,8 @@ async def extract_structure_with_meta(
             chunk.text,
             response_model,
             context_note=f"title_path={' > '.join(chunk.title_path) if chunk.title_path else '(no-heading)'}",
+            prompt_template=prompt_template,
+            model_name=model_name,
         )
         for chunk in chunks
     ]

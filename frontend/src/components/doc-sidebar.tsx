@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DocCard } from "./doc-card";
 import { UploadZone } from "./upload-zone";
-import { useDeleteDocument, useDocuments } from "@/hooks/use-api";
+import { useDeleteDocument, useDocuments, useRetryExtraction } from "@/hooks/use-api";
 import type { DocumentRecord } from "@/lib/api";
 
 interface DocSidebarProps {
@@ -30,6 +30,7 @@ interface DocSidebarProps {
 export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
   const { data: docs = [], isLoading } = useDocuments();
   const deleteDoc = useDeleteDocument();
+  const retryDoc = useRetryExtraction();
   const [keyword, setKeyword] = useState("");
   const [filters, setFilters] = useState<{
     status: string[];
@@ -103,6 +104,15 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
       toast.success("已删除");
     } catch {
       toast.error("删除失败");
+    }
+  };
+
+  const handleRetry = async (doc: DocumentRecord) => {
+    try {
+      await retryDoc.mutateAsync(doc.id);
+      toast.success("重试提取成功");
+    } catch {
+      toast.error("重试提取失败");
     }
   };
 
@@ -216,6 +226,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
                   selected={selectedId === doc.id}
                   onSelect={() => onSelectDoc(doc.id, doc.filename)}
                   onDelete={() => handleDelete(doc)}
+                  onRetry={() => handleRetry(doc)}
                 />
               ))}
             </div>

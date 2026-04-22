@@ -1,0 +1,19 @@
+{
+  "experiment_id": "exp3",
+  "description": "实验三：固定一组配置，按格式、长度、语言和质量标签统计鲁棒性表现。",
+  "manifest": "../datasets/baseline_manifest.json",
+  "sample_filters": {
+    "required_tags": ["robustness"]
+  },
+  "judge": {
+    "enabled": true,
+    "temperature": 0.0
+  },
+  "variants": [
+    {
+      "variant_id": "baseline-zh-detailed",
+      "label": "基线中文详细 Prompt",
+      "prompt_template": "../prompts/zh-detailed.txt"
+    }
+  ]
+}

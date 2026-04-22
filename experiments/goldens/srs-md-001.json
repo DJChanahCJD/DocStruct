@@ -1,0 +1,21 @@
+{
+  "doc_type": "srs",
+  "title": "Software Requirements Specification (SRS) for Document System",
+  "summary": "Document System 的软件需求规格说明，包含功能需求和验收标准。",
+  "version": null,
+  "extra": {},
+  "items": [
+    {
+      "id": null,
+      "title": "Upload PDF files",
+      "description": "The system shall allow users to upload PDF files.",
+      "priority": null
+    },
+    {
+      "id": null,
+      "title": "Extract text from uploaded files",
+      "description": "The system shall extract text from the uploaded files.",
+      "priority": null
+    }
+  ]
+}

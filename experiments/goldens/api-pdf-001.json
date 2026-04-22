@@ -1,0 +1,24 @@
+{
+  "doc_type": "api",
+  "title": "API Documentation",
+  "summary": "文档描述了文档列表查询和文档上传两个接口。",
+  "version": null,
+  "extra": {},
+  "base_url": null,
+  "items": [
+    {
+      "method": "GET",
+      "path": "/api/v1/documents",
+      "summary": "Retrieve a list of documents.",
+      "request": "Method: GET; Endpoint: /api/v1/documents; Headers: Authorization: Bearer",
+      "response": "{\"id\": 1, \"name\": \"example.pdf\"}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/upload",
+      "summary": "Upload a new document.",
+      "request": null,
+      "response": null
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import {
   getDocumentFile,
   getDocument,
   listDocuments,
+  retryExtraction,
   updateDocument,
   uploadFile,
   type DocumentFilePayload,
@@ -60,6 +61,17 @@ export function useUpdateDocument(id: number) {
     mutationFn: (req: UpdateDocumentRequest) => updateDocument(id, req),
     onSuccess: (document) => {
       qc.setQueryData(["document", id], document);
+      qc.invalidateQueries({ queryKey: ["documents"] });
+    },
+  });
+}
+
+export function useRetryExtraction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: retryExtraction,
+    onSuccess: (document) => {
+      qc.setQueryData(["document", document.id], document);
       qc.invalidateQueries({ queryKey: ["documents"] });
     },
   });

@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
-import { AlertCircle, Clock, FileText, FolderOpen, Hash, MoreVertical, Trash2 } from "lucide-react";
+import { AlertCircle, Clock, FileText, FolderOpen, Hash, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,13 +34,14 @@ interface DocCardProps {
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onRetry?: () => void;
 }
 
 function getStatusLabel(status: string) {
   return statusLabel[status] ?? status;
 }
 
-export function DocCard({ doc, selected, onSelect, onDelete }: DocCardProps) {
+export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardProps) {
   return (
     <Tooltip>
       <TooltipTrigger render={<div />} className="block w-full">
@@ -87,6 +88,17 @@ export function DocCard({ doc, selected, onSelect, onDelete }: DocCardProps) {
                     <MoreVertical className="h-4 w-4 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {doc.status === "failed" && doc.parsed_content && onRetry && (
+                      <DropdownMenuItem
+                        onClick={(event: MouseEvent<HTMLDivElement>) => {
+                          event.stopPropagation();
+                          onRetry();
+                        }}
+                      >
+                        <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                        重试提取
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={(event: MouseEvent<HTMLDivElement>) => {

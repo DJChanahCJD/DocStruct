@@ -10,47 +10,54 @@ from fastapi import HTTPException, UploadFile
 
 from core.extractor import extract_structure_with_meta
 from core.parser import ParserFactory
+from core.schema_registry import TYPE_MODEL_MAP, normalize_doc_type
 from schemas.dto import UploadResponse
-from schemas.models import (
-    ApiDocument,
-    DesignDocument,
-    DocType,
-    DocumentRecord,
-    IssueDocument,
-    ManualDocument,
-    SrsDocument,
-    TestDocument,
-)
+from schemas.models import DocType, DocumentRecord
 
 
 logger = logging.getLogger(__name__)
 
-TYPE_MODEL_MAP = {
-    DocType.SRS: SrsDocument,
-    DocType.API: ApiDocument,
-    DocType.DESIGN: DesignDocument,
-    DocType.TEST: TestDocument,
-    DocType.MANUAL: ManualDocument,
-    DocType.ISSUE: IssueDocument,
-}
-
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".md", ".txt"}
+
+
+async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
+    """
+    重试提取结构化数据。
+    仅当 parsed_content 存在时有效。
+    """
+    if not doc.parsed_content:
+        raise ValueError("文档尚未解析，无法重试提取")
+
+    normalized_doc_type = normalize_doc_type(doc.doc_type)
+    target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
+    if target_model is None:
+        raise ValueError(f"不支持的文档类型: {doc.doc_type}")
+
+    await doc.update_from_dict({"status": "processing", "error_message": None}).save()
+
+    try:
+        extracted, _ = await extract_structure_with_meta(doc.parsed_content, target_model)
+        await doc.update_from_dict(
+            {
+                "status": "completed",
+                "extracted_data": extracted.model_dump(mode="json"),
+                "error_message": None,
+            }
+        ).save()
+        return doc
+    except Exception as exc:
+        logger.warning("Retry extraction failed for doc %s: %s", doc.id, exc)
+        await doc.update_from_dict(
+            {
+                "status": "failed",
+                "error_message": f"提取失败: {exc}",
+            }
+        ).save()
+        raise
 
 
 def ensure_upload_dir(upload_dir: str) -> None:
     os.makedirs(upload_dir, exist_ok=True)
-
-
-def normalize_doc_type(doc_type: str | DocType | None) -> DocType:
-    if isinstance(doc_type, DocType):
-        return doc_type
-    if doc_type is None or not str(doc_type).strip():
-        raise ValueError("doc_type 不能为空")
-    try:
-        return DocType(str(doc_type).strip())
-    except ValueError as exc:
-        allowed = ", ".join(item.value for item in DocType)
-        raise ValueError(f"非法 doc_type: {doc_type}。仅支持: {allowed}") from exc
 
 
 def validate_file_extension(filename: str) -> str:
@@ -81,20 +88,35 @@ async def process_uploaded_file(
         doc_type=normalized_doc_type.value,
     )
 
+    # 阶段 1: 解析文件为 markdown
     try:
         parser = ParserFactory.get_parser(file_path)
         markdown_text = await asyncio.to_thread(parser.parse, file_path)
+    except Exception as parse_exc:
+        logger.error("Parse failed for %s: %s", file.filename, parse_exc)
+        await doc.update_from_dict({"status": "failed", "error_message": f"解析失败: {parse_exc}"}).save()
+        raise HTTPException(500, f"文件解析失败: {parse_exc}") from parse_exc
 
-        target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
-        extracted_payload = None
-        if target_model is not None:
-            extracted, _ = await extract_structure_with_meta(markdown_text, target_model)
-            extracted_payload = extracted.model_dump(mode="json")
+    # 解析成功，先保存 markdown
+    await doc.update_from_dict({"parsed_content": markdown_text}).save()
 
+    # 阶段 2: 提取结构化数据
+    target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
+    if target_model is None:
+        await doc.update_from_dict({"status": "completed"}).save()
+        return UploadResponse(
+            id=doc.id,
+            filename=doc.filename,
+            status=doc.status,
+            message=f"已按 {normalized_doc_type.value} 类型完成处理（无结构化提取）",
+        )
+
+    try:
+        extracted, _ = await extract_structure_with_meta(markdown_text, target_model)
+        extracted_payload = extracted.model_dump(mode="json")
         await doc.update_from_dict(
             {
                 "status": "completed",
-                "parsed_content": markdown_text,
                 "extracted_data": extracted_payload,
                 "error_message": None,
             }
@@ -105,10 +127,18 @@ async def process_uploaded_file(
             status=doc.status,
             message=f"已按 {normalized_doc_type.value} 类型完成处理",
         )
-    except ValueError as exc:
-        await doc.update_from_dict({"status": "failed", "error_message": str(exc)}).save()
-        raise HTTPException(400, str(exc)) from exc
-    except Exception as exc:
-        logger.error("Error processing document %s: %s", file.filename, exc, exc_info=True)
-        await doc.update_from_dict({"status": "failed", "error_message": str(exc)}).save()
-        raise HTTPException(500, f"处理失败: {exc}") from exc
+    except Exception as extract_exc:
+        logger.warning("Extraction failed for %s: %s", file.filename, extract_exc)
+        await doc.update_from_dict(
+            {
+                "status": "failed",
+                "error_message": f"提取失败: {extract_exc}",
+            }
+        ).save()
+        # 提取失败但不抛出异常，允许用户查看 markdown 并重试
+        return UploadResponse(
+            id=doc.id,
+            filename=doc.filename,
+            status=doc.status,
+            message=f"解析成功，但结构化提取失败: {extract_exc}",
+        )

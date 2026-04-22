@@ -28,14 +28,9 @@ uv run python scripts/ci_test.py --backend-only
 ### 离线评测
 
 - `run_eval.py`
-  - 单次离线评测入口。
-  - 用评测清单里的样本跑结构化抽取，并输出结果与统计信息。
-  - 适合验证某个 prompt 或模型组合的效果。
-
-- `run_matrix_eval.py`
-  - 矩阵式离线评测入口。
-  - 批量比较多组 prompt / 模型配置的结果。
-  - 适合做实验对比和生成报告。
+  - 配置驱动的统一离线实验入口。
+  - 支持 `exp1`、`exp2`、`exp3` 三个实验，通过配置切换样本过滤、Prompt 变体和结果聚合方式。
+  - 适合做论文实验复现和 Prompt 对比。
 
 ### 接口契约测试
 
@@ -67,4 +62,4 @@ uv run python scripts/ci_test.py --backend-only
 - 改了问答接口：至少跑 `test_qa_contract.py`
 - 改了重提取逻辑：至少跑 `test_re_extract_contract.py` 和 `test_re_extract_unit.py`
 - 改了审核/局部编辑逻辑：至少跑 `test_review_model_contract.py` 和 `test_review_model_unit.py`
-- 改了抽取 prompt 或模型组合：再补跑 `run_eval.py` / `run_matrix_eval.py`
+- 改了抽取 prompt 或实验配置：再补跑 `run_eval.py`

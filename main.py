@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
-from core.document_service import process_uploaded_file
+from core.document_service import process_uploaded_file, retry_extraction
 from schemas.dto import DocumentRecordDTO, DocumentUpdateRequest, UploadResponse
 from schemas.models import DocumentRecord
 
@@ -88,6 +88,22 @@ async def delete_document(doc_id: int) -> dict[str, object]:
 
     await doc.delete()
     return {"message": "删除成功", "id": doc_id}
+
+
+@app.post("/api/documents/{doc_id}/retry-extraction", response_model=DocumentRecordDTO)
+async def retry_extraction_endpoint(doc_id: int) -> DocumentRecordDTO:
+    """重试提取结构化数据"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+
+    try:
+        updated_doc = await retry_extraction(doc)
+        return DocumentRecordDTO.model_validate(updated_doc)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(500, f"重试提取失败: {exc}") from exc
 
 
 @app.get("/api/documents/{doc_id}/file")

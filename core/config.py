@@ -44,5 +44,5 @@ def get_settings() -> RuntimeSettings:
         extraction_chunk_max_chars=_get_int("EXTRACTION_CHUNK_MAX_CHARS", 5000),
         extraction_chunk_overlap_chars=_get_int("EXTRACTION_CHUNK_OVERLAP_CHARS", 200),
         extraction_max_chars=_get_int("EXTRACTION_MAX_CHARS", 100000),
-        extraction_concurrency=_get_int("EXTRACTION_CONCURRENCY", 5),
+        extraction_concurrency=_get_int("EXTRACTION_CONCURRENCY", 3),
     )

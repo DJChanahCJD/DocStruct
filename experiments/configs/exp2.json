@@ -1,0 +1,19 @@
+{
+  "experiment_id": "exp2",
+  "description": "实验二：固定一组配置，评估 6 类文档的泛化覆盖。",
+  "manifest": "../datasets/baseline_manifest.json",
+  "sample_filters": {
+    "required_tags": ["generalization"]
+  },
+  "judge": {
+    "enabled": true,
+    "temperature": 0.0
+  },
+  "variants": [
+    {
+      "variant_id": "baseline-zh-detailed",
+      "label": "基线中文详细 Prompt",
+      "prompt_template": "../prompts/zh-detailed.txt"
+    }
+  ]
+}

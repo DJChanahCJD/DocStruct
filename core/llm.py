@@ -18,10 +18,12 @@ def build_chat_completion_kwargs(
     *,
     messages: list[dict[str, Any]],
     temperature: float,
+    model_name: str | None = None,
 ) -> dict[str, Any]:
     settings = get_settings()
     return {
-        "model": settings.llm_model,
+        "model": model_name or settings.llm_model,
         "messages": messages,
         "temperature": temperature,
+        "max_tokens": 8192,
     }

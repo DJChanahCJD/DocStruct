@@ -1,0 +1,34 @@
+{
+  "experiment_id": "exp1",
+  "description": "实验一：对比 Prompt 配置，筛选当前数据集上的较优方案。",
+  "manifest": "../datasets/baseline_manifest.json",
+  "sample_filters": {
+    "required_tags": ["config_search"]
+  },
+  "judge": {
+    "enabled": true,
+    "temperature": 0.0
+  },
+  "variants": [
+    {
+      "variant_id": "zh-concise",
+      "label": "中文简洁 Prompt",
+      "prompt_template": "../prompts/zh-concise.txt"
+    },
+    {
+      "variant_id": "zh-detailed",
+      "label": "中文详细 Prompt",
+      "prompt_template": "../prompts/zh-detailed.txt"
+    },
+    {
+      "variant_id": "en-concise",
+      "label": "英文简洁 Prompt",
+      "prompt_template": "../prompts/en-concise.txt"
+    },
+    {
+      "variant_id": "en-detailed",
+      "label": "英文详细 Prompt",
+      "prompt_template": "../prompts/en-detailed.txt"
+    }
+  ]
+}
