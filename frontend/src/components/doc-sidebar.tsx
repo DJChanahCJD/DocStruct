@@ -22,6 +22,16 @@ import { UploadZone } from "./upload-zone";
 import { useDeleteDocument, useDocuments, useRetryExtraction } from "@/hooks/use-api";
 import type { DocumentRecord } from "@/lib/api";
 
+const statusLabel: Record<string, string> = {
+  completed: "已完成",
+  uploaded: "已上传",
+  parsing: "解析中",
+  extracting: "提取中",
+  processing: "处理中",
+  failed: "失败",
+  pending: "待处理",
+};
+
 interface DocSidebarProps {
   selectedId: number | null;
   onSelectDoc: (id: number, name: string) => void;
@@ -169,13 +179,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
                         checked={filters.status.includes(status)}
                         onCheckedChange={() => toggleFilter("status", status)}
                       >
-                        {status === "completed"
-                          ? "已完成"
-                          : status === "processing"
-                            ? "处理中"
-                            : status === "failed"
-                              ? "失败"
-                              : status}
+                        {statusLabel[status] ?? status}
                       </DropdownMenuCheckboxItem>
                     ))}
                   </DropdownMenuGroup>

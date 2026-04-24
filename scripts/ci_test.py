@@ -46,6 +46,18 @@ def main() -> int:
             ROOT,
             env=env,
         )
+        run_step(
+            "Backend parser contract test",
+            ["uv", "run", "python", "-m", "unittest", "scripts.test_parser_contract"],
+            ROOT,
+            env=env,
+        )
+        run_step(
+            "Backend extraction resilience test",
+            ["uv", "run", "python", "-m", "unittest", "scripts.test_extraction_resilience"],
+            ROOT,
+            env=env,
+        )
 
     if run_frontend:
         run_step("Frontend build", ["npm.cmd", "run", "build"], FRONTEND_DIR, env=env)

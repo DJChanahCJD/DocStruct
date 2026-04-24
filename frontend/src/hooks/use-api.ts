@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  ACTIVE_DOCUMENT_STATUSES,
   deleteDocument,
   getDocumentFile,
   getDocument,
@@ -12,10 +13,16 @@ import {
   type UpdateDocumentRequest,
 } from "@/lib/api";
 
+const activeDocumentStatuses = new Set<string>(ACTIVE_DOCUMENT_STATUSES);
+
 export function useDocuments() {
   return useQuery({
     queryKey: ["documents"],
     queryFn: listDocuments,
+    refetchInterval: (query) => {
+      const docs = query.state.data ?? [];
+      return docs.some((doc) => activeDocumentStatuses.has(doc.status)) ? 2000 : false;
+    },
   });
 }
 
@@ -24,6 +31,13 @@ export function useDocument(id: number | null) {
     queryKey: ["document", id],
     queryFn: () => getDocument(id!),
     enabled: id !== null,
+    refetchInterval: (query) => {
+      const doc = query.state.data;
+      if (!doc) {
+        return false;
+      }
+      return activeDocumentStatuses.has(doc.status) ? 2000 : false;
+    },
   });
 }
 

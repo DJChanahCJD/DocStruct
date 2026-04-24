@@ -6,7 +6,7 @@ import os
 import uuid
 
 import aiofiles
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 from core.extractor import extract_structure_with_meta
 from core.parser import ParserFactory
@@ -33,10 +33,10 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
     if target_model is None:
         raise ValueError(f"不支持的文档类型: {doc.doc_type}")
 
-    await doc.update_from_dict({"status": "processing", "error_message": None}).save()
+    await doc.update_from_dict({"status": "extracting", "error_message": None}).save()
 
     try:
-        extracted, _ = await extract_structure_with_meta(doc.parsed_content, target_model)
+        extracted, extraction_meta = await extract_structure_with_meta(doc.parsed_content, target_model)
         await doc.update_from_dict(
             {
                 "status": "completed",
@@ -44,6 +44,13 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
                 "error_message": None,
             }
         ).save()
+        if extraction_meta.get("partial"):
+            logger.warning(
+                "Retry extraction partially succeeded for doc %s: failed chunks %s/%s",
+                doc.id,
+                extraction_meta.get("failed_chunks"),
+                extraction_meta.get("chunk_count"),
+            )
         return doc
     except Exception as exc:
         logger.warning("Retry extraction failed for doc %s: %s", doc.id, exc)
@@ -84,18 +91,36 @@ async def process_uploaded_file(
     doc = await DocumentRecord.create(
         filename=file.filename,
         stored_path=file_path,
-        status="processing",
+        status="uploaded",
         doc_type=normalized_doc_type.value,
     )
 
+    return UploadResponse(
+        id=doc.id,
+        filename=doc.filename,
+        status=doc.status,
+        message="文件已上传，正在后台处理中",
+    )
+
+
+async def process_document_record(doc_id: int) -> None:
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if doc is None:
+        logger.warning("Document record not found for processing: %s", doc_id)
+        return
+
+    normalized_doc_type = normalize_doc_type(doc.doc_type)
+
     # 阶段 1: 解析文件为 markdown
     try:
-        parser = ParserFactory.get_parser(file_path)
-        markdown_text = await asyncio.to_thread(parser.parse, file_path)
+        await doc.update_from_dict({"status": "parsing", "error_message": None}).save()
+        parser = ParserFactory.get_parser(doc.stored_path)
+        parse_result = await asyncio.to_thread(parser.parse_to_result, doc.stored_path)
+        markdown_text = parse_result.markdown
     except Exception as parse_exc:
-        logger.error("Parse failed for %s: %s", file.filename, parse_exc)
+        logger.error("Parse failed for doc %s: %s", doc.id, parse_exc)
         await doc.update_from_dict({"status": "failed", "error_message": f"解析失败: {parse_exc}"}).save()
-        raise HTTPException(500, f"文件解析失败: {parse_exc}") from parse_exc
+        return
 
     # 解析成功，先保存 markdown
     await doc.update_from_dict({"parsed_content": markdown_text}).save()
@@ -104,15 +129,11 @@ async def process_uploaded_file(
     target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
     if target_model is None:
         await doc.update_from_dict({"status": "completed"}).save()
-        return UploadResponse(
-            id=doc.id,
-            filename=doc.filename,
-            status=doc.status,
-            message=f"已按 {normalized_doc_type.value} 类型完成处理（无结构化提取）",
-        )
+        return
 
     try:
-        extracted, _ = await extract_structure_with_meta(markdown_text, target_model)
+        await doc.update_from_dict({"status": "extracting", "error_message": None}).save()
+        extracted, extraction_meta = await extract_structure_with_meta(markdown_text, target_model)
         extracted_payload = extracted.model_dump(mode="json")
         await doc.update_from_dict(
             {
@@ -121,24 +142,21 @@ async def process_uploaded_file(
                 "error_message": None,
             }
         ).save()
-        return UploadResponse(
-            id=doc.id,
-            filename=doc.filename,
-            status=doc.status,
-            message=f"已按 {normalized_doc_type.value} 类型完成处理",
-        )
+        partial = bool(extraction_meta.get("partial"))
+        if partial:
+            failed_chunks = extraction_meta.get("failed_chunks", 0)
+            chunk_count = extraction_meta.get("chunk_count", 0)
+            logger.warning(
+                "Extraction partially succeeded for doc %s: failed chunks %s/%s",
+                doc.id,
+                failed_chunks,
+                chunk_count,
+            )
     except Exception as extract_exc:
-        logger.warning("Extraction failed for %s: %s", file.filename, extract_exc)
+        logger.warning("Extraction failed for doc %s: %s", doc.id, extract_exc)
         await doc.update_from_dict(
             {
                 "status": "failed",
                 "error_message": f"提取失败: {extract_exc}",
             }
         ).save()
-        # 提取失败但不抛出异常，允许用户查看 markdown 并重试
-        return UploadResponse(
-            id=doc.id,
-            filename=doc.filename,
-            status=doc.status,
-            message=f"解析成功，但结构化提取失败: {extract_exc}",
-        )

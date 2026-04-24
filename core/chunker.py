@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from core.parser import ParseResult
+
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 NUMBERED_HEADING_PATTERN = re.compile(r"^\s*(\d+(?:\.\d+)*)(?:\.)?\s+(.+?)\s*$")
@@ -11,6 +13,17 @@ TABLE_ROW_PATTERN = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEPARATOR_PATTERN = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 FACT_PATTERN = re.compile(
     r"(failed|error|pass|passed|fail|bug\s*#|/api/|tc\d+|req-\d+|method:|path:|\|\s*[^|]+\s*\|)",
+    re.IGNORECASE,
+)
+HTTP_METHOD_PATTERN = re.compile(r"\b(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)\b")
+PATH_HINT_PATTERN = re.compile(r"(?:^|\s)/[A-Za-z0-9._~!$&'()*+,;=:@%/\-{}]+")
+API_VALUE_HINT_PATTERN = re.compile(
+    r"(base url|authorization|request body|response|path parameter|query parameter|status code|鉴权|请求体|响应|字段|参数)",
+    re.IGNORECASE,
+)
+LOW_VALUE_API_TITLE_PATTERN = re.compile(r"(错误格式|通用错误|状态码|错误码|附录|error|status\s*code)", re.IGNORECASE)
+LOW_VALUE_API_BODY_PATTERN = re.compile(
+    r"(all errors|所有错误统一返回|validation_error|resource_not_found|internal_error|rate_limited|trace_id|\"error\"\s*:)",
     re.IGNORECASE,
 )
 DEFAULT_TARGET_SIZE = 700
@@ -401,6 +414,62 @@ def _split_oversized_block(block: _Block, target_size: int) -> list[_Block]:
     return _split_paragraph_block(block, target_size)
 
 
+def _section_title_text(title_path: list[str]) -> str:
+    return " > ".join(part.strip() for part in title_path if part and part.strip())
+
+
+def _looks_like_api_section(title_path: list[str], blocks: list[_Block]) -> bool:
+    title_text = _section_title_text(title_path)
+    body_text = "\n".join(block.text for block in blocks)
+    combined_text = f"{title_text}\n{body_text}"
+    return bool(
+        HTTP_METHOD_PATTERN.search(combined_text)
+        or PATH_HINT_PATTERN.search(combined_text)
+        or API_VALUE_HINT_PATTERN.search(combined_text)
+        or "api" in title_text.lower()
+    )
+
+
+def _is_low_value_api_section(title_path: list[str], blocks: list[_Block]) -> bool:
+    title_text = _section_title_text(title_path)
+    body_text = "\n".join(block.text for block in blocks)
+    has_endpoint_signal = bool(HTTP_METHOD_PATTERN.search(body_text) or PATH_HINT_PATTERN.search(body_text))
+    has_api_value_signal = bool(API_VALUE_HINT_PATTERN.search(body_text))
+    if re.search(r"限流", title_text) and not has_endpoint_signal:
+        return True
+    if LOW_VALUE_API_TITLE_PATTERN.search(title_text) and not has_endpoint_signal:
+        return True
+    if LOW_VALUE_API_BODY_PATTERN.search(body_text) and not (has_endpoint_signal or has_api_value_signal):
+        return True
+    return False
+
+
+def _merge_blocks_semantically(title_path: list[str], blocks: list[_Block], target_size: int) -> list[_Block]:
+    if not blocks or not _looks_like_api_section(title_path, blocks):
+        return blocks
+
+    merged: list[_Block] = []
+    buffer_parts: list[str] = []
+    buffer_size = 0
+    for block in blocks:
+        text = block.text.strip()
+        if not text:
+            continue
+        addition_size = len(text) + (2 if buffer_parts else 0)
+        if buffer_parts and buffer_size + addition_size > target_size:
+            merged.append(_Block(chunk_type="section", text="\n\n".join(buffer_parts)))
+            buffer_parts = [text]
+            buffer_size = len(text)
+            continue
+        buffer_parts.append(text)
+        buffer_size += addition_size
+
+    if buffer_parts:
+        merged.append(_Block(chunk_type="section", text="\n\n".join(buffer_parts)))
+
+    return merged or blocks
+
+
 def _prepare_blocks(blocks: list[_Block], target_size: int, min_size: int) -> list[_Block]:
     expanded: list[_Block] = []
     for block in blocks:
@@ -487,7 +556,10 @@ def _build_markdown_chunks(markdown_text: str, target_size: int, overlap_chars: 
 
     for section in sections:
         blocks = _split_section_blocks(section)
+        if _is_low_value_api_section(section.title_path, blocks):
+            continue
         prepared_blocks = _prepare_blocks(blocks, target_size=target_size, min_size=min_size)
+        prepared_blocks = _merge_blocks_semantically(section.title_path, prepared_blocks, target_size=target_size)
         section_chunks = _build_chunks_from_blocks(
             title_path=section.title_path,
             blocks=prepared_blocks,
@@ -498,13 +570,104 @@ def _build_markdown_chunks(markdown_text: str, target_size: int, overlap_chars: 
         chunks.extend(section_chunks)
         next_index += len(section_chunks)
 
-    return chunks
+    return _merge_adjacent_api_chunks(chunks, target_size=target_size, overlap_chars=overlap_chars)
+
+
+def _merge_adjacent_api_chunks(
+    chunks: list[MarkdownChunk],
+    *,
+    target_size: int,
+    overlap_chars: int,
+) -> list[MarkdownChunk]:
+    if not chunks:
+        return chunks
+
+    merged: list[MarkdownChunk] = []
+    current = chunks[0]
+
+    def can_merge(left: MarkdownChunk, right: MarkdownChunk) -> bool:
+        if len(left.title_path) < 2 or len(right.title_path) < 2:
+            return False
+        if left.title_path[:-1] != right.title_path[:-1]:
+            return False
+        if not (_looks_like_api_section(left.title_path, [_Block(chunk_type="section", text=left.text)]) and _looks_like_api_section(right.title_path, [_Block(chunk_type="section", text=right.text)])):
+            return False
+        left_heading = left.title_path[-1]
+        right_heading = right.title_path[-1]
+        combined_text = f"{left_heading}\n{left.text}\n\n{right_heading}\n{right.text}"
+        return len(combined_text) <= target_size
+
+    def merge_two(left: MarkdownChunk, right: MarkdownChunk) -> MarkdownChunk:
+        title_path = left.title_path[:-1] if len(left.title_path) > 1 else left.title_path
+        display_text = f"{left.title_path[-1]}\n{left.text}\n\n{right.title_path[-1]}\n{right.text}".strip()
+        return MarkdownChunk(
+            index=left.index,
+            title_path=title_path,
+            section_title=title_path[-1] if title_path else left.section_title,
+            chunk_type="section",
+            order_index=left.order_index,
+            embed_text=_build_embed_text(title_path=title_path, display_text=display_text, overlap_prefix=""),
+            display_text=display_text,
+        )
+
+    for chunk in chunks[1:]:
+        if can_merge(current, chunk):
+            current = merge_two(current, chunk)
+            continue
+        merged.append(current)
+        current = chunk
+
+    merged.append(current)
+    return merged
+
+
+def _node_label(node: dict[str, Any]) -> str:
+    for key in ("title", "name", "id"):
+        value = str(node.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _artifact_extra_value(artifact: dict[str, Any], key: str) -> str:
+    extra = artifact.get("extra")
+    if isinstance(extra, dict):
+        value = extra.get(key)
+        if value is not None:
+            return str(value).strip()
+    return ""
+
+
+def _find_api_artifact(
+    artifacts: list[dict[str, Any]],
+    interface_id: str,
+    method: str,
+    path: str,
+) -> dict[str, Any] | None:
+    normalized_method = method.upper()
+
+    for artifact in artifacts:
+        artifact_id = str(artifact.get("id") or "").strip()
+        artifact_method = _artifact_extra_value(artifact, "method").upper()
+        artifact_path = _artifact_extra_value(artifact, "path")
+        if interface_id and artifact_id and artifact_id == interface_id:
+            return artifact
+        if artifact_method and artifact_path and artifact_method == normalized_method and artifact_path == path:
+            return artifact
+
+    return None
 
 
 def _api_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[str], list[_Block]]]:
     title = str(extracted_data.get("title") or "API Documentation").strip()
     version = extracted_data.get("version")
     base_url = extracted_data.get("base_url")
+    interfaces = extracted_data.get("interfaces") or []
+    artifacts = [
+        artifact
+        for artifact in (extracted_data.get("artifacts") or [])
+        if isinstance(artifact, dict) and artifact.get("artifact_type") == "api_endpoint"
+    ]
 
     overview_lines = [f"API 文档标题: {title}"]
     if version:
@@ -519,24 +682,33 @@ def _api_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[st
         )
     ]
 
-    for endpoint in extracted_data.get("items") or []:
-        if not isinstance(endpoint, dict):
+    for interface in interfaces:
+        if not isinstance(interface, dict):
             continue
-        method = str(endpoint.get("method") or "").strip().upper()
-        path = str(endpoint.get("path") or "").strip()
-        summary = str(endpoint.get("summary") or "").strip()
-        request = str(endpoint.get("request") or "").strip()
-        response = str(endpoint.get("response") or "").strip()
+        method = str(interface.get("method") or "").strip().upper()
+        path = str(interface.get("path") or "").strip()
         if not method or not path:
             continue
+
+        interface_id = str(interface.get("id") or "").strip()
+        summary = str(interface.get("description") or "").strip()
+        target = str(interface.get("target") or "").strip()
+        artifact = _find_api_artifact(artifacts, interface_id=interface_id, method=method, path=path)
+        request = _artifact_extra_value(artifact or {}, "request")
+        response = _artifact_extra_value(artifact or {}, "response")
+        operation_id = _artifact_extra_value(artifact or {}, "operation_id")
 
         lines = [
             f"API endpoint: {method} {path}",
             f"Method: {method}",
             f"Path: {path}",
         ]
+        if target:
+            lines.append(f"Target: {target}")
         if summary:
             lines.append(f"Summary: {summary}")
+        if operation_id:
+            lines.append(f"Operation ID: {operation_id}")
         if request:
             lines.append(f"Request: {request}")
         if response:
@@ -553,24 +725,53 @@ def _api_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[st
 
 
 def _issue_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[str], list[_Block]]]:
-    title = str(extracted_data.get("title") or "Issue").strip()
+    artifacts = [
+        artifact
+        for artifact in (extracted_data.get("artifacts") or [])
+        if isinstance(artifact, dict) and artifact.get("artifact_type") == "issue"
+    ]
+    issue_artifact = artifacts[0] if artifacts else {}
+    title = str(_node_label(issue_artifact) or extracted_data.get("title") or "Issue").strip()
     overview_lines = [f"问题标题: {title}"]
 
-    for label, key in (
-        ("Issue ID", "issue_id"),
-        ("状态", "status"),
-        ("严重级别", "severity"),
+    for label, value in (
+        ("Issue ID", _artifact_extra_value(issue_artifact, "issue_id")),
+        ("状态", str(issue_artifact.get("status") or "").strip()),
+        ("严重级别", _artifact_extra_value(issue_artifact, "severity")),
     ):
-        value = extracted_data.get(key)
         if value:
             overview_lines.append(f"{label}: {value}")
 
     if extracted_data.get("summary"):
         overview_lines.append(f"摘要: {extracted_data['summary']}")
-    if extracted_data.get("expected"):
-        overview_lines.append(f"期望结果: {extracted_data['expected']}")
-    if extracted_data.get("actual"):
-        overview_lines.append(f"实际结果: {extracted_data['actual']}")
+
+    description = str(issue_artifact.get("description") or "").strip()
+    if description:
+        overview_lines.append(f"问题描述: {description}")
+
+    expected = _artifact_extra_value(issue_artifact, "expected")
+    actual = _artifact_extra_value(issue_artifact, "actual")
+    if expected:
+        overview_lines.append(f"期望结果: {expected}")
+    if actual:
+        overview_lines.append(f"实际结果: {actual}")
+
+    issue_id = str(issue_artifact.get("id") or "").strip()
+    impacted_ids: list[str] = []
+    for relation in extracted_data.get("relations") or []:
+        if not isinstance(relation, dict):
+            continue
+        subject_id = str(relation.get("subject_id") or "").strip()
+        object_id = str(relation.get("object_id") or "").strip()
+        relation_name = str(relation.get("relation") or "").strip()
+        if not issue_id:
+            continue
+        if subject_id == issue_id and object_id:
+            impacted_ids.append(f"{relation_name}: {object_id}")
+        elif object_id == issue_id and subject_id:
+            impacted_ids.append(f"{relation_name}: {subject_id}")
+    if impacted_ids:
+        overview_lines.append(f"关联对象: {', '.join(dict.fromkeys(impacted_ids))}")
 
     sections: list[tuple[list[str], list[_Block]]] = [
         (
@@ -579,15 +780,73 @@ def _issue_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[
         )
     ]
 
-    steps = extracted_data.get("steps") or []
-    if steps:
-        step_lines = [f"{idx}. {step}" for idx, step in enumerate(steps, start=1)]
-        sections.append(
-            (
-                ["Structured Data", "Reproduction Steps"],
-                [_Block(chunk_type="structured", text="\n".join(step_lines))],
+    reproduction_process = None
+    for process in extracted_data.get("processes") or []:
+        if not isinstance(process, dict):
+            continue
+        steps = process.get("steps") or []
+        if steps:
+            reproduction_process = process
+            break
+
+    if reproduction_process:
+        process_title = _node_label(reproduction_process) or "Reproduction Steps"
+        step_lines = []
+        for idx, step in enumerate(reproduction_process.get("steps") or [], start=1):
+            if not isinstance(step, dict):
+                continue
+            step_name = str(step.get("name") or "").strip()
+            step_description = str(step.get("description") or "").strip()
+            if step_name and step_description:
+                step_lines.append(f"{idx}. {step_name}: {step_description}")
+            elif step_name:
+                step_lines.append(f"{idx}. {step_name}")
+            elif step_description:
+                step_lines.append(f"{idx}. {step_description}")
+        if step_lines:
+            sections.append(
+                (
+                    ["Structured Data", process_title],
+                    [_Block(chunk_type="structured", text="\n".join(step_lines))],
+                )
             )
-        )
+
+    for requirement in extracted_data.get("requirements") or []:
+        if not isinstance(requirement, dict):
+            continue
+        if requirement.get("requirement_type") != "acceptance":
+            continue
+        requirement_text = str(requirement.get("description") or _node_label(requirement)).strip()
+        if requirement_text:
+            sections.append(
+                (
+                    ["Structured Data", "Expected Result"],
+                    [_Block(chunk_type="structured", text=requirement_text)],
+                )
+            )
+            break
+
+    if extracted_data.get("metrics"):
+        metric_lines = []
+        for metric in extracted_data.get("metrics") or []:
+            if not isinstance(metric, dict):
+                continue
+            metric_name = str(metric.get("metric_name") or "").strip()
+            metric_value = str(metric.get("metric_value") or "").strip()
+            if not metric_name or not metric_value:
+                continue
+            condition = str(metric.get("condition") or "").strip()
+            line = f"{metric_name}: {metric_value}"
+            if condition:
+                line = f"{line} ({condition})"
+            metric_lines.append(line)
+        if metric_lines:
+            sections.append(
+                (
+                    ["Structured Data", "Metrics"],
+                    [_Block(chunk_type="structured", text="\n".join(metric_lines))],
+                )
+            )
 
     return sections
 
@@ -654,3 +913,73 @@ def split_markdown_into_chunks(
         start_index=len(markdown_chunks),
     )
     return markdown_chunks + structured_chunks
+
+
+def split_parse_result_into_chunks(
+    parse_result: ParseResult,
+    max_chars: int = DEFAULT_TARGET_SIZE,
+    overlap_chars: int = DEFAULT_OVERLAP,
+    min_chars: int = DEFAULT_MIN_SIZE,
+) -> list[MarkdownChunk]:
+    """
+    直接基于解析器输出的 block 结构切分，避免再次从 Markdown 反推结构。
+    """
+    target_size = max_chars or DEFAULT_TARGET_SIZE
+    overlap = overlap_chars if overlap_chars is not None else DEFAULT_OVERLAP
+    min_size = min_chars or DEFAULT_MIN_SIZE
+
+    sections: list[tuple[list[str], list[_Block]]] = []
+    current_path: list[str] = []
+    current_blocks: list[_Block] = []
+
+    def flush_section() -> None:
+        if current_blocks:
+            sections.append((list(current_path), list(current_blocks)))
+            current_blocks.clear()
+
+    for block in parse_result.blocks:
+        if block.type == "title":
+            flush_section()
+            level = max(1, block.level or 1)
+            title_text = block.text.strip()
+            if not title_text:
+                continue
+            current_path[:] = current_path[: level - 1]
+            current_path.append(title_text)
+            continue
+
+        if block.type == "section_break":
+            flush_section()
+            continue
+
+        chunk_type = block.type if block.type in {"paragraph", "list", "table", "code", "quote"} else "paragraph"
+        text = block.text.strip()
+        if not text:
+            continue
+        current_blocks.append(_Block(chunk_type=chunk_type, text=text))
+
+    flush_section()
+
+    chunks: list[MarkdownChunk] = []
+    next_index = 0
+    for title_path, blocks in sections:
+        prepared_blocks = _prepare_blocks(blocks, target_size=target_size, min_size=min_size)
+        section_chunks = _build_chunks_from_blocks(
+            title_path=title_path,
+            blocks=prepared_blocks,
+            target_size=target_size,
+            overlap_chars=overlap,
+            start_index=next_index,
+        )
+        chunks.extend(section_chunks)
+        next_index += len(section_chunks)
+
+    if chunks:
+        return chunks
+
+    return split_markdown_into_chunks(
+        markdown_text=parse_result.markdown,
+        max_chars=max_chars,
+        overlap_chars=overlap_chars,
+        min_chars=min_chars,
+    )

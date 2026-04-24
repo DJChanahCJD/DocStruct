@@ -91,8 +91,12 @@ export function UploadZone() {
         ) : (
           <FileUp className="h-6 w-6 text-muted-foreground" />
         )}
-        <p className="mt-2 text-xs text-muted-foreground">拖拽或点击上传</p>
-        <p className="mt-0.5 text-[10px] text-muted-foreground/60">PDF / DOCX / MD / TXT</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {uploadFile.isPending ? "上传文件中..." : "拖拽或点击上传"}
+        </p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground/60">
+          {uploadFile.isPending ? "上传后将自动开始解析与提取" : "PDF / DOCX / MD / TXT"}
+        </p>
       </div>
 
       <DocTypeSelectorDialog

@@ -17,6 +17,9 @@ import type { DocumentRecord } from "@/lib/api";
 
 const statusColor: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
+  uploaded: "bg-amber-100 text-amber-700",
+  parsing: "bg-amber-100 text-amber-700",
+  extracting: "bg-amber-100 text-amber-700",
   processing: "bg-amber-100 text-amber-700",
   failed: "bg-red-100 text-red-700",
   pending: "bg-slate-100 text-slate-600",
@@ -24,6 +27,9 @@ const statusColor: Record<string, string> = {
 
 const statusLabel: Record<string, string> = {
   completed: "已完成",
+  uploaded: "已上传",
+  parsing: "解析中",
+  extracting: "提取中",
   processing: "处理中",
   failed: "失败",
   pending: "待处理",
@@ -68,6 +74,17 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
                   {getStatusLabel(doc.status)}
                 </span>
               </div>
+              {doc.status !== "completed" && doc.status !== "failed" && (
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  {doc.status === "uploaded"
+                    ? "等待开始处理"
+                    : doc.status === "parsing"
+                      ? "正在解析原文"
+                      : doc.status === "extracting"
+                        ? "正在提取结构化结果"
+                        : "处理中"}
+                </div>
+              )}
             </div>
 
             <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">

@@ -4,6 +4,8 @@ const api = axios.create({
   baseURL: "/api",
 });
 
+export const ACTIVE_DOCUMENT_STATUSES = ["pending", "uploaded", "parsing", "extracting"] as const;
+
 export interface DocumentRecord {
   id: number;
   filename: string;

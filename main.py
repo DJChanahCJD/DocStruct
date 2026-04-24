@@ -1,13 +1,13 @@
 import logging
 import os
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
-from core.document_service import process_uploaded_file, retry_extraction
+from core.document_service import process_document_record, process_uploaded_file, retry_extraction
 from schemas.dto import DocumentRecordDTO, DocumentUpdateRequest, UploadResponse
 from schemas.models import DocumentRecord
 
@@ -34,10 +34,13 @@ app.add_middleware(
 
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     doc_type: str | None = Form(None),
 ) -> UploadResponse:
-    return await process_uploaded_file(file, doc_type=doc_type, upload_dir=settings.upload_dir)
+    response = await process_uploaded_file(file, doc_type=doc_type, upload_dir=settings.upload_dir)
+    background_tasks.add_task(process_document_record, response.id)
+    return response
 
 
 @app.get("/api/documents", response_model=list[DocumentRecordDTO])

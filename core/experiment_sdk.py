@@ -13,8 +13,14 @@ from core.schema_registry import get_response_model, normalize_doc_type
 def parse_document(file_path: str | Path) -> tuple[str, dict[str, Any]]:
     resolved_path = Path(file_path)
     parser = ParserFactory.get_parser(str(resolved_path))
-    markdown = parser.parse(str(resolved_path))
-    return markdown, {"parser_name": parser.__class__.__name__, "file_path": str(resolved_path).replace("\\", "/")}
+    parse_result = parser.parse_to_result(str(resolved_path))
+    return parse_result.markdown, {
+        "parser_name": parser.__class__.__name__,
+        "file_path": str(resolved_path).replace("\\", "/"),
+        "title": parse_result.title,
+        "block_count": len(parse_result.blocks),
+        **parse_result.metadata,
+    }
 
 
 async def extract_document(

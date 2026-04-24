@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from core.chunker import split_markdown_into_chunks
 from core.config import get_settings
@@ -16,6 +16,23 @@ from core.utils import clean_and_parse_json, merge_extraction_results, normalize
 logger = logging.getLogger(__name__)
 settings = get_settings()
 raw_client = get_openai_client()
+METADATA_FIELDS = {"doc_type", "language", "source_document_id", "schema_version", "extraction_version", "extra"}
+
+
+def _infer_doc_type(response_model: type[BaseModel]) -> str | None:
+    doc_type_field = getattr(response_model, "model_fields", {}).get("doc_type")
+    default = getattr(doc_type_field, "default", None)
+    return default if isinstance(default, str) and default.strip() else None
+
+
+def _has_meaningful_schema_fields(data: dict[str, object], response_model: type[BaseModel]) -> bool:
+    model_fields = getattr(response_model, "model_fields", {})
+    for key, value in data.items():
+        if key not in model_fields or key in METADATA_FIELDS:
+            continue
+        if value not in (None, "", [], {}):
+            return True
+    return False
 
 
 def _json_schema_text(model: type[BaseModel]) -> str:
@@ -128,6 +145,7 @@ async def extract_structure_with_meta(
         markdown_text=markdown_content,
         max_chars=settings.extraction_chunk_max_chars,
         overlap_chars=settings.extraction_chunk_overlap_chars,
+        doc_type=_infer_doc_type(response_model),
     )
     if not chunks:
         raise ValueError("文档分块失败，无法继续提取")
@@ -147,25 +165,36 @@ async def extract_structure_with_meta(
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     partial_results: list[dict[str, object]] = []
-    failed_chunks = 0
-    for result in results:
+    failed_chunk_indexes: list[int] = []
+    for index, result in enumerate(results):
         if isinstance(result, Exception):
-            failed_chunks += 1
+            failed_chunk_indexes.append(index)
             logger.warning("Chunk extraction failed: %s", result)
             continue
-        partial_results.append(result)
+        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, response_model):
+            failed_chunk_indexes.append(index)
+            logger.warning("Chunk returned no meaningful schema fields at index %s", index)
+            continue
+        try:
+            validated_chunk = response_model.model_validate(result)
+        except ValidationError as exc:
+            failed_chunk_indexes.append(index)
+            logger.warning("Chunk validation failed at index %s: %s", index, exc)
+            continue
+        partial_results.append(validated_chunk.model_dump(mode="python", exclude_none=True))
 
-    if failed_chunks > 0:
-        raise RuntimeError(f"分块提取失败，失败块数: {failed_chunks}/{len(chunks)}")
     if not partial_results:
-        raise RuntimeError("分块提取失败，未返回有效结果")
+        raise RuntimeError(f"分块提取失败，失败块数: {len(failed_chunk_indexes)}/{len(chunks)}")
 
     merged = merge_extraction_results(partial_results)
     validated = response_model.model_validate(merged)
+    failed_chunks = len(failed_chunk_indexes)
     return validated, {
         "mode": "chunked",
         "chunk_count": len(chunks),
         "failed_chunks": failed_chunks,
+        "failed_chunk_indexes": failed_chunk_indexes,
+        "partial": failed_chunks > 0,
     }
 
 
