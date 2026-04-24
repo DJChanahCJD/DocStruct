@@ -728,7 +728,31 @@ class ParserFactory:
     """解析器工厂。"""
 
     @staticmethod
-    def get_parser(file_path: str) -> BaseParser:
+    def get_parser(file_path: str, backend: str | None = None) -> BaseParser:
+        """
+        根据文件类型和后端配置返回解析器。
+
+        Args:
+            file_path: 文件路径
+            backend: 解析器后端 ("basic" | "docling")，为 None 时使用配置
+
+        Returns:
+            对应的解析器实例
+        """
+        from core.config import get_settings
+
+        settings = get_settings()
+        selected_backend = backend or settings.parser_backend
+
+        if selected_backend == "docling":
+            from core.parsers.docling_parser import DoclingParser
+
+            return DoclingParser(
+                enable_ocr=settings.docling_enable_ocr,
+                enable_table_structure=settings.docling_enable_table_structure,
+            )
+
+        # 默认 basic parser
         ext = os.path.splitext(file_path)[1].lower()
         if ext == ".pdf":
             return PdfParser()

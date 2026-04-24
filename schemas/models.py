@@ -198,6 +198,7 @@ class SourceRef(BaseModel):
     section: Optional[str] = Field(None, description="来源章节号或章节标题，如 3.6.1")
     page: Optional[int] = Field(None, description="来源页码；纯文本/Markdown 可为空")
     text_span: Optional[str] = Field(None, description="对应原文片段；不宜过长")
+    bbox: Optional[list[float]] = Field(None, description="边界框坐标 [x0, y0, x1, y1]；PDF point 单位，左上角为原点")
 
 
 class BaseNode(BaseModel):

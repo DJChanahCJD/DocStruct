@@ -18,6 +18,13 @@ def _get_int(name: str, default: int) -> int:
         return default
 
 
+def _get_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None or value == "":
+        return default
+    return value.lower() in ("true", "1", "yes", "on")
+
+
 @dataclass(frozen=True)
 class RuntimeSettings:
     llm_api_key: str | None
@@ -30,6 +37,9 @@ class RuntimeSettings:
     extraction_chunk_overlap_chars: int
     extraction_max_chars: int
     extraction_concurrency: int
+    parser_backend: str
+    docling_enable_ocr: bool
+    docling_enable_table_structure: bool
 
 
 @lru_cache(maxsize=1)
@@ -45,4 +55,7 @@ def get_settings() -> RuntimeSettings:
         extraction_chunk_overlap_chars=_get_int("EXTRACTION_CHUNK_OVERLAP_CHARS", 200),
         extraction_max_chars=_get_int("EXTRACTION_MAX_CHARS", 100000),
         extraction_concurrency=_get_int("EXTRACTION_CONCURRENCY", 3),
+        parser_backend=os.getenv("PARSER_BACKEND", "basic"),
+        docling_enable_ocr=_get_bool("DOCLING_ENABLE_OCR", False),
+        docling_enable_table_structure=_get_bool("DOCLING_ENABLE_TABLE_STRUCTURE", True),
     )

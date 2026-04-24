@@ -11,7 +11,8 @@ pymupdf4llm
 pymupdf
 python-dotenv
 python-docx
-numpy
-faiss-cpu
-httpx
+# numpy
+# faiss-cpu
+# httpx
 markdownify
+docling
