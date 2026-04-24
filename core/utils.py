@@ -1,7 +1,7 @@
 import json
 import ast
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 def clean_and_parse_json(text: str) -> Dict[str, Any]:
     """
@@ -161,3 +161,144 @@ def merge_extraction_results(results: list[Dict[str, Any]]) -> Dict[str, Any]:
                 merged[key] = _merge_scalar_value(existing_value, incoming_value)
 
     return normalize_extracted_data(merged)
+
+
+def _clean_empty_values(data: Any) -> Any:
+    """
+    清理空值：
+    - ""、仅空白字符串转为 None
+    - 空列表 [] 和 空字典 {} （除了必要的可能要保留，但如果作为 source_ref/extra 的可以删掉，安全起见我们过滤 None, [], {} 和空白字符串）
+    我们只递归清理 dict 和 list，遇到空值直接删除该 key。
+    """
+    if isinstance(data, dict):
+        cleaned = {}
+        for k, v in data.items():
+            val = _clean_empty_values(v)
+            if val not in (None, "", [], {}):
+                cleaned[k] = val
+        return cleaned
+    elif isinstance(data, list):
+        cleaned = []
+        for item in data:
+            val = _clean_empty_values(item)
+            if val not in (None, "", [], {}):
+                cleaned.append(val)
+        return cleaned
+    elif isinstance(data, str):
+        s = data.strip()
+        return s if s else None
+    return data
+
+
+def _deduplicate_requirements(requirements: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    """优先按 id，无 id 时按 title(name) + description + requirement_type 归一"""
+    seen_ids = set()
+    seen_texts = set()
+    result = []
+    
+    for req in requirements:
+        req_id = req.get("id", "")
+        if req_id:
+            if req_id in seen_ids:
+                continue
+            seen_ids.add(req_id)
+            result.append(req)
+            continue
+            
+        # 无 id 情况
+        name = req.get("name", "")
+        desc = req.get("description", "")
+        req_type = req.get("requirement_type", "other")
+        
+        # 用 name + desc + type 作为去重 key
+        text_key = f"{name}::{desc}::{req_type}"
+        if text_key in seen_texts:
+            continue
+        seen_texts.add(text_key)
+        result.append(req)
+        
+    return result
+
+
+def _normalize_priority(priority: str) -> Optional[str]:
+    """中文“高/中/低”、“P0/P1/P2”等映射到 high/medium/low"""
+    if not priority:
+        return None
+    p = priority.strip().lower()
+    if p in ("high", "高", "p0", "紧急", "critical", "严重"):
+        return "high"
+    if p in ("medium", "中", "p1", "一般", "normal", "major"):
+        return "medium"
+    if p in ("low", "低", "p2", "p3", "次要", "minor"):
+        return "low"
+    return "medium"  # 无法识别的默认为 medium
+
+
+def _filter_invalid_artifacts(artifacts: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    """过滤纯术语、缩写、普通名词表项；对无 artifact_type 且无明确文档/接口/测试产物特征的条目丢弃"""
+    valid = []
+    for art in artifacts:
+        art_type = art.get("artifact_type", "other")
+        name = art.get("name", "")
+        desc = art.get("description", "")
+        
+        if art_type == "other" and len(name) < 20 and len(desc) < 30:
+            # 可能是普通术语、缩写，丢弃
+            continue
+        valid.append(art)
+    return valid
+
+
+def _stabilize_requirement_type(req: Dict[str, Any]) -> str:
+    """基于标题、措辞二次修正 requirement_type"""
+    current_type = req.get("requirement_type", "other")
+    if current_type != "other":
+        return current_type
+        
+    name = req.get("name", "")
+    desc = req.get("description", "")
+    text = f"{name} {desc}".lower()
+    
+    if "验收标准" in text or "uat" in text or "通过条件" in text or "acceptance" in text:
+        return "acceptance"
+    if any(k in text for k in ("性能", "可靠性", "安全性", "并发", "响应时间", "performance", "security", "非功能")):
+        return "non_functional"
+    if any(k in text for k in ("应", "必须", "支持", "能够", "功能", "functional", "shall", "must", "should")):
+        return "functional"
+    
+    return "other"
+
+
+def finalize_merged_result(metadata: Dict[str, Any], chunk_results: list[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    统一做清洗、归一化、去重，再组装为最终的数据字典。
+    """
+    # 1. 组合 chunk 结果
+    merged_chunks = merge_extraction_results(chunk_results)
+    
+    # 2. 空值处理
+    cleaned = _clean_empty_values(merged_chunks) or {}
+    
+    # 3. 具体对象列表的清洗归一化
+    if "requirements" in cleaned and isinstance(cleaned["requirements"], list):
+        reqs = []
+        for req in cleaned["requirements"]:
+            # priority
+            if "priority" in req and req["priority"]:
+                req["priority"] = _normalize_priority(req["priority"])
+            # type
+            req["requirement_type"] = _stabilize_requirement_type(req)
+            reqs.append(req)
+            
+        cleaned["requirements"] = _deduplicate_requirements(reqs)
+        
+    if "artifacts" in cleaned and isinstance(cleaned["artifacts"], list):
+        cleaned["artifacts"] = _filter_invalid_artifacts(cleaned["artifacts"])
+        
+    # 4. 覆盖 metadata 字段（文档级字段仅来自阶段 A）
+    # metadata 中的字段如 title, doc_type 优先级最高
+    for key, value in metadata.items():
+        if value not in (None, "", [], {}):
+            cleaned[key] = value
+            
+    return cleaned

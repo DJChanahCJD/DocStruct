@@ -6,11 +6,12 @@ import logging
 
 from pydantic import BaseModel, ValidationError
 
-from core.chunker import split_markdown_into_chunks
+from core.chunker import get_metadata_window, split_markdown_into_chunks
 from core.config import get_settings
 from core.constants import EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
 from core.llm import build_chat_completion_kwargs, get_openai_client
-from core.utils import clean_and_parse_json, merge_extraction_results, normalize_extracted_data
+from core.utils import clean_and_parse_json, finalize_merged_result, merge_extraction_results, normalize_extracted_data
+from schemas.models import DocumentMetadata, StructuredChunk
 
 
 logger = logging.getLogger(__name__)
@@ -130,33 +131,49 @@ async def extract_structure_with_meta(
             "当前系统仅面向中短文档。"
         )
 
-    if content_length <= settings.extraction_threshold:
-        data = await asyncio.to_thread(
-            _extract_once,
-            markdown_content,
-            response_model,
-            prompt_template=prompt_template,
-            model_name=model_name,
-        )
-        validated = response_model.model_validate(data)
-        return validated, {"mode": "single", "chunk_count": 1}
+    # 阶段 A：Metadata 抽取
+    metadata_window = get_metadata_window(markdown_content)
+    metadata_prompt_note = "请仅抽取文档级元信息，禁止从局部章节标题推测。无明确信息则留空。"
+    
+    metadata_dict = await asyncio.to_thread(
+        _extract_once,
+        metadata_window,
+        DocumentMetadata,
+        context_note=metadata_prompt_note,
+        prompt_template=prompt_template,
+        model_name=model_name,
+    )
+    
+    doc_type = _infer_doc_type(response_model) or metadata_dict.get("doc_type")
+    if doc_type:
+        metadata_dict["doc_type"] = doc_type
 
+    # 阶段 B：Chunk 内容抽取
     chunks = split_markdown_into_chunks(
         markdown_text=markdown_content,
         max_chars=settings.extraction_chunk_max_chars,
         overlap_chars=settings.extraction_chunk_overlap_chars,
-        doc_type=_infer_doc_type(response_model),
+        doc_type=doc_type,
     )
     if not chunks:
         raise ValueError("文档分块失败，无法继续提取")
 
     semaphore = asyncio.Semaphore(max(1, settings.extraction_concurrency))
+    
+    doc_title = metadata_dict.get("title") or "(Unknown Title)"
+    doc_summary = metadata_dict.get("summary") or ""
+    base_context = f"Document Title: {doc_title}"
+    if doc_summary:
+        base_context += f"\nDocument Summary: {doc_summary}"
+        
+    chunk_prompt_note = "请仅抽取当前 Chunk 中出现的对象列表。忽略文档级字段（如 title/version/summary）。"
+
     tasks = [
         _extract_chunk(
             semaphore,
             chunk.text,
-            response_model,
-            context_note=f"title_path={' > '.join(chunk.title_path) if chunk.title_path else '(no-heading)'}",
+            StructuredChunk,
+            context_note=f"{base_context}\nLocal Path: {' > '.join(chunk.title_path) if chunk.title_path else '(no-heading)'}\n{chunk_prompt_note}",
             prompt_template=prompt_template,
             model_name=model_name,
         )
@@ -171,12 +188,12 @@ async def extract_structure_with_meta(
             failed_chunk_indexes.append(index)
             logger.warning("Chunk extraction failed: %s", result)
             continue
-        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, response_model):
+        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, StructuredChunk):
             failed_chunk_indexes.append(index)
             logger.warning("Chunk returned no meaningful schema fields at index %s", index)
             continue
         try:
-            validated_chunk = response_model.model_validate(result)
+            validated_chunk = StructuredChunk.model_validate(result)
         except ValidationError as exc:
             failed_chunk_indexes.append(index)
             logger.warning("Chunk validation failed at index %s: %s", index, exc)
@@ -186,11 +203,13 @@ async def extract_structure_with_meta(
     if not partial_results:
         raise RuntimeError(f"分块提取失败，失败块数: {len(failed_chunk_indexes)}/{len(chunks)}")
 
-    merged = merge_extraction_results(partial_results)
-    validated = response_model.model_validate(merged)
+    # 阶段 C：Finalize 清洗合并
+    merged_data = finalize_merged_result(metadata_dict, partial_results)
+    
+    validated = response_model.model_validate(merged_data)
     failed_chunks = len(failed_chunk_indexes)
     return validated, {
-        "mode": "chunked",
+        "mode": "three-stage",
         "chunk_count": len(chunks),
         "failed_chunks": failed_chunks,
         "failed_chunk_indexes": failed_chunk_indexes,

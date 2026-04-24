@@ -31,6 +31,37 @@ DEFAULT_OVERLAP = 80
 DEFAULT_MIN_SIZE = 200
 
 
+def get_metadata_window(markdown_text: str, max_chars: int = 1500) -> str:
+    """
+    从文档开头截取元信息窗口文本（优先包含文档标题、前若干个 heading/段落、封面表格等）。
+    尽量在自然段落或标题处截断，避免截断在句子中间。
+    """
+    if not markdown_text:
+        return ""
+    
+    text = markdown_text.strip()
+    if len(text) <= max_chars:
+        return text
+
+    # 在 max_chars 附近寻找一个较好的截断点，如换行符
+    # 给一点 buffer (如 +200) 来找段落结束
+    search_end = min(len(text), max_chars + 200)
+    window = text[:search_end]
+    
+    # 尝试在 max_chars 以内的最后一个空行截断
+    last_blank_line = window.rfind("\n\n", 0, max_chars)
+    if last_blank_line > max_chars * 0.5:
+        return window[:last_blank_line].strip()
+        
+    # 如果没找到空行，尝试找最后一个换行符
+    last_newline = window.rfind("\n", 0, max_chars)
+    if last_newline > max_chars * 0.5:
+        return window[:last_newline].strip()
+        
+    # 如果都没有，硬截断
+    return text[:max_chars].strip()
+
+
 @dataclass
 class MarkdownChunk:
     index: int

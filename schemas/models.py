@@ -18,7 +18,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from tortoise import fields, models
 
 
@@ -99,6 +99,48 @@ class ArtifactType(str, Enum):
     OTHER = "other"
 
 
+class DocumentStatus(str, Enum):
+    """文档处理状态。"""
+    PENDING = "pending"
+    UPLOADED = "uploaded"
+    PARSING = "parsing"
+    EXTRACTING = "extracting"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class RequirementCategory(str, Enum):
+    """需求细分类别。"""
+    USER_MANAGEMENT = "user_management"
+    PERFORMANCE = "performance"
+    SECURITY = "security"
+    DATA = "data"
+    INTERFACE = "interface"
+    OTHER = "other"
+
+
+class ArtifactStatus(str, Enum):
+    """文档产物状态。"""
+    PENDING = "pending"
+    RESOLVED = "resolved"
+    PASSED = "passed"
+    FAILED = "failed"
+
+
+class HttpMethod(str, Enum):
+    """HTTP 请求方法或协议调用方式。"""
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+    OPTIONS = "OPTIONS"
+    HEAD = "HEAD"
+    GRPC = "gRPC"
+    AMQP = "AMQP"
+    OTHER = "OTHER"
+
+
 # =========================
 # ORM Models
 # =========================
@@ -133,8 +175,8 @@ class DocumentRecord(models.Model):
 
     status = fields.CharField(
         max_length=20,
-        default="pending",
-        description="处理状态：pending/processing/completed/failed",
+        default=DocumentStatus.PENDING.value,
+        description="处理状态",
     )
     error_message = fields.TextField(
         null=True,
@@ -215,9 +257,9 @@ class RequirementItem(BaseNode):
 
     requirement_type: RequirementType = Field(default=RequirementType.OTHER, description="需求类型")
     priority: Optional[PriorityLevel] = Field(None, description="优先级")
-    category: Optional[str] = Field(
+    category: Optional[RequirementCategory] = Field(
         None,
-        description="需求细分类，如 user_management / performance / security / data / interface",
+        description="需求细分类",
     )
     details: list[str] = Field(default_factory=list, description="功能点、规则细节或补充说明")
     acceptance_criteria: list[str] = Field(default_factory=list, description="验收标准")
@@ -232,9 +274,24 @@ class InterfaceItem(BaseNode):
     """
 
     interface_type: InterfaceType = Field(default=InterfaceType.OTHER, description="接口类型")
-    method: Optional[str] = Field(None, description="调用方式，如 GET / POST / gRPC / AMQP")
+    method: Optional[HttpMethod] = Field(None, description="调用方式")
     path: Optional[str] = Field(None, description="接口路径或协议地址")
     target: Optional[str] = Field(None, description="目标系统、目标服务或目标资源")
+
+    @field_validator("path", mode="before")
+    @classmethod
+    def validate_path(cls, v: Optional[str], info) -> Optional[str]:
+        """校验接口路径格式。HTTP 接口路径必须以 / 开头。"""
+        if not v:
+            return v
+        interface_type = info.data.get("interface_type")
+        # HTTP 类接口路径必须以 / 开头
+        if interface_type == InterfaceType.HTTP:
+            if not v.startswith("/"):
+                raise ValueError(f"HTTP interface path must start with '/', got: {v}")
+            if len(v) > 255:
+                raise ValueError(f"Path exceeds max length 255: {v[:50]}...")
+        return v
 
 
 class ArtifactItem(BaseNode):
@@ -247,7 +304,33 @@ class ArtifactItem(BaseNode):
     """
 
     artifact_type: ArtifactType = Field(default=ArtifactType.OTHER, description="产物类型")
-    status: Optional[str] = Field(None, description="状态，如待确认、已解决、通过、失败")
+    status: Optional[ArtifactStatus] = Field(None, description="状态")
+
+
+# =========================
+# Internal Models for Three-Stage Extraction
+# =========================
+
+
+class DocumentMetadata(BaseModel):
+    """阶段 A：仅提取文档级元信息"""
+    doc_type: DocType = Field(default=DocType.UNKNOWN, description="文档类型")
+    title: Optional[str] = Field(None, description="文档标题")
+    summary: Optional[str] = Field(None, description="文档摘要")
+    version: Optional[str] = Field(None, description="版本号")
+    language: Optional[str] = Field("zh-CN", description="文档语言")
+    base_url: Optional[str] = Field(None, description="基础 URL（如适用）")
+    test_stage: Optional[TestStage] = Field(None, description="测试阶段（如适用）")
+    extra: dict[str, Any] = Field(default_factory=dict, description="非核心补充信息")
+
+
+class StructuredChunk(BaseModel):
+    """阶段 B：仅提取 Chunk 内的对象列表"""
+    entities: list[EntityItem] = Field(default_factory=list, description="实体对象")
+    processes: list[ProcessItem] = Field(default_factory=list, description="流程对象")
+    requirements: list[RequirementItem] = Field(default_factory=list, description="需求对象")
+    interfaces: list[InterfaceItem] = Field(default_factory=list, description="接口对象")
+    artifacts: list[ArtifactItem] = Field(default_factory=list, description="文档产物")
 
 
 # =========================
