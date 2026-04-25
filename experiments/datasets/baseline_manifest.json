@@ -11,12 +11,12 @@
       "notes": "SRS Markdown 短文档"
     },
     {
-      "sample_id": "api-pdf-001",
-      "file_path": "static/examples/api_example.pdf",
+      "sample_id": "api-md-001",
+      "file_path": "static/examples/api_example.md",
       "golden_path": "experiments/goldens/api-pdf-001.json",
       "doc_type": "api",
-      "tags": ["baseline", "medium", "zh", "pdf", "standard", "config_search", "generalization", "robustness"],
-      "notes": "API PDF 样例"
+      "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
+      "notes": "API Markdown 样例"
     },
     {
       "sample_id": "design-md-001",
@@ -27,20 +27,20 @@
       "notes": "设计说明 Markdown 样例"
     },
     {
-      "sample_id": "test-docx-001",
-      "file_path": "static/examples/test_report_example.docx",
+      "sample_id": "test-md-001",
+      "file_path": "static/examples/test_plan_example.md",
       "golden_path": "experiments/goldens/test-docx-001.json",
       "doc_type": "test",
-      "tags": ["baseline", "medium", "zh", "docx", "standard", "config_search", "generalization", "robustness"],
-      "notes": "测试文档 DOCX 样例"
+      "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
+      "notes": "测试计划 Markdown 样例"
     },
     {
       "sample_id": "manual-md-001",
-      "file_path": "static/examples/user_manual_example.md",
+      "file_path": "static/examples/test_case_example.md",
       "golden_path": "experiments/goldens/manual-md-001.json",
       "doc_type": "manual",
       "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
-      "notes": "用户手册 Markdown 样例"
+      "notes": "测试用例作为手册样例"
     },
     {
       "sample_id": "issue-md-001",

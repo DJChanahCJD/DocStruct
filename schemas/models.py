@@ -12,7 +12,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from tortoise import fields, models
 
 
@@ -244,6 +244,15 @@ class BaseNode(BaseModel):
     evidence_element_ids: list[str] = Field(default_factory=list, description="Source IR element IDs")
     extra: dict[str, Any] = Field(default_factory=dict, description="Small supplementary fields")
 
+    @field_validator("extra", mode="before")
+    @classmethod
+    def _normalize_extra(cls, value: Any) -> dict[str, Any]:
+        if value is None:
+            return {}
+        if isinstance(value, dict):
+            return value
+        return {}
+
 
 class StepItem(BaseModel):
     id: Optional[str] = Field(None, description="Step ID")
@@ -255,10 +264,34 @@ class StepItem(BaseModel):
 class EntityItem(BaseNode):
     entity_type: EntityType = Field(default=EntityType.OTHER, description="Entity type")
 
+    @field_validator("entity_type", mode="before")
+    @classmethod
+    def _normalize_entity_type(cls, value: Any) -> EntityType:
+        if isinstance(value, EntityType):
+            return value
+        if isinstance(value, str):
+            try:
+                return EntityType(value)
+            except ValueError:
+                return EntityType.OTHER
+        return EntityType.OTHER
+
 
 class ProcessItem(BaseNode):
     process_type: ProcessType = Field(default=ProcessType.OTHER, description="Process type")
     steps: list[StepItem] = Field(default_factory=list, description="Ordered process steps")
+
+    @field_validator("process_type", mode="before")
+    @classmethod
+    def _normalize_process_type(cls, value: Any) -> ProcessType:
+        if isinstance(value, ProcessType):
+            return value
+        if isinstance(value, str):
+            try:
+                return ProcessType(value)
+            except ValueError:
+                return ProcessType.OTHER
+        return ProcessType.OTHER
 
 
 class RequirementItem(BaseNode):
@@ -269,12 +302,64 @@ class RequirementItem(BaseNode):
     acceptance_criteria: list[str] = Field(default_factory=list, description="Acceptance criteria")
     metric: Optional[str] = Field(None, description="Quantified metric")
 
+    @field_validator("requirement_type", mode="before")
+    @classmethod
+    def _normalize_requirement_type(cls, value: Any) -> RequirementType:
+        if isinstance(value, RequirementType):
+            return value
+        if isinstance(value, str):
+            try:
+                return RequirementType(value)
+            except ValueError:
+                return RequirementType.OTHER
+        return RequirementType.OTHER
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def _normalize_category(cls, value: Any) -> Optional[RequirementCategory]:
+        if value is None:
+            return None
+        if isinstance(value, RequirementCategory):
+            return value
+        if isinstance(value, str):
+            try:
+                return RequirementCategory(value)
+            except ValueError:
+                return None
+        return None
+
 
 class InterfaceItem(BaseNode):
     interface_type: InterfaceType = Field(default=InterfaceType.OTHER, description="Interface type")
     method: Optional[HttpMethod] = Field(None, description="Method or call style")
     path: Optional[str] = Field(None, description="Endpoint path or protocol address")
     target: Optional[str] = Field(None, description="Target system, service, or resource")
+
+    @field_validator("interface_type", mode="before")
+    @classmethod
+    def _normalize_interface_type(cls, value: Any) -> InterfaceType:
+        if isinstance(value, InterfaceType):
+            return value
+        if isinstance(value, str):
+            try:
+                return InterfaceType(value)
+            except ValueError:
+                return InterfaceType.OTHER
+        return InterfaceType.OTHER
+
+    @field_validator("method", mode="before")
+    @classmethod
+    def _normalize_method(cls, value: Any) -> Optional[HttpMethod]:
+        if value is None:
+            return None
+        if isinstance(value, HttpMethod):
+            return value
+        if isinstance(value, str):
+            try:
+                return HttpMethod(value)
+            except ValueError:
+                return HttpMethod.OTHER
+        return None
 
     @field_validator("path", mode="before")
     @classmethod
@@ -293,6 +378,18 @@ class InterfaceItem(BaseNode):
 class ArtifactItem(BaseNode):
     artifact_type: ArtifactType = Field(default=ArtifactType.OTHER, description="Artifact type")
     status: Optional[ArtifactStatus] = Field(None, description="Artifact status")
+
+    @field_validator("artifact_type", mode="before")
+    @classmethod
+    def _normalize_artifact_type(cls, value: Any) -> ArtifactType:
+        if isinstance(value, ArtifactType):
+            return value
+        if isinstance(value, str):
+            try:
+                return ArtifactType(value)
+            except ValueError:
+                return ArtifactType.OTHER
+        return ArtifactType.OTHER
 
 
 class StructuredChunk(BaseModel):

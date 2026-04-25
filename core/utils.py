@@ -46,6 +46,7 @@ def normalize_extracted_data(value: Any) -> Any:
     递归归一化提取结果：
     - 字符串去首尾空白
     - 容器类型递归处理
+    - extra 字段 null -> {}
     """
     if isinstance(value, str):
         return value.strip()
@@ -54,7 +55,14 @@ def normalize_extracted_data(value: Any) -> Any:
         return [normalize_extracted_data(item) for item in value]
 
     if isinstance(value, dict):
-        return {key: normalize_extracted_data(val) for key, val in value.items()}
+        result = {}
+        for key, val in value.items():
+            normalized_val = normalize_extracted_data(val)
+            # extra 字段如果为 None，转换为空字典
+            if key == "extra" and normalized_val is None:
+                normalized_val = {}
+            result[key] = normalized_val
+        return result
 
     return value
 
