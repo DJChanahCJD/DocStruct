@@ -3,19 +3,39 @@
   "title": "Software Requirements Specification (SRS) for Document System",
   "summary": "Document System 的软件需求规格说明，包含功能需求和验收标准。",
   "version": null,
-  "extra": {},
-  "items": [
+  "entities": [],
+  "processes": [],
+  "requirements": [
     {
-      "id": null,
-      "title": "Upload PDF files",
+      "id": "REQ-001",
+      "name": "Upload PDF files",
       "description": "The system shall allow users to upload PDF files.",
-      "priority": null
+      "requirement_type": "functional",
+      "priority": null,
+      "category": null,
+      "details": [],
+      "acceptance_criteria": [],
+      "metric": null,
+      "evidence_element_ids": [],
+      "extra": {}
     },
     {
-      "id": null,
-      "title": "Extract text from uploaded files",
+      "id": "REQ-002",
+      "name": "Extract text from uploaded files",
       "description": "The system shall extract text from the uploaded files.",
-      "priority": null
+      "requirement_type": "functional",
+      "priority": null,
+      "category": null,
+      "details": [],
+      "acceptance_criteria": [],
+      "metric": null,
+      "evidence_element_ids": [],
+      "extra": {}
     }
-  ]
+  ],
+  "interfaces": [],
+  "artifacts": [],
+  "views": [],
+  "evidence": [],
+  "extra": {}
 }

@@ -9,6 +9,7 @@ import aiofiles
 from fastapi import UploadFile
 
 from core.extractor import extract_structure_with_meta
+from core.ir import build_basic_ir_from_markdown, document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
 from core.schema_registry import TYPE_MODEL_MAP, normalize_doc_type
 from schemas.dto import UploadResponse
@@ -36,7 +37,17 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
     await doc.update_from_dict({"status": "extracting", "error_message": None}).save()
 
     try:
-        extracted, extraction_meta = await extract_structure_with_meta(doc.parsed_content, target_model)
+        document_ir = doc.document_ir
+        if document_ir is None:
+            regenerated_ir = build_basic_ir_from_markdown(doc.parsed_content, doc_type=normalized_doc_type)
+            document_ir = document_ir_to_payload(regenerated_ir)
+            await doc.update_from_dict({"document_ir": document_ir}).save()
+
+        extracted, extraction_meta = await extract_structure_with_meta(
+            doc.parsed_content,
+            target_model,
+            document_ir=document_ir,
+        )
         await doc.update_from_dict(
             {
                 "status": "completed",
@@ -117,13 +128,20 @@ async def process_document_record(doc_id: int) -> None:
         parser = ParserFactory.get_parser(doc.stored_path)
         parse_result = await asyncio.to_thread(parser.parse_to_result, doc.stored_path)
         markdown_text = parse_result.markdown
+        document_ir = parse_result_to_ir(parse_result, doc_type=normalized_doc_type)
+        document_ir_payload = document_ir_to_payload(document_ir)
     except Exception as parse_exc:
         logger.error("Parse failed for doc %s: %s", doc.id, parse_exc)
         await doc.update_from_dict({"status": "failed", "error_message": f"解析失败: {parse_exc}"}).save()
         return
 
-    # 解析成功，先保存 markdown
-    await doc.update_from_dict({"parsed_content": markdown_text}).save()
+    # 解析成功，先保存 Markdown 预览和机器可读 IR
+    await doc.update_from_dict(
+        {
+            "parsed_content": markdown_text,
+            "document_ir": document_ir_payload,
+        }
+    ).save()
 
     # 阶段 2: 提取结构化数据
     target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
@@ -133,7 +151,11 @@ async def process_document_record(doc_id: int) -> None:
 
     try:
         await doc.update_from_dict({"status": "extracting", "error_message": None}).save()
-        extracted, extraction_meta = await extract_structure_with_meta(markdown_text, target_model)
+        extracted, extraction_meta = await extract_structure_with_meta(
+            markdown_text,
+            target_model,
+            document_ir=document_ir_payload,
+        )
         extracted_payload = extracted.model_dump(mode="json")
         await doc.update_from_dict(
             {

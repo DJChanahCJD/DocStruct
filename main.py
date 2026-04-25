@@ -66,7 +66,9 @@ async def update_document(doc_id: int, body: DocumentUpdateRequest) -> DocumentR
     update_fields: list[str] = []
     if body.parsed_content is not None and body.parsed_content != doc.parsed_content:
         doc.parsed_content = body.parsed_content
+        doc.document_ir = None
         update_fields.append("parsed_content")
+        update_fields.append("document_ir")
     if body.extracted_data is not None and body.extracted_data != doc.extracted_data:
         doc.extracted_data = body.extracted_data
         update_fields.append("extracted_data")

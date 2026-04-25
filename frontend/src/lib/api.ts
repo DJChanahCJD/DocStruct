@@ -13,6 +13,7 @@ export interface DocumentRecord {
   upload_time: string;
   doc_type: string;
   parsed_content: string | null;
+  document_ir: Record<string, unknown> | null;
   extracted_data: Record<string, unknown> | null;
   status: string;
   error_message: string | null;

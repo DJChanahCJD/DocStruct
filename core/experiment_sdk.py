@@ -6,19 +6,23 @@ from typing import Any
 
 from core.config import get_settings
 from core.extractor import extract_structure_with_meta
+from core.ir import document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
 from core.schema_registry import get_response_model, normalize_doc_type
 
 
-def parse_document(file_path: str | Path) -> tuple[str, dict[str, Any]]:
+def parse_document(file_path: str | Path, doc_type: str | None = None) -> tuple[str, dict[str, Any]]:
     resolved_path = Path(file_path)
     parser = ParserFactory.get_parser(str(resolved_path))
     parse_result = parser.parse_to_result(str(resolved_path))
+    document_ir = parse_result_to_ir(parse_result, doc_type=doc_type)
     return parse_result.markdown, {
         "parser_name": parser.__class__.__name__,
         "file_path": str(resolved_path).replace("\\", "/"),
         "title": parse_result.title,
         "block_count": len(parse_result.blocks),
+        "element_count": len(document_ir.elements),
+        "document_ir": document_ir_to_payload(document_ir),
         **parse_result.metadata,
     }
 
@@ -27,6 +31,7 @@ async def extract_document(
     markdown_content: str,
     doc_type: str,
     *,
+    document_ir: dict[str, Any] | None = None,
     prompt_template: str | None = None,
     model_name: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
@@ -43,6 +48,7 @@ async def extract_document(
     extracted, extraction_meta = await extract_structure_with_meta(
         markdown_content=markdown_content,
         response_model=response_model,
+        document_ir=document_ir,
         prompt_template=prompt_template,
         model_name=model_name,
     )
@@ -61,10 +67,11 @@ async def run_sample(
     prompt_template: str | None = None,
     model_name: str | None = None,
 ) -> dict[str, Any]:
-    markdown, parse_meta = await asyncio.to_thread(parse_document, file_path)
+    markdown, parse_meta = await asyncio.to_thread(parse_document, file_path, doc_type)
     extracted_data, extraction_meta = await extract_document(
         markdown,
         doc_type,
+        document_ir=parse_meta.get("document_ir") if isinstance(parse_meta.get("document_ir"), dict) else None,
         prompt_template=prompt_template,
         model_name=model_name,
     )

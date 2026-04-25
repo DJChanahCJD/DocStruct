@@ -1,3 +1,25 @@
+- 应当引入 Docling，但不是直接使用 Docling JSON 作为最终结果，而是把 Docling 升级为解析层核心能力；DocStruct 继续负责语义级结构化抽取。
+文档
+  ↓
+Docling 解析层：文本、表格、图片、版面、页码、坐标、Markdown    （结构化提取上游，文档质量影响提取结果）
+  ↓
+DocStruct 语义抽取层：LLM + Pydantic Schema
+  ↓
+StructuredDocument JSON
+
+"一旦某个 custom schema 已被文档使用，不允许直接修改，只能新建一条新的 CustomSchemaRecord。
+
+也就是说：
+
+custom_schema_id = 1  政务 SRS Schema v1
+custom_schema_id = 2  政务 SRS Schema v2
+
+你不需要 schema_version 字段，但通过新建记录实现版本隔离。"外部系统可以根据 custom_schema_id 获取 schema_json，从而理解 extra 的字段结构、类型和含义。若需要将 extra 字段映射到外部系统自身字段，应额外维护字段映射配置。当前系统仅提供 schema_json 作为对接契约，不负责自动完成跨系统字段映射。
+
+
+- 对于schema的通用性，可以通用Shema，动态关联具体业务子schema，允许用户自定义具体业务子schema？
+- 单次长文档结构化抽取过程中的“文档级上下文记忆” Document Context / 文档上下文摘要
+
 - 结构化提取功能稳定后才接 FAISS向量索引和RAG做轻量知识库问答。
 - 写毕设论文初稿
 - 用 Codex 辅助画图、PPTX生成

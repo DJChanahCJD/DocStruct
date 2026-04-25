@@ -5,7 +5,7 @@
 ## 目录职责
 
 - `datasets/`：样本清单与标签
-- `goldens/`：每个样本对应的标准答案 JSON，可直接手工修改
+- `goldens/`：每个样本对应的标准答案 JSON，对齐 `entities / processes / requirements / interfaces / artifacts / views / evidence` 输出契约，可直接手工修改
 - `configs/`：3 个实验的配置文件
 - `prompts/`：实验使用的 Prompt 模板
 - `results/`：脚本运行后生成的 JSON 结果与 Markdown 报告
@@ -43,3 +43,4 @@ python scripts/run_eval.py --experiment exp1 --enable-llm-judge
 - `golden_path` 缺失时仍可运行实验，但字段级分数与 LLM Judge 会记为未覆盖
 - `--enable-llm-judge` 开启后，会在存在 `golden_path` 的样本上执行整体验审，输出单文档分数和问题说明
 - 可在实验配置中通过 `judge.model_name` 单独指定评审模型；未指定时回退到当前 `LLM_MODEL`
+- `parse_meta.document_ir` 会记录本次解析得到的 IR；`extraction_meta.evidence_coverage` 可用于比较普通抽取与 section-aware evidence 绑定效果

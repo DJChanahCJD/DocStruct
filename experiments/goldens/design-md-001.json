@@ -3,24 +3,55 @@
   "title": "电商平台后端系统设计说明书 (SDD)",
   "summary": "易购电商平台后端采用前后端分离的微服务架构，包含用户、商品、订单、支付等服务。",
   "version": "2.3",
-  "extra": {},
-  "architecture": "系统采用前后端分离的微服务架构，前端通过 Nginx 反向代理访问 Spring Cloud Gateway，后端由多个独立微服务组成，并配套 Nacos、MySQL、Redis Cluster 和 RocketMQ。",
-  "items": [
+  "entities": [
     {
+      "id": "ENT-001",
       "name": "用户服务 (User Service)",
-      "description": "负责用户账号全生命周期管理及鉴权，包括注册、登录、个人信息修改、地址管理和实名认证。"
+      "description": "负责用户账号全生命周期管理及鉴权，包括注册、登录、个人信息修改、地址管理和实名认证。",
+      "entity_type": "service",
+      "evidence_element_ids": [],
+      "extra": {}
     },
     {
+      "id": "ENT-002",
       "name": "订单服务 (Order Service)",
-      "description": "处理核心交易链路和订单状态流转，包括购物车管理、创建订单、取消订单、超时关闭和订单详情查询。"
+      "description": "处理核心交易链路和订单状态流转，包括购物车管理、创建订单、取消订单、超时关闭和订单详情查询。",
+      "entity_type": "service",
+      "evidence_element_ids": [],
+      "extra": {}
     },
     {
+      "id": "ENT-003",
       "name": "商品服务 (Product Service)",
-      "description": "管理商品信息、类目及属性，包括商品上下架、SKU 管理、库存扣减和商品搜索。"
+      "description": "管理商品信息、类目及属性，包括商品上下架、SKU 管理、库存扣减和商品搜索。",
+      "entity_type": "service",
+      "evidence_element_ids": [],
+      "extra": {}
     },
     {
+      "id": "ENT-004",
       "name": "支付服务 (Payment Service)",
-      "description": "对接第三方支付渠道，包括支付预订单、支付回调、退款和对账。"
+      "description": "对接第三方支付渠道，包括支付预订单、支付回调、退款和对账。",
+      "entity_type": "service",
+      "evidence_element_ids": [],
+      "extra": {}
     }
-  ]
+  ],
+  "processes": [],
+  "requirements": [],
+  "interfaces": [],
+  "artifacts": [
+    {
+      "id": "ART-001",
+      "name": "微服务架构",
+      "description": "系统采用前后端分离的微服务架构，前端通过 Nginx 反向代理访问 Spring Cloud Gateway，后端由多个独立微服务组成，并配套 Nacos、MySQL、Redis Cluster 和 RocketMQ。",
+      "artifact_type": "design_module",
+      "status": null,
+      "evidence_element_ids": [],
+      "extra": {}
+    }
+  ],
+  "views": [],
+  "evidence": [],
+  "extra": {}
 }

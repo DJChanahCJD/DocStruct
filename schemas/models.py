@@ -1,17 +1,11 @@
 """
-数据库 ORM 模型（Tortoise）及结构化提取 Pydantic 模型。
+ORM records and Pydantic models for DocStruct's final extraction design.
 
-设计说明：
-1. ORM 层只负责文件记录与提取结果持久化，不直接承载复杂业务语义。
-2. Pydantic 层采用“统一结构化对象 + 文档类型轻特化”结构。
-3. 结构化结果统一收敛到 entities / processes / requirements / interfaces /
-   artifacts 五类主槽位，优先保证单文档抽取结果稳定、可校验、可人工修订。
-4. 不构建知识图谱，不维护 relations；量化指标优先放入 RequirementItem.metric。
-5. 文档类型仅保留少量必要特化字段，不再为每类文档维护独立顶层条目结构。
-6. 保留 source_ref，支持结构化条目回溯到原文位置。
+The output contract is centered on five software-engineering object slots plus
+business views and evidence bindings. Source traceability is expressed through
+`evidence_element_ids` on objects and document-level `evidence` entries, not
+through per-object `source_ref` blobs.
 """
-
-# TODO: 如果能够细化到某一个小的提取结果能够直接关联对应原文档的具体位置，“后校验”就简单很多了
 
 from __future__ import annotations
 
@@ -100,7 +94,6 @@ class ArtifactType(str, Enum):
 
 
 class DocumentStatus(str, Enum):
-    """文档处理状态。"""
     PENDING = "pending"
     UPLOADED = "uploaded"
     PARSING = "parsing"
@@ -110,7 +103,6 @@ class DocumentStatus(str, Enum):
 
 
 class RequirementCategory(str, Enum):
-    """需求细分类别。"""
     USER_MANAGEMENT = "user_management"
     PERFORMANCE = "performance"
     SECURITY = "security"
@@ -120,7 +112,6 @@ class RequirementCategory(str, Enum):
 
 
 class ArtifactStatus(str, Enum):
-    """文档产物状态。"""
     PENDING = "pending"
     RESOLVED = "resolved"
     PASSED = "passed"
@@ -128,7 +119,6 @@ class ArtifactStatus(str, Enum):
 
 
 class HttpMethod(str, Enum):
-    """HTTP 请求方法或协议调用方式。"""
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -148,9 +138,11 @@ class HttpMethod(str, Enum):
 
 class DocumentRecord(models.Model):
     """
-    文件记录表：
-    - parsed_content 存文档解析后的 Markdown / 文本
-    - extracted_data 存结构化抽取结果 JSON
+    File record table.
+
+    - `parsed_content` stores the human-readable Markdown preview.
+    - `document_ir` stores the parser IR used for chunking and evidence binding.
+    - `extracted_data` stores the final extracted JSON.
     """
 
     id = fields.IntField(pk=True)
@@ -167,6 +159,10 @@ class DocumentRecord(models.Model):
     parsed_content = fields.TextField(
         null=True,
         description="解析后的 Markdown / 文本内容",
+    )
+    document_ir = fields.JSONField(
+        null=True,
+        description="文档元素 IR，用于分块与证据回溯",
     )
     extracted_data = fields.JSONField(
         null=True,
@@ -188,36 +184,52 @@ class DocumentRecord(models.Model):
 
 
 # =========================
-# Common Pydantic Models
+# Document IR
 # =========================
 
 
-class SourceRef(BaseModel):
-    """结构化条目的来源定位信息。"""
-
-    section: Optional[str] = Field(None, description="来源章节号或章节标题，如 3.6.1")
-    page: Optional[int] = Field(None, description="来源页码；纯文本/Markdown 可为空")
-    text_span: Optional[str] = Field(None, description="对应原文片段；不宜过长")
-    bbox: Optional[list[float]] = Field(None, description="边界框坐标 [x0, y0, x1, y1]；PDF point 单位，左上角为原点")
-
-
-class BaseNode(BaseModel):
-    """统一结构化对象基类。"""
-
-    id: Optional[str] = Field(None, description="对象 ID，如需求编号、用例编号、接口编号")
-    name: Optional[str] = Field(None, description="对象名称")
-    description: Optional[str] = Field(None, description="对象描述")
-    source_ref: Optional[SourceRef] = Field(None, description="来源定位")
-    extra: dict[str, Any] = Field(default_factory=dict, description="少量补充字段")
+class DocumentElement(BaseModel):
+    element_id: str = Field(..., description="Stable element identifier")
+    element_type: str = Field(..., description="heading / paragraph / table / image / code / footer")
+    text: Optional[str] = Field(None, description="Plain element text")
+    markdown: Optional[str] = Field(None, description="Markdown rendering for this element")
+    section_path: list[str] = Field(default_factory=list, description="Heading path containing this element")
+    page: Optional[int] = Field(None, description="Source page number when available")
+    bbox: Optional[list[float]] = Field(None, description="Bounding box [x0, y0, x1, y1] when available")
+    order: int = Field(..., description="Reading order")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Parser-specific metadata")
 
 
-class StepItem(BaseModel):
-    """流程或操作步骤。"""
+class DocumentOutline(BaseModel):
+    title: Optional[str] = Field(None, description="Document title")
+    doc_type: DocType = Field(default=DocType.UNKNOWN, description="Document type")
+    sections: list[str] = Field(default_factory=list, description="Flattened section headings")
+    main_topics: list[str] = Field(default_factory=list, description="Short topic hints from headings")
 
-    id: Optional[str] = Field(None, description="步骤 ID")
-    name: str = Field(..., description="步骤名称")
-    description: Optional[str] = Field(None, description="步骤描述")
-    source_ref: Optional[SourceRef] = Field(None, description="来源定位")
+
+class DocumentChunk(BaseModel):
+    chunk_id: str = Field(..., description="Chunk identifier")
+    section_path: list[str] = Field(default_factory=list, description="Section path for the chunk")
+    elements: list[DocumentElement] = Field(default_factory=list, description="Elements included in this chunk")
+    markdown: str = Field("", description="Chunk Markdown with element markers")
+    page_start: Optional[int] = Field(None, description="First source page in chunk")
+    page_end: Optional[int] = Field(None, description="Last source page in chunk")
+
+
+class DocumentIR(BaseModel):
+    title: Optional[str] = None
+    doc_type: DocType = Field(default=DocType.UNKNOWN)
+    elements: list[DocumentElement] = Field(default_factory=list)
+    outline: DocumentOutline = Field(default_factory=DocumentOutline)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExtractionContract(BaseModel):
+    doc_type: DocType
+    target_slots: list[str]
+    slot_descriptions: dict[str, str] = Field(default_factory=dict)
+    rules: list[str] = Field(default_factory=list)
+    ignore_sections: list[str] = Field(default_factory=list)
 
 
 # =========================
@@ -225,113 +237,88 @@ class StepItem(BaseModel):
 # =========================
 
 
+class BaseNode(BaseModel):
+    id: Optional[str] = Field(None, description="Global object ID, e.g. REQ-001")
+    name: Optional[str] = Field(None, description="Object name")
+    description: Optional[str] = Field(None, description="Object description")
+    evidence_element_ids: list[str] = Field(default_factory=list, description="Source IR element IDs")
+    extra: dict[str, Any] = Field(default_factory=dict, description="Small supplementary fields")
+
+
+class StepItem(BaseModel):
+    id: Optional[str] = Field(None, description="Step ID")
+    name: str = Field(..., description="Step name")
+    description: Optional[str] = Field(None, description="Step description")
+    evidence_element_ids: list[str] = Field(default_factory=list, description="Source IR element IDs")
+
+
 class EntityItem(BaseNode):
-    """
-    实体对象。
-
-    用于承载角色、模块、系统、服务、组件、数据对象等名词型对象。
-    不建议用于术语表中的普通缩写解释，术语表更适合放入文档 extra。
-    """
-
-    entity_type: EntityType = Field(default=EntityType.OTHER, description="实体类型")
+    entity_type: EntityType = Field(default=EntityType.OTHER, description="Entity type")
 
 
 class ProcessItem(BaseNode):
-    """
-    流程对象。
-
-    用于承载业务流程、工作流、操作流程、测试流程等具有步骤顺序的信息。
-    """
-
-    process_type: ProcessType = Field(default=ProcessType.OTHER, description="流程类型")
-    steps: list[StepItem] = Field(default_factory=list, description="流程步骤")
+    process_type: ProcessType = Field(default=ProcessType.OTHER, description="Process type")
+    steps: list[StepItem] = Field(default_factory=list, description="Ordered process steps")
 
 
 class RequirementItem(BaseNode):
-    """
-    需求对象。
-
-    用于承载功能需求、非功能需求、业务规则、约束和验收要求。
-    对于 SRS 中带需求编号的条目，建议每个需求编号生成一个 RequirementItem；
-    功能点放入 details，验收标准放入 acceptance_criteria，避免拆成多个碎片需求。
-    """
-
-    requirement_type: RequirementType = Field(default=RequirementType.OTHER, description="需求类型")
-    priority: Optional[PriorityLevel] = Field(None, description="优先级")
-    category: Optional[RequirementCategory] = Field(
-        None,
-        description="需求细分类",
-    )
-    details: list[str] = Field(default_factory=list, description="功能点、规则细节或补充说明")
-    acceptance_criteria: list[str] = Field(default_factory=list, description="验收标准")
-    metric: Optional[str] = Field(None, description="量化指标，如 < 3 秒、> 99.9%、RPO < 24h")
+    requirement_type: RequirementType = Field(default=RequirementType.OTHER, description="Requirement type")
+    priority: Optional[PriorityLevel] = Field(None, description="Priority")
+    category: Optional[RequirementCategory] = Field(None, description="Requirement category")
+    details: list[str] = Field(default_factory=list, description="Details or functional points")
+    acceptance_criteria: list[str] = Field(default_factory=list, description="Acceptance criteria")
+    metric: Optional[str] = Field(None, description="Quantified metric")
 
 
 class InterfaceItem(BaseNode):
-    """
-    接口对象。
-
-    用于承载 HTTP/RPC/消息/数据库/文件/外部系统/硬件/用户界面等交互接口。
-    """
-
-    interface_type: InterfaceType = Field(default=InterfaceType.OTHER, description="接口类型")
-    method: Optional[HttpMethod] = Field(None, description="调用方式")
-    path: Optional[str] = Field(None, description="接口路径或协议地址")
-    target: Optional[str] = Field(None, description="目标系统、目标服务或目标资源")
+    interface_type: InterfaceType = Field(default=InterfaceType.OTHER, description="Interface type")
+    method: Optional[HttpMethod] = Field(None, description="Method or call style")
+    path: Optional[str] = Field(None, description="Endpoint path or protocol address")
+    target: Optional[str] = Field(None, description="Target system, service, or resource")
 
     @field_validator("path", mode="before")
     @classmethod
-    def validate_path(cls, v: Optional[str], info) -> Optional[str]:
-        """校验接口路径格式。HTTP 接口路径必须以 / 开头。"""
-        if not v:
-            return v
+    def validate_path(cls, value: Optional[str], info) -> Optional[str]:
+        if not value:
+            return value
         interface_type = info.data.get("interface_type")
-        # HTTP 类接口路径必须以 / 开头
         if interface_type == InterfaceType.HTTP:
-            if not v.startswith("/"):
-                raise ValueError(f"HTTP interface path must start with '/', got: {v}")
-            if len(v) > 255:
-                raise ValueError(f"Path exceeds max length 255: {v[:50]}...")
-        return v
+            if not value.startswith("/"):
+                raise ValueError(f"HTTP interface path must start with '/', got: {value}")
+            if len(value) > 255:
+                raise ValueError(f"Path exceeds max length 255: {value[:50]}...")
+        return value
 
 
 class ArtifactItem(BaseNode):
-    """
-    文档产物。
-
-    用于承载测试用例、手册章节、缺陷项、待确认问题、API endpoint 元数据、
-    设计模块说明等文档内部产物。
-    不建议用于术语表、参考资料、普通功能点。
-    """
-
-    artifact_type: ArtifactType = Field(default=ArtifactType.OTHER, description="产物类型")
-    status: Optional[ArtifactStatus] = Field(None, description="状态")
-
-
-# =========================
-# Internal Models for Three-Stage Extraction
-# =========================
-
-
-class DocumentMetadata(BaseModel):
-    """阶段 A：仅提取文档级元信息"""
-    doc_type: DocType = Field(default=DocType.UNKNOWN, description="文档类型")
-    title: Optional[str] = Field(None, description="文档标题")
-    summary: Optional[str] = Field(None, description="文档摘要")
-    version: Optional[str] = Field(None, description="版本号")
-    language: Optional[str] = Field("zh-CN", description="文档语言")
-    base_url: Optional[str] = Field(None, description="基础 URL（如适用）")
-    test_stage: Optional[TestStage] = Field(None, description="测试阶段（如适用）")
-    extra: dict[str, Any] = Field(default_factory=dict, description="非核心补充信息")
+    artifact_type: ArtifactType = Field(default=ArtifactType.OTHER, description="Artifact type")
+    status: Optional[ArtifactStatus] = Field(None, description="Artifact status")
 
 
 class StructuredChunk(BaseModel):
-    """阶段 B：仅提取 Chunk 内的对象列表"""
-    entities: list[EntityItem] = Field(default_factory=list, description="实体对象")
-    processes: list[ProcessItem] = Field(default_factory=list, description="流程对象")
-    requirements: list[RequirementItem] = Field(default_factory=list, description="需求对象")
-    interfaces: list[InterfaceItem] = Field(default_factory=list, description="接口对象")
-    artifacts: list[ArtifactItem] = Field(default_factory=list, description="文档产物")
+    entities: list[EntityItem] = Field(default_factory=list, description="Entities in this chunk")
+    processes: list[ProcessItem] = Field(default_factory=list, description="Processes in this chunk")
+    requirements: list[RequirementItem] = Field(default_factory=list, description="Requirements in this chunk")
+    interfaces: list[InterfaceItem] = Field(default_factory=list, description="Interfaces in this chunk")
+    artifacts: list[ArtifactItem] = Field(default_factory=list, description="Artifacts in this chunk")
+
+
+class BusinessView(BaseModel):
+    view_name: str = Field(..., description="Business-facing view name")
+    view_type: str = Field(..., description="View type, e.g. requirement_group")
+    object_ids: list[str] = Field(default_factory=list, description="Referenced object IDs")
+    description: Optional[str] = Field(None, description="Short view description")
+    extra: dict[str, Any] = Field(default_factory=dict, description="Small supplementary fields")
+
+
+class Evidence(BaseModel):
+    evidence_id: str = Field(..., description="Evidence ID, e.g. EVD-001")
+    object_id: str = Field(..., description="Bound object ID")
+    element_id: Optional[str] = Field(None, description="Source element ID when available")
+    text_span: Optional[str] = Field(None, description="Source text span")
+    section_path: list[str] = Field(default_factory=list, description="Source section path")
+    page: Optional[int] = Field(None, description="Source page when available")
+    bbox: Optional[list[float]] = Field(None, description="Source bbox when available")
 
 
 # =========================
@@ -340,29 +327,21 @@ class StructuredChunk(BaseModel):
 
 
 class BaseExtractedDocument(BaseModel):
-    """所有结构化文档的公共基类。"""
-
-    doc_type: DocType = Field(..., description="文档类型")
-    title: Optional[str] = Field(None, description="文档标题")
-    summary: Optional[str] = Field(None, description="文档摘要")
-    version: Optional[str] = Field(None, description="版本号")
-    language: Optional[str] = Field("zh-CN", description="文档语言")
-    extra: dict[str, Any] = Field(default_factory=dict, description="非核心补充信息")
+    doc_type: DocType = Field(..., description="Document type")
+    title: Optional[str] = Field(None, description="Document title")
+    summary: Optional[str] = Field(None, description="Document summary")
+    version: Optional[str] = Field(None, description="Version")
+    extra: dict[str, Any] = Field(default_factory=dict, description="Document-level supplementary fields")
 
 
 class StructuredDocument(BaseExtractedDocument):
-    """统一结构化文档主干。"""
-
-    entities: list[EntityItem] = Field(default_factory=list, description="实体对象")
-    processes: list[ProcessItem] = Field(default_factory=list, description="流程对象")
-    requirements: list[RequirementItem] = Field(default_factory=list, description="需求对象")
-    interfaces: list[InterfaceItem] = Field(default_factory=list, description="接口对象")
-    artifacts: list[ArtifactItem] = Field(default_factory=list, description="文档产物")
-
-
-# =========================
-# Document-Specific Views
-# =========================
+    entities: list[EntityItem] = Field(default_factory=list, description="Entities")
+    processes: list[ProcessItem] = Field(default_factory=list, description="Processes")
+    requirements: list[RequirementItem] = Field(default_factory=list, description="Requirements")
+    interfaces: list[InterfaceItem] = Field(default_factory=list, description="Interfaces")
+    artifacts: list[ArtifactItem] = Field(default_factory=list, description="Artifacts")
+    views: list[BusinessView] = Field(default_factory=list, description="Business views")
+    evidence: list[Evidence] = Field(default_factory=list, description="Evidence bindings")
 
 
 class SrsDocument(StructuredDocument):
@@ -371,7 +350,7 @@ class SrsDocument(StructuredDocument):
 
 class ApiDocument(StructuredDocument):
     doc_type: Literal["api"] = Field(default="api")
-    base_url: Optional[str] = Field(None, description="基础 URL")
+    base_url: Optional[str] = Field(None, description="Base URL")
 
 
 class DesignDocument(StructuredDocument):
@@ -380,7 +359,7 @@ class DesignDocument(StructuredDocument):
 
 class TestDocument(StructuredDocument):
     doc_type: Literal["test"] = Field(default="test")
-    test_stage: Optional[TestStage] = Field(None, description="测试阶段")
+    test_stage: Optional[TestStage] = Field(None, description="Test stage")
 
 
 class ManualDocument(StructuredDocument):
@@ -389,11 +368,6 @@ class ManualDocument(StructuredDocument):
 
 class IssueDocument(StructuredDocument):
     doc_type: Literal["issue"] = Field(default="issue")
-
-
-# =========================
-# Union Type
-# =========================
 
 
 ExtractedDocument = Union[

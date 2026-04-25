@@ -19,6 +19,7 @@ class DocumentRecordDTO(BaseModel):
     upload_time: datetime
     doc_type: str
     parsed_content: Optional[str] = None
+    document_ir: Optional[dict[str, Any]] = None
     extracted_data: Optional[dict[str, Any]] = None
     status: str
     error_message: Optional[str] = None

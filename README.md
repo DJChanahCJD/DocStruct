@@ -2,6 +2,8 @@
 
 **基于大模型的软件工程文档结构化提取系统**
 
+> 推荐使用.venv环境
+
 当前版本只保留后端最小抽取内核，目标聚焦于软件工程文档的结构化提取与评测，不包含知识库问答、向量检索、URL 导入、模型切换和前端联动能力。
 
 ## 当前能力
@@ -246,3 +248,7 @@ python scripts/run_eval.py --experiment exp3
 - [ ] 格式化导出渠道（JSON / MD / CSV / YAML）
 - [ ] 多语言支持扩展
 - [ ] 轻量文档管理能力
+
+## 参考资料
+
+- https://github.com/docling-project/docling

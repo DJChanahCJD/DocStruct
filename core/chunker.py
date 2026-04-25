@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.parser import ParseResult
+from schemas.models import DocumentChunk, DocumentElement, DocumentIR
 
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -60,6 +61,82 @@ def get_metadata_window(markdown_text: str, max_chars: int = 1500) -> str:
         
     # 如果都没有，硬截断
     return text[:max_chars].strip()
+
+
+def split_ir_into_chunks(
+    document_ir: DocumentIR,
+    max_chars: int = DEFAULT_TARGET_SIZE,
+    *,
+    ignore_sections: list[str] | None = None,
+) -> list[DocumentChunk]:
+    """
+    Build section-aware chunks from Document IR.
+
+    Chunks are split only on element boundaries. Oversized atomic elements such
+    as tables or code blocks are kept intact so their evidence marker remains
+    unambiguous.
+    """
+    target_size = max_chars or DEFAULT_TARGET_SIZE
+    ignored = [item.strip().lower() for item in (ignore_sections or []) if item.strip()]
+    chunks: list[DocumentChunk] = []
+    current_section: tuple[str, ...] | None = None
+    current_elements: list[DocumentElement] = []
+    current_size = 0
+
+    def flush() -> None:
+        nonlocal current_elements, current_size
+        if not current_elements:
+            return
+        chunks.append(_build_ir_chunk(len(chunks), current_elements))
+        current_elements = []
+        current_size = 0
+
+    for element in sorted(document_ir.elements, key=lambda item: item.order):
+        if _is_ignored_section(element.section_path, ignored):
+            flush()
+            current_section = None
+            continue
+
+        section_key = tuple(element.section_path)
+        rendered = render_element_marker(element)
+        rendered_size = len(rendered)
+        section_changed = current_section is not None and section_key != current_section
+        over_target = current_elements and current_size + rendered_size > target_size
+        if section_changed or over_target:
+            flush()
+
+        current_section = section_key
+        current_elements.append(element)
+        current_size += rendered_size
+
+    flush()
+    return chunks
+
+
+def render_element_marker(element: DocumentElement) -> str:
+    page_hint = f" page={element.page}" if element.page is not None else ""
+    body = (element.markdown or element.text or "").strip()
+    marker = f"[ELEMENT: {element.element_id}{page_hint}]"
+    return f"{marker}\n{body}".strip()
+
+
+def _build_ir_chunk(index: int, elements: list[DocumentElement]) -> DocumentChunk:
+    pages = [element.page for element in elements if element.page is not None]
+    return DocumentChunk(
+        chunk_id=f"chunk-{index + 1:04d}",
+        section_path=list(elements[0].section_path) if elements else [],
+        elements=list(elements),
+        markdown="\n\n".join(render_element_marker(element) for element in elements),
+        page_start=min(pages) if pages else None,
+        page_end=max(pages) if pages else None,
+    )
+
+
+def _is_ignored_section(section_path: list[str], ignored: list[str]) -> bool:
+    if not ignored:
+        return False
+    section_text = " > ".join(section_path).lower()
+    return any(item in section_text for item in ignored)
 
 
 @dataclass
@@ -787,23 +864,6 @@ def _issue_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[
     if actual:
         overview_lines.append(f"实际结果: {actual}")
 
-    issue_id = str(issue_artifact.get("id") or "").strip()
-    impacted_ids: list[str] = []
-    for relation in extracted_data.get("relations") or []:
-        if not isinstance(relation, dict):
-            continue
-        subject_id = str(relation.get("subject_id") or "").strip()
-        object_id = str(relation.get("object_id") or "").strip()
-        relation_name = str(relation.get("relation") or "").strip()
-        if not issue_id:
-            continue
-        if subject_id == issue_id and object_id:
-            impacted_ids.append(f"{relation_name}: {object_id}")
-        elif object_id == issue_id and subject_id:
-            impacted_ids.append(f"{relation_name}: {subject_id}")
-    if impacted_ids:
-        overview_lines.append(f"关联对象: {', '.join(dict.fromkeys(impacted_ids))}")
-
     sections: list[tuple[list[str], list[_Block]]] = [
         (
             ["Structured Data", "Overview"],
@@ -856,28 +916,6 @@ def _issue_structured_blocks(extracted_data: dict[str, Any]) -> list[tuple[list[
                 )
             )
             break
-
-    if extracted_data.get("metrics"):
-        metric_lines = []
-        for metric in extracted_data.get("metrics") or []:
-            if not isinstance(metric, dict):
-                continue
-            metric_name = str(metric.get("metric_name") or "").strip()
-            metric_value = str(metric.get("metric_value") or "").strip()
-            if not metric_name or not metric_value:
-                continue
-            condition = str(metric.get("condition") or "").strip()
-            line = f"{metric_name}: {metric_value}"
-            if condition:
-                line = f"{line} ({condition})"
-            metric_lines.append(line)
-        if metric_lines:
-            sections.append(
-                (
-                    ["Structured Data", "Metrics"],
-                    [_Block(chunk_type="structured", text="\n".join(metric_lines))],
-                )
-            )
 
     return sections
 
