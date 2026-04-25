@@ -45,6 +45,10 @@ def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContr
             "Content with requirement IDs or shall/must/support language should be requirements.",
             "Functional points under one numbered requirement should stay in details.",
             "Acceptance criteria belong in acceptance_criteria, not separate requirements.",
+            "Keep one requirement section together as one requirement object: title, requirement ID, description, functional points, and acceptance criteria are parts of the same object.",
+            "Do not turn glossary terms, acronyms, document metadata tables, revision tables, or cover information into entities or artifacts.",
+            "Use entities only for real actors, systems, modules, services, components, or data objects in the product domain.",
+            "Do not create artifacts for summary, document information, glossary, reference, separator, or final end-marker sections.",
         ],
         DocType.API: [
             "Endpoint paths and methods should become interfaces.",
@@ -62,7 +66,7 @@ def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContr
         target_slots=list(OBJECT_SLOTS),
         slot_descriptions=dict(SLOT_DESCRIPTIONS),
         rules=common_rules + doc_rules.get(normalized, []),
-        ignore_sections=["术语表", "参考资料", "references", "glossary"],
+        ignore_sections=["术语表", "术语定义", "参考资料", "参考文献", "附录", "references", "glossary"],
     )
 
 

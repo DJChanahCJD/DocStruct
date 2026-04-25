@@ -2,19 +2,36 @@
 
 最小验证实验，单文档快速验证系统核心功能。
 
+## 实验设计
+
+### 实验一：选择最优 LLM
+
+🚧 可等系统稳定后再做
+
+### 实验二：选择最优 Prompt
+
+🚧 可等系统稳定后再做。事实上，是否真的需要这个实验存疑，因为在开发过程中为了提高系统的性能和稳定性，已经对 Prompt 进行了优化。
+
+### 实验三：泛化鲁棒性
+
+🚧 可等系统稳定后再做
+
+> 架构消融暂不考虑
+
 ## 目录结构
 
 ```
 experiments/
-├── configs/exp1.json       # 实验配置
-├── datasets/manifest.json  # 样本清单
-├── goldens/               # 标准答案
-├── prompts/               # Prompt 模板
-└── results/               # 运行结果
+|── assets/
+|   ├── srs_mini.md            # 测试文档   
+|── exp1/
+    ├── configs/              # 实验配置
+    └── results/              # 运行结果
+    ├── exp1.py                 # 实验脚本
+|── exp2/
+...
 ```
 
-## 运行实验
+## TODO
 
-```powershell
-python scripts/run_eval.py --experiment exp1
-```
+- [] 移除当前的旧实验框架，等系统稳定后再做实验,当前可以搭一个简易前端做轻量测试 

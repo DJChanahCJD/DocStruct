@@ -178,8 +178,8 @@ class MarkdownNormalizer:
         )
 
     def _parse_blocks(self, markdown_text: str) -> list[DocBlock]:
-        text = (markdown_text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
-        if not text:
+        text = (markdown_text or "").replace("\r\n", "\n").replace("\r", "\n")
+        if not text.strip():
             return []
 
         lines = text.split("\n")
@@ -194,50 +194,69 @@ class MarkdownNormalizer:
                 cursor += 1
                 continue
 
+            start_cursor = cursor
             heading = self._parse_heading(lines, cursor)
             if heading is not None:
                 level, title = heading
-                blocks.append(DocBlock(type="title", text=title, level=level, order=index))
+                blocks.append(
+                    self._with_line_span(
+                        DocBlock(type="title", text=title, level=level, order=index),
+                        start_cursor,
+                        cursor + 1,
+                    )
+                )
                 index += 1
                 cursor += 1
                 continue
 
             if THEMATIC_BREAK_PATTERN.match(stripped):
-                blocks.append(DocBlock(type="section_break", text="---", order=index))
+                blocks.append(
+                    self._with_line_span(
+                        DocBlock(type="section_break", text="---", order=index),
+                        start_cursor,
+                        cursor + 1,
+                    )
+                )
                 index += 1
                 cursor += 1
                 continue
 
             if CODE_FENCE_PATTERN.match(line):
                 block, cursor = self._collect_code_block(lines, cursor, index)
-                blocks.append(block)
+                blocks.append(self._with_line_span(block, start_cursor, cursor))
                 index += 1
                 continue
 
             if self._looks_like_table(lines, cursor):
                 block, cursor = self._collect_table_block(lines, cursor, index)
-                blocks.append(block)
+                blocks.append(self._with_line_span(block, start_cursor, cursor))
                 index += 1
                 continue
 
             list_match = LIST_ITEM_PATTERN.match(stripped)
             if list_match:
                 block, cursor = self._collect_list_block(lines, cursor, index)
-                blocks.append(block)
+                blocks.append(self._with_line_span(block, start_cursor, cursor))
                 index += 1
                 continue
 
             if stripped.startswith(">"):
                 block, cursor = self._collect_quote_block(lines, cursor, index)
-                blocks.append(block)
+                blocks.append(self._with_line_span(block, start_cursor, cursor))
                 index += 1
                 continue
 
             block, cursor = self._collect_paragraph_block(lines, cursor, index)
-            blocks.append(block)
+            blocks.append(self._with_line_span(block, start_cursor, cursor))
             index += 1
 
         return blocks
+
+    @staticmethod
+    def _with_line_span(block: DocBlock, start_cursor: int, end_cursor: int) -> DocBlock:
+        block.attrs.setdefault("line_start", start_cursor + 1)
+        block.attrs.setdefault("line_end", max(start_cursor + 1, end_cursor))
+        return block
 
     @staticmethod
     def _extract_title(blocks: list[DocBlock]) -> str | None:

@@ -6,4 +6,5 @@ db/
 .qoder/
 .vscode/
 .venv/
+.omx/
 # experiments/results/

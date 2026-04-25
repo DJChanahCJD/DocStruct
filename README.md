@@ -2,62 +2,83 @@
 
 **基于大模型的软件工程文档结构化提取系统**
 
-> 推荐使用.venv环境
+> 推荐使用 `.venv` 环境。
 
-当前版本只保留后端最小抽取内核，目标聚焦于软件工程文档的结构化提取与评测，不包含知识库问答、向量检索、URL 导入、模型切换和前端联动能力。
+DocStruct 当前聚焦于软件工程文档的结构化提取与离线评测。系统不包含知识库问答、向量检索、URL 导入、模型切换和前端联动能力。
 
 ## 当前能力
 
 - 支持 `PDF`、`DOCX`、`MD`、`TXT` 文件上传
-- 支持 6 类主干软件工程文档的结构化抽取：`srs`、`api`、`design`、`test`、`manual`、`issue`
-- `unknown` 类型仅保留解析后的原文，不执行结构化抽取
-- 文档统一解析为 Markdown，再按统一知识对象 `Pydantic Schema` 输出 JSON
-- 保留文档查询、详情查看、人工修订 `parsed_content` / `extracted_data`
+- 支持 6 类主干软件工程文档：`srs`、`api`、`design`、`test`、`manual`、`issue`
+- `unknown` 类型只保留解析后的原文与 IR，不执行结构化抽取
+- 解析结果同时保存 `parsed_content` 和 `document_ir`
+- 抽取结果统一输出五类主干对象、业务视图和证据回溯
 - 提供离线评测脚本，便于论文实验复现
+
+## 设计概要
+
+DocStruct 不做通用 JSON 生成器，而是面向软件工程文档建立稳定抽取链路：
+
+```text
+PDF / DOCX / MD / TXT
+    ↓
+Parser → Document IR
+    ↓
+Section-aware Chunking
+    ↓
+Map：逐块局部抽取
+    ↓
+Reduce：合并、去重、全局 ID
+    ↓
+Evidence Binding
+    ↓
+Final JSON
+```
+
+核心思想：
+
+- `Document IR` 保存标题、段落、表格、页码、bbox、章节路径和阅读顺序
+- `ExtractionContract` 控制每类文档抽什么，不使用任意动态 Schema
+- LLM 只负责 chunk 内局部语义抽取，Reduce 尽量使用确定性逻辑
+- 每个对象通过 `evidence_element_ids` 绑定到原文元素，最终生成 `evidence`
+- `views` 表达业务分组，`extra` 只保存少量文档级补充信息
 
 ## 边界说明
 
 - 系统仅面向中短文档，默认上限为 `100000` 字符
-- 超过上限的文档直接拒绝处理，不再尝试兜底
-- 长文档统一走固定分块抽取，不再保留串行调用和单次全量回退策略
-- 当前后端只服务结构化提取主流程，知识库问答与向量库后续如需接入，应作为独立扩展模块重新设计
+- 超过上限的文档直接拒绝处理
+- 当前后端只服务结构化提取主流程
+- 知识库问答、向量库和跨文档长期记忆后续应作为独立模块设计
 
 ## 支持的文档类型
 
-| 文档类型 | `doc_type` | 抽取能力 |
+| 文档类型 | `doc_type` | 重点抽取内容 |
 | --- | --- | --- |
-| 软件需求规格说明书 | `srs` | 优先抽取角色/模块等 `entities`、业务 `processes`、各类 `requirements`、接口与关系 |
-| API 接口文档 | `api` | 优先抽取 `interfaces`、`artifacts`（如 endpoint 元数据）、相关 `relations` |
-| 系统设计说明书 | `design` | 优先抽取模块/服务等 `entities`、设计产物 `artifacts`、依赖 `relations` |
-| 测试文档 | `test` | 优先抽取测试流程 `processes`、测试产物 `artifacts`、验证关系 `relations`、测试指标 `metrics` |
-| 用户手册 | `manual` | 优先抽取操作流程 `processes`、手册章节 `artifacts`、涉及实体 `entities` |
-| 问题单 / 缺陷单 | `issue` | 优先抽取问题产物 `artifacts`、复现流程 `processes`、影响关系 `relations` |
-| 未知类型 | `unknown` | 仅保留基础元信息 |
+| 软件需求规格说明书 | `srs` | 角色、模块、需求、验收标准、接口 |
+| API 接口文档 | `api` | 接口、endpoint 元数据、请求响应产物 |
+| 系统设计说明书 | `design` | 模块、服务、设计产物 |
+| 测试文档 | `test` | 测试流程、测试用例、测试报告 |
+| 用户手册 | `manual` | 操作流程、手册章节、相关实体 |
+| 问题单 / 缺陷单 | `issue` | 问题描述、复现流程、期望结果 |
+| 未知类型 | `unknown` | 仅保留基础元信息、原文和 IR |
 
 ## 统一输出结构
 
 ```python
-class BaseExtractedDocument(BaseModel):
-    doc_type: DocType
-    title: str | None = None
-    summary: str | None = None
-    version: str | None = None
-    extra: dict[str, Any] = Field(default_factory=dict)
-
-
 class StructuredDocument(BaseExtractedDocument):
     entities: list[EntityItem] = Field(default_factory=list)
     processes: list[ProcessItem] = Field(default_factory=list)
     requirements: list[RequirementItem] = Field(default_factory=list)
     interfaces: list[InterfaceItem] = Field(default_factory=list)
     artifacts: list[ArtifactItem] = Field(default_factory=list)
-    relations: list[RelationItem] = Field(default_factory=list)
-    metrics: list[MetricItem] = Field(default_factory=list)
+    views: list[BusinessView] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
 ```
 
-- 统一输出以“对象槽位”组织，不再按文档类型维护彼此割裂的顶层字段
-- 文档类型只决定哪些槽位更常见、哪些轻量特化字段可启用，例如 `ApiDocument.base_url`、`TestDocument.test_stage`
-- 当前设计优先服务稳定抽取与跨文档融合，不追求完整重建原文章节结构
+- 主干对象保存事实：实体、流程、需求、接口、文档产物
+- `views` 保存业务组织方式，例如同一类需求分组
+- `evidence` 保存对象到 `DocumentElement` 的回溯信息
+- 不再使用 `relations`、`metrics` 顶层槽位；量化指标写入相关对象字段
 
 ## 快速开始
 
@@ -75,27 +96,27 @@ pip install -r requirements.txt
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_API_KEY=your_api_key
 LLM_MODEL=qwen-doc-turbo
-EXTRACTION_THRESHOLD=6000
 EXTRACTION_CHUNK_MAX_CHARS=5000
-EXTRACTION_CHUNK_OVERLAP_CHARS=200
 EXTRACTION_MAX_CHARS=100000
-EXTRACTION_CONCURRENCY=5
+EXTRACTION_CONCURRENCY=3
+PARSER_BACKEND=basic
+DOCLING_ENABLE_OCR=false
+DOCLING_ENABLE_TABLE_STRUCTURE=true
 ```
-
-说明：
 
 | 配置项 | 说明 | 默认值 |
 | --- | --- | --- |
-| `LLM_API_KEY` | 大模型调用鉴权 | 无 |
+| `LLM_API_KEY` | 大模型调用鉴权，也可使用 `DASHSCOPE_API_KEY` | 无 |
 | `LLM_BASE_URL` | OpenAI-Compatible 接口地址 | 无 |
-| `LLM_MODEL` | 固定使用的结构化提取模型 | `qwen-doc-turbo` |
+| `LLM_MODEL` | 结构化提取模型 | `qwen-doc-turbo` |
 | `UPLOAD_DIR` | 上传文件目录 | `db/uploads` |
 | `DB_PATH` | SQLite 路径 | `db/db.sqlite3` |
-| `EXTRACTION_THRESHOLD` | 超过该长度后进入分块抽取 | `6000` |
-| `EXTRACTION_CHUNK_MAX_CHARS` | 固定分块大小 | `5000` |
-| `EXTRACTION_CHUNK_OVERLAP_CHARS` | 分块重叠字符数 | `200` |
+| `EXTRACTION_CHUNK_MAX_CHARS` | IR chunk 目标大小 | `5000` |
 | `EXTRACTION_MAX_CHARS` | 文档最大字符数上限 | `100000` |
-| `EXTRACTION_CONCURRENCY` | 分块并发抽取数 | `5` |
+| `EXTRACTION_CONCURRENCY` | 分块并发抽取数 | `3` |
+| `PARSER_BACKEND` | 解析后端，当前默认 `basic` | `basic` |
+| `DOCLING_ENABLE_OCR` | Docling OCR 开关 | `false` |
+| `DOCLING_ENABLE_TABLE_STRUCTURE` | Docling 表格结构识别开关 | `true` |
 
 ### 3. 启动后端
 
@@ -103,14 +124,14 @@ EXTRACTION_CONCURRENCY=5
 python main.py
 ```
 
-服务默认运行在 `http://127.0.0.1:8001`
+服务默认运行在 `http://127.0.0.1:8001`。
 
 ## 技术栈
 
 | 层次 | 技术 |
 | --- | --- |
 | 后端 | `FastAPI` + `Tortoise-ORM` + `SQLite` |
-| 文档解析 | `pymupdf4llm`、`python-docx` |
+| 文档解析 | `docling`、`pymupdf4llm`、`python-docx` |
 | 结构化抽取 | OpenAI-Compatible API + `Pydantic` |
 | 评测 | Python 脚本 + JSON / Markdown 报告 |
 
@@ -121,14 +142,13 @@ DocStruct/
 ├── main.py
 ├── core/
 │   ├── parser.py
-│   ├── extractor.py
-│   ├── experiment_sdk.py
+│   ├── ir.py
 │   ├── chunker.py
-│   ├── llm.py
+│   ├── extractor.py
+│   ├── reducer.py
+│   ├── experiment_sdk.py
 │   ├── document_service.py
-│   ├── constants.py
-│   ├── schema_registry.py
-│   └── utils.py
+│   └── llm.py
 ├── schemas/
 │   ├── models.py
 │   └── dto.py
@@ -137,10 +157,9 @@ DocStruct/
 │   ├── configs/
 │   ├── prompts/
 │   └── results/
-├── scripts/
-│   ├── ci_test.py
-│   └── run_eval.py
-└── db/
+└── scripts/
+    ├── ci_test.py
+    └── run_eval.py
 ```
 
 ## 核心流程
@@ -148,22 +167,24 @@ DocStruct/
 ```text
 文档上传
     ↓
-Parser（PDF / DOCX / MD / TXT → Markdown）
+Parser 生成 Markdown 与 Document IR
     ↓
 用户指定 doc_type
     ↓
-Extractor（短文档单次抽取 / 长文档固定分块并发抽取）
+构建 DocumentOutline 与 ExtractionContract
     ↓
-Pydantic 校验
+按章节和元素边界生成 chunk
     ↓
-文档查询与人工修订
+并发 Map 抽取
+    ↓
+Reduce 合并、去重、重排全局 ID
+    ↓
+Evidence Binding 回填 page / bbox / text_span
+    ↓
+保存 extracted_data
 ```
 
-### 抽取策略
-
-- 短文档：单次抽取
-- 长文档：固定大小分块 + 并发 LLM 调用 + 合并校验
-- 超长文档：直接拒绝
+`parsed_content` 用于人类预览和修订，`document_ir` 是分块与证据绑定的机器可读来源。
 
 ## API 接口
 
@@ -192,13 +213,14 @@ Pydantic 校验
 
 建议至少覆盖以下场景：
 
-1. 上传 `PDF / DOCX / MD / TXT`，确认状态从 `processing` 变为 `completed` 或 `failed`
+1. 上传 `PDF / DOCX / MD / TXT`，确认状态从 `uploaded` / `parsing` / `extracting` 变为 `completed` 或 `failed`
 2. 检查 `parsed_content` 是否正常生成
-3. 检查 `extracted_data` 是否符合统一主干槽位和指定 `doc_type`
-4. 上传 `unknown` 类型文档，确认只保留原文不执行结构化抽取
-5. 上传超长文档，确认返回明确错误
-6. 修改 `parsed_content` 或 `extracted_data`，确认 `PATCH` 生效
-7. 删除文档后确认数据库记录与上传文件一并清理
+3. 检查 `document_ir` 是否包含 `elements`、`outline`、`section_path`
+4. 检查 `extracted_data` 是否符合五类主干对象、`views` 和 `evidence`
+5. 上传 `unknown` 类型文档，确认只保留原文和 IR
+6. 上传超长文档，确认返回明确错误
+7. 修改 `parsed_content` 或 `extracted_data`，确认 `PATCH` 生效
+8. 删除文档后确认数据库记录与上传文件一并清理
 
 ## CI Test
 
@@ -219,35 +241,35 @@ uv run python scripts/ci_test.py --frontend-only
 python scripts/run_eval.py --experiment exp1
 python scripts/run_eval.py --experiment exp2
 python scripts/run_eval.py --experiment exp3
+python scripts/run_eval.py --experiment exp1 --enable-llm-judge
 ```
 
-评测结果输出到 `experiments/results/`，记录实验配置、样本 ID、文档类型、Prompt 变体、成功率、耗时、完整率与字段级分数等指标。
-具体实验说明见 [experiments/README.md](/C:/Users/DJCHAN/SE/1_CourseProject/DocStruct/experiments/README.md)。
+评测结果输出到 `experiments/results/`，记录实验配置、样本 ID、文档类型、Prompt 变体、成功率、耗时、完整率、字段级分数、chunk 数、失败 chunk 和证据覆盖率等信息。LLM Judge 默认关闭，需要显式传入 `--enable-llm-judge`。
 
-## TODO
+最近一次 `exp1` 结果：
 
-### High Priority
+| 指标 | 数值 |
+| --- | --- |
+| 结果文件 | `experiments/results/exp1-20260425-173724.*` |
+| 样本 | `srs-mini-001` |
+| 成功率 | `1.0` |
+| 平均耗时 | `46.977s` |
+| 完整率 | `0.781` |
+| 字段分 | `0.6081` |
+| chunk 数 | `22` |
+| 空 / 失败 chunk | `9` |
+| 证据覆盖率 | `1.0` |
 
-- [x] 重构精简系统
-- [x] 移除 `source_type`、`source_url`、`llm_model`
-- [x] 明确系统仅针对中短文档
-- [x] 固定长文档分块提取方案
-- [x] 异步 LLM 调用优化
+结论：当前链路已经能稳定完成 IR Map-Reduce 和证据绑定；主要短板是 chunk 过细、低价值 chunk 被记为失败，以及 golden 未覆盖 `artifacts`、`views`、`evidence` 时会拉低字段级评分。
 
-### Medium Priority
+## 后续优化方向
 
-- [ ] 引入 `pydantic-to-typescript`，方便前后端类型共享
-- [ ] 继续完善统一对象模型与跨文档关系抽取质量
-- [ ] 引入更真实的软件工程文档样本集
-- [ ] 设计原文与 JSON 的对照修订能力
-- [ ] 评估容器化部署方案
-- [ ] 设计 JSON 节点到原文位置的映射机制
-
-### Low Priority
-
-- [ ] 格式化导出渠道（JSON / MD / CSV / YAML）
-- [ ] 多语言支持扩展
-- [ ] 轻量文档管理能力
+- 区分真正失败 chunk 与低价值跳过 chunk，降低实验日志噪声
+- 合并同一需求下的标题、描述、功能点和验收标准，减少过小 chunk
+- 收紧 SRS 抽取规则，避免术语表、封面表和汇总表被过度抽为主干对象
+- 调整评测口径，增加核心槽位评分和证据覆盖评分
+- 引入更真实的软件工程文档样本集
+- 设计原文与 JSON 的对照修订能力
 
 ## 参考资料
 
