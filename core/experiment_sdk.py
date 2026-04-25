@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
@@ -81,3 +82,29 @@ async def run_sample(
         "extracted_data": extracted_data,
         "extraction_meta": extraction_meta,
     }
+
+
+def summarize_sample_result(result: dict[str, Any]) -> dict[str, Any]:
+    parse_meta = result.get("parse_meta") if isinstance(result.get("parse_meta"), dict) else {}
+    extraction_meta = result.get("extraction_meta") if isinstance(result.get("extraction_meta"), dict) else {}
+    return {
+        "file_path": parse_meta.get("file_path"),
+        "parser_name": parse_meta.get("parser_name"),
+        "title": parse_meta.get("title"),
+        "block_count": parse_meta.get("block_count"),
+        "element_count": parse_meta.get("element_count"),
+        "doc_type": extraction_meta.get("doc_type"),
+        "model_name": extraction_meta.get("model_name"),
+        "supported": extraction_meta.get("supported"),
+        "error_message": extraction_meta.get("error_message"),
+    }
+
+
+def write_json(data: dict[str, Any], output_path: str | Path) -> Path:
+    resolved_path = Path(output_path)
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return resolved_path

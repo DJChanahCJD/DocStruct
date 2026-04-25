@@ -152,14 +152,8 @@ DocStruct/
 ├── schemas/
 │   ├── models.py
 │   └── dto.py
-├── experiments/
-│   ├── datasets/
-│   ├── configs/
-│   ├── prompts/
-│   └── results/
 └── scripts/
     ├── ci_test.py
-    └── run_eval.py
 ```
 
 ## 核心流程
@@ -234,42 +228,6 @@ uv run python scripts/ci_test.py --frontend-only
 
 - Python 编译检查
 - `main.py` 导入与应用实例化检查
-
-## 离线评测
-
-```powershell
-python scripts/run_eval.py --experiment exp1
-python scripts/run_eval.py --experiment exp2
-python scripts/run_eval.py --experiment exp3
-python scripts/run_eval.py --experiment exp1 --enable-llm-judge
-```
-
-评测结果输出到 `experiments/results/`，记录实验配置、样本 ID、文档类型、Prompt 变体、成功率、耗时、完整率、字段级分数、chunk 数、失败 chunk 和证据覆盖率等信息。LLM Judge 默认关闭，需要显式传入 `--enable-llm-judge`。
-
-最近一次 `exp1` 结果：
-
-| 指标 | 数值 |
-| --- | --- |
-| 结果文件 | `experiments/results/exp1-20260425-173724.*` |
-| 样本 | `srs-mini-001` |
-| 成功率 | `1.0` |
-| 平均耗时 | `46.977s` |
-| 完整率 | `0.781` |
-| 字段分 | `0.6081` |
-| chunk 数 | `22` |
-| 空 / 失败 chunk | `9` |
-| 证据覆盖率 | `1.0` |
-
-结论：当前链路已经能稳定完成 IR Map-Reduce 和证据绑定；主要短板是 chunk 过细、低价值 chunk 被记为失败，以及 golden 未覆盖 `artifacts`、`views`、`evidence` 时会拉低字段级评分。
-
-## 后续优化方向
-
-- 区分真正失败 chunk 与低价值跳过 chunk，降低实验日志噪声
-- 合并同一需求下的标题、描述、功能点和验收标准，减少过小 chunk
-- 收紧 SRS 抽取规则，避免术语表、封面表和汇总表被过度抽为主干对象
-- 调整评测口径，增加核心槽位评分和证据覆盖评分
-- 引入更真实的软件工程文档样本集
-- 设计原文与 JSON 的对照修订能力
 
 ## 参考资料
 
