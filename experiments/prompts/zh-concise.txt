@@ -1,9 +1,0 @@
-根据下方 JSON Schema，从文档中提取结构化信息。
-
-文档：
-{content}
-
-Schema：
-{schema}
-
-{extra_instruction}

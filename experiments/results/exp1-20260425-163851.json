@@ -1,0 +1,3164 @@
+{
+  "summary": {
+    "generated_at": "2026-04-25T16:38:51",
+    "experiment_id": "exp1",
+    "config_path": "C:/Users/DJCHAN/SE/1_CourseProject/DocStruct/experiments/configs/exp1.json",
+    "manifest_path": "C:/Users/DJCHAN/SE/1_CourseProject/DocStruct/experiments/datasets/baseline_manifest.json",
+    "model_name": "deepseek-v4-flash",
+    "sample_count": 1,
+    "success_rate": 1.0,
+    "avg_total_latency_ms": 41722.46,
+    "avg_total_latency_s": 41.722,
+    "avg_completeness_score": 0.7829,
+    "avg_field_level_score": 0.5878,
+    "avg_llm_judge_score": null,
+    "judge_coverage_rate": 0.0,
+    "llm_judge_status": "disabled",
+    "by_variant": {
+      "production": {
+        "sample_count": 1,
+        "success_rate": 1.0,
+        "avg_total_latency_ms": 41722.46,
+        "avg_completeness_score": 0.7829,
+        "avg_field_level_score": 0.5878,
+        "avg_llm_judge_score": null,
+        "judge_coverage_rate": 0.0
+      }
+    },
+    "by_doc_type": {
+      "srs": {
+        "sample_count": 1,
+        "success_rate": 1.0,
+        "avg_total_latency_ms": 41722.46,
+        "avg_completeness_score": 0.7829,
+        "avg_field_level_score": 0.5878,
+        "avg_llm_judge_score": null,
+        "judge_coverage_rate": 0.0
+      }
+    },
+    "by_tag": {
+      "md": {
+        "sample_count": 1,
+        "success_rate": 1.0,
+        "avg_total_latency_ms": 41722.46,
+        "avg_completeness_score": 0.7829,
+        "avg_field_level_score": 0.5878,
+        "avg_llm_judge_score": null,
+        "judge_coverage_rate": 0.0
+      },
+      "mini": {
+        "sample_count": 1,
+        "success_rate": 1.0,
+        "avg_total_latency_ms": 41722.46,
+        "avg_completeness_score": 0.7829,
+        "avg_field_level_score": 0.5878,
+        "avg_llm_judge_score": null,
+        "judge_coverage_rate": 0.0
+      },
+      "zh": {
+        "sample_count": 1,
+        "success_rate": 1.0,
+        "avg_total_latency_ms": 41722.46,
+        "avg_completeness_score": 0.7829,
+        "avg_field_level_score": 0.5878,
+        "avg_llm_judge_score": null,
+        "judge_coverage_rate": 0.0
+      }
+    }
+  },
+  "config": {
+    "experiment_id": "exp1",
+    "description": "核心文档类型验证实验，使用生产环境 Prompt。",
+    "manifest": "../datasets/baseline_manifest.json",
+    "judge": {
+      "enabled": true,
+      "temperature": 0.0
+    },
+    "variants": [
+      {
+        "variant_id": "production",
+        "label": "生产环境配置"
+      }
+    ]
+  },
+  "results": [
+    {
+      "experiment_id": "exp1",
+      "variant_id": "production",
+      "variant_label": "生产环境配置",
+      "sample_id": "srs-mini-001",
+      "file_path": "C:/Users/DJCHAN/SE/1_CourseProject/DocStruct/static/examples/srs_mini.md",
+      "doc_type": "srs",
+      "tags": [
+        "mini",
+        "zh",
+        "md"
+      ],
+      "notes": "精简 SRS 文档 - 快速验证",
+      "prompt_template_path": null,
+      "requested_model_name": null,
+      "used_model_name": "deepseek-v4-flash",
+      "parse_latency_ms": 8.71,
+      "extraction_latency_ms": 41713.75,
+      "total_latency_ms": 41722.46,
+      "content_length": 2063,
+      "success": true,
+      "doc_type_match": true,
+      "completeness_score": 0.7829,
+      "field_level_score": 0.5878,
+      "golden_available": true,
+      "llm_judge_status": "disabled",
+      "llm_judge_score": null,
+      "llm_judge_decision": null,
+      "llm_judge_summary": null,
+      "llm_judge_issues": [],
+      "llm_judge_model_name": null,
+      "llm_judge_latency_ms": null,
+      "llm_judge_error": null,
+      "parse_meta": {
+        "parser_name": "PlainTextParser",
+        "file_path": "C:/Users/DJCHAN/SE/1_CourseProject/DocStruct/static/examples/srs_mini.md",
+        "title": "智能文档系统需求规格说明书",
+        "block_count": 62,
+        "element_count": 62,
+        "document_ir": {
+          "title": "智能文档系统需求规格说明书",
+          "doc_type": "unknown",
+          "elements": [
+            {
+              "element_id": "el-0001",
+              "element_type": "heading",
+              "text": "智能文档系统需求规格说明书",
+              "markdown": "# 智能文档系统需求规格说明书",
+              "section_path": [
+                "智能文档系统需求规格说明书"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 0,
+              "metadata": {
+                "level": 1,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0002",
+              "element_type": "heading",
+              "text": "文档信息",
+              "markdown": "## 文档信息",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "文档信息"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 1,
+              "metadata": {
+                "level": 2,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0003",
+              "element_type": "table",
+              "text": "| 项目 | 内容 |\n| --- | --- |\n| 文档版本 | v1.0 |\n| 编制日期 | 2026-04-25 |",
+              "markdown": "| 项目 | 内容 |\n| --- | --- |\n| 文档版本 | v1.0 |\n| 编制日期 | 2026-04-25 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "文档信息"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 2,
+              "metadata": {
+                "rows": [
+                  [
+                    "项目",
+                    "内容"
+                  ],
+                  [
+                    "文档版本",
+                    "v1.0"
+                  ],
+                  [
+                    "编制日期",
+                    "2026-04-25"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0004",
+              "element_type": "heading",
+              "text": "1. 引言",
+              "markdown": "## 1. 引言",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 3,
+              "metadata": {
+                "level": 2,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0005",
+              "element_type": "heading",
+              "text": "1.1 编写目的",
+              "markdown": "### 1.1 编写目的",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.1 编写目的"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 4,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0006",
+              "element_type": "paragraph",
+              "text": "本文档描述\"智能文档系统\"的功能需求，为开发团队提供需求基准。",
+              "markdown": "本文档描述\"智能文档系统\"的功能需求，为开发团队提供需求基准。",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.1 编写目的"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 5,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0007",
+              "element_type": "heading",
+              "text": "1.2 项目背景",
+              "markdown": "### 1.2 项目背景",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.2 项目背景"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 6,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0008",
+              "element_type": "paragraph",
+              "text": "本系统通过结构化存储、智能解析等技术手段，提升技术文档的管理效率。",
+              "markdown": "本系统通过结构化存储、智能解析等技术手段，提升技术文档的管理效率。",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.2 项目背景"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 7,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0009",
+              "element_type": "heading",
+              "text": "1.3 术语定义",
+              "markdown": "### 1.3 术语定义",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.3 术语定义"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 8,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0010",
+              "element_type": "table",
+              "text": "| 术语 | 定义 |\n| --- | --- |\n| SRS | 软件需求规格说明书 |\n| OCR | 光学字符识别 |\n| API | 应用程序编程接口 |",
+              "markdown": "| 术语 | 定义 |\n| --- | --- |\n| SRS | 软件需求规格说明书 |\n| OCR | 光学字符识别 |\n| API | 应用程序编程接口 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.3 术语定义"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 9,
+              "metadata": {
+                "rows": [
+                  [
+                    "术语",
+                    "定义"
+                  ],
+                  [
+                    "SRS",
+                    "软件需求规格说明书"
+                  ],
+                  [
+                    "OCR",
+                    "光学字符识别"
+                  ],
+                  [
+                    "API",
+                    "应用程序编程接口"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0011",
+              "element_type": "separator",
+              "text": "---",
+              "markdown": "---",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "1. 引言",
+                "1.3 术语定义"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 10,
+              "metadata": {
+                "block_type": "section_break"
+              }
+            },
+            {
+              "element_id": "el-0012",
+              "element_type": "heading",
+              "text": "2. 功能需求",
+              "markdown": "## 2. 功能需求",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 11,
+              "metadata": {
+                "level": 2,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0013",
+              "element_type": "heading",
+              "text": "2.1 用户管理模块",
+              "markdown": "### 2.1 用户管理模块",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 12,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0014",
+              "element_type": "heading",
+              "text": "2.1.1 用户注册",
+              "markdown": "#### 2.1.1 用户注册",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.1 用户注册"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 13,
+              "metadata": {
+                "level": 4,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0015",
+              "element_type": "paragraph",
+              "text": "**需求编号**：SRS-USER-001\n**需求描述**：系统应支持新用户通过邮箱注册账号\n**优先级**：高",
+              "markdown": "**需求编号**：SRS-USER-001\n**需求描述**：系统应支持新用户通过邮箱注册账号\n**优先级**：高",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.1 用户注册"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 14,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0016",
+              "element_type": "paragraph",
+              "text": "**功能点**：",
+              "markdown": "**功能点**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.1 用户注册"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 15,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0017",
+              "element_type": "paragraph",
+              "text": "用户输入邮箱、密码进行注册\n系统发送验证码进行身份验证\n密码需满足复杂度要求（8-20位，包含大小写字母和数字）",
+              "markdown": "1. 用户输入邮箱、密码进行注册\n2. 系统发送验证码进行身份验证\n3. 密码需满足复杂度要求（8-20位，包含大小写字母和数字）",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.1 用户注册"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 16,
+              "metadata": {
+                "items": [
+                  "用户输入邮箱、密码进行注册",
+                  "系统发送验证码进行身份验证",
+                  "密码需满足复杂度要求（8-20位，包含大小写字母和数字）"
+                ],
+                "ordered": true,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0018",
+              "element_type": "paragraph",
+              "text": "**验收标准**：",
+              "markdown": "**验收标准**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.1 用户注册"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 17,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0019",
+              "element_type": "paragraph",
+              "text": "验证码 5 分钟内有效\n邮箱不可重复注册",
+              "markdown": "- 验证码 5 分钟内有效\n- 邮箱不可重复注册",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.1 用户注册"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 18,
+              "metadata": {
+                "items": [
+                  "验证码 5 分钟内有效",
+                  "邮箱不可重复注册"
+                ],
+                "ordered": false,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0020",
+              "element_type": "heading",
+              "text": "2.1.2 用户登录",
+              "markdown": "#### 2.1.2 用户登录",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.2 用户登录"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 19,
+              "metadata": {
+                "level": 4,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0021",
+              "element_type": "paragraph",
+              "text": "**需求编号**：SRS-USER-002\n**需求描述**：系统应支持用户通过账号密码登录\n**优先级**：高",
+              "markdown": "**需求编号**：SRS-USER-002\n**需求描述**：系统应支持用户通过账号密码登录\n**优先级**：高",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.2 用户登录"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 20,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0022",
+              "element_type": "paragraph",
+              "text": "**功能点**：",
+              "markdown": "**功能点**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.2 用户登录"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 21,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0023",
+              "element_type": "paragraph",
+              "text": "支持邮箱+密码登录\n支持\"记住我\"功能（7天免登录）\n连续 5 次密码错误锁定账号 30 分钟",
+              "markdown": "1. 支持邮箱+密码登录\n2. 支持\"记住我\"功能（7天免登录）\n3. 连续 5 次密码错误锁定账号 30 分钟",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.2 用户登录"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 22,
+              "metadata": {
+                "items": [
+                  "支持邮箱+密码登录",
+                  "支持\"记住我\"功能（7天免登录）",
+                  "连续 5 次密码错误锁定账号 30 分钟"
+                ],
+                "ordered": true,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0024",
+              "element_type": "paragraph",
+              "text": "**验收标准**：",
+              "markdown": "**验收标准**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.2 用户登录"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 23,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0025",
+              "element_type": "paragraph",
+              "text": "登录响应时间 < 2 秒\nToken 有效期 2 小时",
+              "markdown": "- 登录响应时间 < 2 秒\n- Token 有效期 2 小时",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.1 用户管理模块",
+                "2.1.2 用户登录"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 24,
+              "metadata": {
+                "items": [
+                  "登录响应时间 < 2 秒",
+                  "Token 有效期 2 小时"
+                ],
+                "ordered": false,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0026",
+              "element_type": "heading",
+              "text": "2.2 文档管理模块",
+              "markdown": "### 2.2 文档管理模块",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 25,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0027",
+              "element_type": "heading",
+              "text": "2.2.1 文档上传",
+              "markdown": "#### 2.2.1 文档上传",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.1 文档上传"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 26,
+              "metadata": {
+                "level": 4,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0028",
+              "element_type": "paragraph",
+              "text": "**需求编号**：SRS-DOC-001\n**需求描述**：系统应支持多种格式文档的上传\n**优先级**：高",
+              "markdown": "**需求编号**：SRS-DOC-001\n**需求描述**：系统应支持多种格式文档的上传\n**优先级**：高",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.1 文档上传"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 27,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0029",
+              "element_type": "paragraph",
+              "text": "**功能点**：",
+              "markdown": "**功能点**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.1 文档上传"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 28,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0030",
+              "element_type": "paragraph",
+              "text": "支持格式：PDF、Word、Markdown\n支持批量上传（单次最多 50 个文件）\n上传过程中显示进度条",
+              "markdown": "1. 支持格式：PDF、Word、Markdown\n2. 支持批量上传（单次最多 50 个文件）\n3. 上传过程中显示进度条",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.1 文档上传"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 29,
+              "metadata": {
+                "items": [
+                  "支持格式：PDF、Word、Markdown",
+                  "支持批量上传（单次最多 50 个文件）",
+                  "上传过程中显示进度条"
+                ],
+                "ordered": true,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0031",
+              "element_type": "paragraph",
+              "text": "**验收标准**：",
+              "markdown": "**验收标准**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.1 文档上传"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 30,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0032",
+              "element_type": "paragraph",
+              "text": "单文件上传最大 100MB\n格式校验失败给出明确错误提示",
+              "markdown": "- 单文件上传最大 100MB\n- 格式校验失败给出明确错误提示",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.1 文档上传"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 31,
+              "metadata": {
+                "items": [
+                  "单文件上传最大 100MB",
+                  "格式校验失败给出明确错误提示"
+                ],
+                "ordered": false,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0033",
+              "element_type": "heading",
+              "text": "2.2.2 文档解析",
+              "markdown": "#### 2.2.2 文档解析",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.2 文档解析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 32,
+              "metadata": {
+                "level": 4,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0034",
+              "element_type": "paragraph",
+              "text": "**需求编号**：SRS-DOC-002\n**需求描述**：系统应自动解析上传的文档，提取结构化信息\n**优先级**：高",
+              "markdown": "**需求编号**：SRS-DOC-002\n**需求描述**：系统应自动解析上传的文档，提取结构化信息\n**优先级**：高",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.2 文档解析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 33,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0035",
+              "element_type": "paragraph",
+              "text": "**功能点**：",
+              "markdown": "**功能点**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.2 文档解析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 34,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0036",
+              "element_type": "paragraph",
+              "text": "PDF 文档自动进行 OCR 文字识别\n识别文档类型（SRS/SDD/测试计划等）\n提取文档大纲结构",
+              "markdown": "1. PDF 文档自动进行 OCR 文字识别\n2. 识别文档类型（SRS/SDD/测试计划等）\n3. 提取文档大纲结构",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.2 文档解析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 35,
+              "metadata": {
+                "items": [
+                  "PDF 文档自动进行 OCR 文字识别",
+                  "识别文档类型（SRS/SDD/测试计划等）",
+                  "提取文档大纲结构"
+                ],
+                "ordered": true,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0037",
+              "element_type": "paragraph",
+              "text": "**验收标准**：",
+              "markdown": "**验收标准**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.2 文档解析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 36,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0038",
+              "element_type": "paragraph",
+              "text": "OCR 识别准确率 > 95%\n文档类型识别准确率 > 90%",
+              "markdown": "- OCR 识别准确率 > 95%\n- 文档类型识别准确率 > 90%",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.2 文档管理模块",
+                "2.2.2 文档解析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 37,
+              "metadata": {
+                "items": [
+                  "OCR 识别准确率 > 95%",
+                  "文档类型识别准确率 > 90%"
+                ],
+                "ordered": false,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0039",
+              "element_type": "heading",
+              "text": "2.3 智能分析模块",
+              "markdown": "### 2.3 智能分析模块",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 38,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0040",
+              "element_type": "heading",
+              "text": "2.3.1 文档关联分析",
+              "markdown": "#### 2.3.1 文档关联分析",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 39,
+              "metadata": {
+                "level": 4,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0041",
+              "element_type": "paragraph",
+              "text": "**需求编号**：SRS-ANALYSIS-001\n**需求描述**：系统应自动分析文档间的关联关系\n**优先级**：高",
+              "markdown": "**需求编号**：SRS-ANALYSIS-001\n**需求描述**：系统应自动分析文档间的关联关系\n**优先级**：高",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 40,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0042",
+              "element_type": "paragraph",
+              "text": "**功能点**：",
+              "markdown": "**功能点**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 41,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0043",
+              "element_type": "paragraph",
+              "text": "识别文档间的引用关系\n建立需求-设计-测试用例的追溯链\n生成文档依赖关系图谱",
+              "markdown": "1. 识别文档间的引用关系\n2. 建立需求-设计-测试用例的追溯链\n3. 生成文档依赖关系图谱",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 42,
+              "metadata": {
+                "items": [
+                  "识别文档间的引用关系",
+                  "建立需求-设计-测试用例的追溯链",
+                  "生成文档依赖关系图谱"
+                ],
+                "ordered": true,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0044",
+              "element_type": "paragraph",
+              "text": "**验收标准**：",
+              "markdown": "**验收标准**：",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 43,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            },
+            {
+              "element_id": "el-0045",
+              "element_type": "paragraph",
+              "text": "关联识别准确率 > 85%",
+              "markdown": "- 关联识别准确率 > 85%",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 44,
+              "metadata": {
+                "items": [
+                  "关联识别准确率 > 85%"
+                ],
+                "ordered": false,
+                "block_type": "list"
+              }
+            },
+            {
+              "element_id": "el-0046",
+              "element_type": "separator",
+              "text": "---",
+              "markdown": "---",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "2. 功能需求",
+                "2.3 智能分析模块",
+                "2.3.1 文档关联分析"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 45,
+              "metadata": {
+                "block_type": "section_break"
+              }
+            },
+            {
+              "element_id": "el-0047",
+              "element_type": "heading",
+              "text": "3. 非功能需求",
+              "markdown": "## 3. 非功能需求",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "3. 非功能需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 46,
+              "metadata": {
+                "level": 2,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0048",
+              "element_type": "heading",
+              "text": "3.1 性能需求",
+              "markdown": "### 3.1 性能需求",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "3. 非功能需求",
+                "3.1 性能需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 47,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0049",
+              "element_type": "table",
+              "text": "| 需求编号 | 需求描述 | 目标值 |\n| --- | --- | --- |\n| SRS-PERF-001 | 首页加载时间 | < 3 秒 |\n| SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 |\n| SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+              "markdown": "| 需求编号 | 需求描述 | 目标值 |\n| --- | --- | --- |\n| SRS-PERF-001 | 首页加载时间 | < 3 秒 |\n| SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 |\n| SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "3. 非功能需求",
+                "3.1 性能需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 48,
+              "metadata": {
+                "rows": [
+                  [
+                    "需求编号",
+                    "需求描述",
+                    "目标值"
+                  ],
+                  [
+                    "SRS-PERF-001",
+                    "首页加载时间",
+                    "< 3 秒"
+                  ],
+                  [
+                    "SRS-PERF-002",
+                    "文档搜索响应时间",
+                    "< 2 秒"
+                  ],
+                  [
+                    "SRS-PERF-003",
+                    "并发用户数支持",
+                    "> 1000"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0050",
+              "element_type": "heading",
+              "text": "3.2 安全需求",
+              "markdown": "### 3.2 安全需求",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "3. 非功能需求",
+                "3.2 安全需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 49,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0051",
+              "element_type": "table",
+              "text": "| 需求编号 | 需求描述 | 具体要求 |\n| --- | --- | --- |\n| SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 |\n| SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 |\n| SRS-SEC-003 | 传输安全 | 全站 HTTPS，TLS 1.3 |",
+              "markdown": "| 需求编号 | 需求描述 | 具体要求 |\n| --- | --- | --- |\n| SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 |\n| SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 |\n| SRS-SEC-003 | 传输安全 | 全站 HTTPS，TLS 1.3 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "3. 非功能需求",
+                "3.2 安全需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 50,
+              "metadata": {
+                "rows": [
+                  [
+                    "需求编号",
+                    "需求描述",
+                    "具体要求"
+                  ],
+                  [
+                    "SRS-SEC-001",
+                    "用户认证",
+                    "采用 JWT + Refresh Token 机制"
+                  ],
+                  [
+                    "SRS-SEC-002",
+                    "密码安全",
+                    "密码 bcrypt 加密存储"
+                  ],
+                  [
+                    "SRS-SEC-003",
+                    "传输安全",
+                    "全站 HTTPS，TLS 1.3"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0052",
+              "element_type": "separator",
+              "text": "---",
+              "markdown": "---",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "3. 非功能需求",
+                "3.2 安全需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 51,
+              "metadata": {
+                "block_type": "section_break"
+              }
+            },
+            {
+              "element_id": "el-0053",
+              "element_type": "heading",
+              "text": "4. 接口需求",
+              "markdown": "## 4. 接口需求",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "4. 接口需求"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 52,
+              "metadata": {
+                "level": 2,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0054",
+              "element_type": "heading",
+              "text": "4.1 外部接口",
+              "markdown": "### 4.1 外部接口",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "4. 接口需求",
+                "4.1 外部接口"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 53,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0055",
+              "element_type": "table",
+              "text": "| 接口名称 | 协议 | 用途 |\n| --- | --- | --- |\n| 企业微信 API | HTTP | 消息推送 |\n| GitLab API | HTTP | 代码仓库关联 |",
+              "markdown": "| 接口名称 | 协议 | 用途 |\n| --- | --- | --- |\n| 企业微信 API | HTTP | 消息推送 |\n| GitLab API | HTTP | 代码仓库关联 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "4. 接口需求",
+                "4.1 外部接口"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 54,
+              "metadata": {
+                "rows": [
+                  [
+                    "接口名称",
+                    "协议",
+                    "用途"
+                  ],
+                  [
+                    "企业微信 API",
+                    "HTTP",
+                    "消息推送"
+                  ],
+                  [
+                    "GitLab API",
+                    "HTTP",
+                    "代码仓库关联"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0056",
+              "element_type": "heading",
+              "text": "4.2 内部接口",
+              "markdown": "### 4.2 内部接口",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "4. 接口需求",
+                "4.2 内部接口"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 55,
+              "metadata": {
+                "level": 3,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0057",
+              "element_type": "table",
+              "text": "| 接口名称 | 协议 | 用途 |\n| --- | --- | --- |\n| 文档解析服务 | gRPC | 文档解析 |\n| 搜索服务 | HTTP | 全文检索 |",
+              "markdown": "| 接口名称 | 协议 | 用途 |\n| --- | --- | --- |\n| 文档解析服务 | gRPC | 文档解析 |\n| 搜索服务 | HTTP | 全文检索 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "4. 接口需求",
+                "4.2 内部接口"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 56,
+              "metadata": {
+                "rows": [
+                  [
+                    "接口名称",
+                    "协议",
+                    "用途"
+                  ],
+                  [
+                    "文档解析服务",
+                    "gRPC",
+                    "文档解析"
+                  ],
+                  [
+                    "搜索服务",
+                    "HTTP",
+                    "全文检索"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0058",
+              "element_type": "separator",
+              "text": "---",
+              "markdown": "---",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "4. 接口需求",
+                "4.2 内部接口"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 57,
+              "metadata": {
+                "block_type": "section_break"
+              }
+            },
+            {
+              "element_id": "el-0059",
+              "element_type": "heading",
+              "text": "5. 验收标准",
+              "markdown": "## 5. 验收标准",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "5. 验收标准"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 58,
+              "metadata": {
+                "level": 2,
+                "block_type": "title"
+              }
+            },
+            {
+              "element_id": "el-0060",
+              "element_type": "table",
+              "text": "| 验收项 | 验收方法 | 通过标准 |\n| --- | --- | --- |\n| 文档上传功能 | 功能测试 | 支持所有声明格式 |\n| 文档解析功能 | 准确性测试 | OCR 准确率 > 95% |\n| 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+              "markdown": "| 验收项 | 验收方法 | 通过标准 |\n| --- | --- | --- |\n| 文档上传功能 | 功能测试 | 支持所有声明格式 |\n| 文档解析功能 | 准确性测试 | OCR 准确率 > 95% |\n| 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "5. 验收标准"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 59,
+              "metadata": {
+                "rows": [
+                  [
+                    "验收项",
+                    "验收方法",
+                    "通过标准"
+                  ],
+                  [
+                    "文档上传功能",
+                    "功能测试",
+                    "支持所有声明格式"
+                  ],
+                  [
+                    "文档解析功能",
+                    "准确性测试",
+                    "OCR 准确率 > 95%"
+                  ],
+                  [
+                    "权限控制功能",
+                    "安全测试",
+                    "未授权访问被拒绝"
+                  ]
+                ],
+                "prefer_html": false,
+                "block_type": "table"
+              }
+            },
+            {
+              "element_id": "el-0061",
+              "element_type": "separator",
+              "text": "---",
+              "markdown": "---",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "5. 验收标准"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 60,
+              "metadata": {
+                "block_type": "section_break"
+              }
+            },
+            {
+              "element_id": "el-0062",
+              "element_type": "paragraph",
+              "text": "**文档结束**",
+              "markdown": "**文档结束**",
+              "section_path": [
+                "智能文档系统需求规格说明书",
+                "5. 验收标准"
+              ],
+              "page": null,
+              "bbox": null,
+              "order": 61,
+              "metadata": {
+                "block_type": "paragraph"
+              }
+            }
+          ],
+          "outline": {
+            "title": "智能文档系统需求规格说明书",
+            "doc_type": "unknown",
+            "sections": [
+              "智能文档系统需求规格说明书",
+              "智能文档系统需求规格说明书 > 文档信息",
+              "智能文档系统需求规格说明书 > 1. 引言",
+              "智能文档系统需求规格说明书 > 1. 引言 > 1.1 编写目的",
+              "智能文档系统需求规格说明书 > 1. 引言 > 1.2 项目背景",
+              "智能文档系统需求规格说明书 > 1. 引言 > 1.3 术语定义",
+              "智能文档系统需求规格说明书 > 2. 功能需求",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.1 用户管理模块",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.1 用户管理模块 > 2.1.1 用户注册",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.1 用户管理模块 > 2.1.2 用户登录",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.2 文档管理模块",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.2 文档管理模块 > 2.2.1 文档上传",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.2 文档管理模块 > 2.2.2 文档解析",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.3 智能分析模块",
+              "智能文档系统需求规格说明书 > 2. 功能需求 > 2.3 智能分析模块 > 2.3.1 文档关联分析",
+              "智能文档系统需求规格说明书 > 3. 非功能需求",
+              "智能文档系统需求规格说明书 > 3. 非功能需求 > 3.1 性能需求",
+              "智能文档系统需求规格说明书 > 3. 非功能需求 > 3.2 安全需求",
+              "智能文档系统需求规格说明书 > 4. 接口需求",
+              "智能文档系统需求规格说明书 > 4. 接口需求 > 4.1 外部接口",
+              "智能文档系统需求规格说明书 > 4. 接口需求 > 4.2 内部接口",
+              "智能文档系统需求规格说明书 > 5. 验收标准"
+            ],
+            "main_topics": [
+              "智能文档系统需求规格说明书",
+              "文档信息",
+              ". 引言",
+              "编写目的",
+              "项目背景",
+              "术语定义",
+              ". 功能需求",
+              "用户管理模块",
+              "用户注册",
+              "用户登录",
+              "文档管理模块",
+              "文档上传"
+            ]
+          },
+          "metadata": {
+            "parser_name": "PlainTextParser",
+            "source_type": "plain_text"
+          }
+        },
+        "source_type": "plain_text"
+      },
+      "extraction_meta": {
+        "mode": "ir-map-reduce",
+        "chunk_count": 22,
+        "failed_chunks": 8,
+        "failed_chunk_indexes": [
+          0,
+          2,
+          4,
+          6,
+          7,
+          13,
+          15,
+          18
+        ],
+        "partial": true,
+        "element_count": 62,
+        "section_count": 22,
+        "evidence_count": 78,
+        "objects_total": 34,
+        "objects_with_evidence": 34,
+        "evidence_coverage": 1.0,
+        "doc_type": "srs",
+        "model_name": "deepseek-v4-flash",
+        "supported": true
+      },
+      "error_message": null,
+      "extracted_data": {
+        "doc_type": "srs",
+        "title": "智能文档系统需求规格说明书",
+        "summary": null,
+        "version": null,
+        "extra": {},
+        "entities": [
+          {
+            "id": "ENT-001",
+            "name": "智能文档系统",
+            "description": "本文档描述'智能文档系统'的功能需求，为开发团队提供需求基准。",
+            "evidence_element_ids": [
+              "el-0005",
+              "el-0006"
+            ],
+            "extra": {},
+            "entity_type": "system"
+          },
+          {
+            "id": "ENT-002",
+            "name": "新用户",
+            "description": "通过邮箱注册账号的用户",
+            "evidence_element_ids": [
+              "el-0015",
+              "el-0017"
+            ],
+            "extra": {},
+            "entity_type": "actor"
+          },
+          {
+            "id": "ENT-003",
+            "name": "文档管理模块",
+            "description": null,
+            "evidence_element_ids": [
+              "el-0026"
+            ],
+            "extra": {},
+            "entity_type": "module"
+          },
+          {
+            "id": "ENT-004",
+            "name": "文档上传",
+            "description": "文档上传模块",
+            "evidence_element_ids": [
+              "el-0027"
+            ],
+            "extra": {},
+            "entity_type": "module"
+          },
+          {
+            "id": "ENT-005",
+            "name": "文档解析",
+            "description": "文档解析模块，负责自动解析上传的文档，提取结构化信息",
+            "evidence_element_ids": [
+              "el-0033",
+              "el-0034",
+              "el-0035",
+              "el-0036",
+              "el-0037",
+              "el-0038"
+            ],
+            "extra": {},
+            "entity_type": "module"
+          },
+          {
+            "id": "ENT-006",
+            "name": "文档解析服务",
+            "description": "文档解析服务，使用gRPC协议",
+            "evidence_element_ids": [
+              "el-0057"
+            ],
+            "extra": {},
+            "entity_type": "service"
+          },
+          {
+            "id": "ENT-007",
+            "name": "搜索服务",
+            "description": "搜索服务，使用HTTP协议",
+            "evidence_element_ids": [
+              "el-0057"
+            ],
+            "extra": {},
+            "entity_type": "service"
+          }
+        ],
+        "processes": [
+          {
+            "id": "PROC-001",
+            "name": "用户注册流程",
+            "description": "新用户通过邮箱注册账号的步骤",
+            "evidence_element_ids": [
+              "el-0017"
+            ],
+            "extra": {},
+            "process_type": "workflow",
+            "steps": [
+              {
+                "id": null,
+                "name": "输入注册信息",
+                "description": "用户输入邮箱、密码进行注册",
+                "evidence_element_ids": [
+                  "el-0017"
+                ]
+              },
+              {
+                "id": null,
+                "name": "身份验证",
+                "description": "系统发送验证码进行身份验证",
+                "evidence_element_ids": [
+                  "el-0017"
+                ]
+              },
+              {
+                "id": null,
+                "name": "密码复杂度检查",
+                "description": "密码需满足复杂度要求（8-20位，包含大小写字母和数字）",
+                "evidence_element_ids": [
+                  "el-0017"
+                ]
+              }
+            ]
+          }
+        ],
+        "requirements": [
+          {
+            "id": "REQ-001",
+            "name": "用户注册",
+            "description": "系统应支持新用户通过邮箱注册账号",
+            "evidence_element_ids": [
+              "el-0015",
+              "el-0016",
+              "el-0017",
+              "el-0018",
+              "el-0019"
+            ],
+            "extra": {},
+            "requirement_type": "functional",
+            "priority": "high",
+            "category": "user_management",
+            "details": [
+              "用户输入邮箱、密码进行注册",
+              "系统发送验证码进行身份验证",
+              "密码需满足复杂度要求（8-20位，包含大小写字母和数字）"
+            ],
+            "acceptance_criteria": [
+              "验证码 5 分钟内有效",
+              "邮箱不可重复注册"
+            ],
+            "metric": null
+          },
+          {
+            "id": "REQ-002",
+            "name": "用户登录",
+            "description": "系统应支持用户通过账号密码登录",
+            "evidence_element_ids": [
+              "el-0020",
+              "el-0021",
+              "el-0022",
+              "el-0023",
+              "el-0024",
+              "el-0025"
+            ],
+            "extra": {},
+            "requirement_type": "functional",
+            "priority": "high",
+            "category": "user_management",
+            "details": [
+              "支持邮箱+密码登录",
+              "支持'记住我'功能（7天免登录）",
+              "连续 5 次密码错误锁定账号 30 分钟"
+            ],
+            "acceptance_criteria": [
+              "登录响应时间 < 2 秒",
+              "Token 有效期 2 小时"
+            ],
+            "metric": "登录响应时间 < 2 秒; Token 有效期 2 小时"
+          },
+          {
+            "id": "REQ-003",
+            "name": "文档上传",
+            "description": "系统应支持多种格式文档的上传",
+            "evidence_element_ids": [
+              "el-0028",
+              "el-0029",
+              "el-0030",
+              "el-0031",
+              "el-0032"
+            ],
+            "extra": {},
+            "requirement_type": "functional",
+            "priority": "high",
+            "category": "other",
+            "details": [
+              "支持格式：PDF、Word、Markdown",
+              "支持批量上传（单次最多 50 个文件）",
+              "上传过程中显示进度条"
+            ],
+            "acceptance_criteria": [
+              "单文件上传最大 100MB",
+              "格式校验失败给出明确错误提示"
+            ],
+            "metric": "单文件上传最大100MB, 单次最多50个文件"
+          },
+          {
+            "id": "REQ-004",
+            "name": "自动解析上传文档",
+            "description": "系统应自动解析上传的文档，提取结构化信息",
+            "evidence_element_ids": [
+              "el-0033",
+              "el-0034",
+              "el-0035",
+              "el-0036",
+              "el-0037",
+              "el-0038"
+            ],
+            "extra": {},
+            "requirement_type": "functional",
+            "priority": "high",
+            "category": "other",
+            "details": [
+              "PDF 文档自动进行 OCR 文字识别",
+              "识别文档类型（SRS/SDD/测试计划等）",
+              "提取文档大纲结构"
+            ],
+            "acceptance_criteria": [
+              "OCR 识别准确率 > 95%",
+              "文档类型识别准确率 > 90%"
+            ],
+            "metric": "OCR accuracy >95%, document type identification accuracy >90%"
+          },
+          {
+            "id": "REQ-005",
+            "name": "文档关联分析",
+            "description": "系统应自动分析文档间的关联关系",
+            "evidence_element_ids": [
+              "el-0041",
+              "el-0042",
+              "el-0043",
+              "el-0044",
+              "el-0045"
+            ],
+            "extra": {},
+            "requirement_type": "functional",
+            "priority": "high",
+            "category": null,
+            "details": [
+              "识别文档间的引用关系",
+              "建立需求-设计-测试用例的追溯链",
+              "生成文档依赖关系图谱"
+            ],
+            "acceptance_criteria": [
+              "关联识别准确率 > 85%"
+            ],
+            "metric": "关联识别准确率 > 85%"
+          },
+          {
+            "id": "REQ-006",
+            "name": "首页加载时间",
+            "description": "首页加载时间",
+            "evidence_element_ids": [
+              "el-0048",
+              "el-0049"
+            ],
+            "extra": {},
+            "requirement_type": "non_functional",
+            "priority": null,
+            "category": "performance",
+            "details": [],
+            "acceptance_criteria": [],
+            "metric": "< 3 秒"
+          },
+          {
+            "id": "REQ-007",
+            "name": "文档搜索响应时间",
+            "description": "文档搜索响应时间",
+            "evidence_element_ids": [
+              "el-0048",
+              "el-0049"
+            ],
+            "extra": {},
+            "requirement_type": "non_functional",
+            "priority": null,
+            "category": "performance",
+            "details": [],
+            "acceptance_criteria": [],
+            "metric": "< 2 秒"
+          },
+          {
+            "id": "REQ-008",
+            "name": "并发用户数支持",
+            "description": "并发用户数支持",
+            "evidence_element_ids": [
+              "el-0048",
+              "el-0049"
+            ],
+            "extra": {},
+            "requirement_type": "non_functional",
+            "priority": null,
+            "category": "performance",
+            "details": [],
+            "acceptance_criteria": [],
+            "metric": "> 1000"
+          },
+          {
+            "id": "REQ-009",
+            "name": "用户认证",
+            "description": "采用 JWT + Refresh Token 机制",
+            "evidence_element_ids": [
+              "el-0051"
+            ],
+            "extra": {},
+            "requirement_type": "non_functional",
+            "priority": null,
+            "category": "security",
+            "details": [
+              "采用 JWT + Refresh Token 机制"
+            ],
+            "acceptance_criteria": [],
+            "metric": null
+          },
+          {
+            "id": "REQ-010",
+            "name": "密码安全",
+            "description": "密码 bcrypt 加密存储",
+            "evidence_element_ids": [
+              "el-0051"
+            ],
+            "extra": {},
+            "requirement_type": "non_functional",
+            "priority": null,
+            "category": "security",
+            "details": [
+              "密码 bcrypt 加密存储"
+            ],
+            "acceptance_criteria": [],
+            "metric": null
+          },
+          {
+            "id": "REQ-011",
+            "name": "传输安全",
+            "description": "全站 HTTPS，TLS 1.3",
+            "evidence_element_ids": [
+              "el-0051"
+            ],
+            "extra": {},
+            "requirement_type": "non_functional",
+            "priority": null,
+            "category": "security",
+            "details": [
+              "全站 HTTPS，TLS 1.3"
+            ],
+            "acceptance_criteria": [],
+            "metric": null
+          },
+          {
+            "id": "REQ-012",
+            "name": "文档上传功能",
+            "description": "功能测试",
+            "evidence_element_ids": [
+              "el-0060"
+            ],
+            "extra": {},
+            "requirement_type": "acceptance",
+            "priority": null,
+            "category": null,
+            "details": [
+              "功能测试"
+            ],
+            "acceptance_criteria": [
+              "支持所有声明格式"
+            ],
+            "metric": null
+          },
+          {
+            "id": "REQ-013",
+            "name": "文档解析功能",
+            "description": "准确性测试",
+            "evidence_element_ids": [
+              "el-0060"
+            ],
+            "extra": {},
+            "requirement_type": "acceptance",
+            "priority": null,
+            "category": null,
+            "details": [
+              "准确性测试"
+            ],
+            "acceptance_criteria": [
+              "OCR 准确率 > 95%"
+            ],
+            "metric": "OCR 准确率 > 95%"
+          },
+          {
+            "id": "REQ-014",
+            "name": "权限控制功能",
+            "description": "安全测试",
+            "evidence_element_ids": [
+              "el-0060"
+            ],
+            "extra": {},
+            "requirement_type": "acceptance",
+            "priority": null,
+            "category": null,
+            "details": [
+              "安全测试"
+            ],
+            "acceptance_criteria": [
+              "未授权访问被拒绝"
+            ],
+            "metric": null
+          }
+        ],
+        "interfaces": [
+          {
+            "id": "INT-001",
+            "name": "企业微信 API",
+            "description": "消息推送",
+            "evidence_element_ids": [
+              "el-0054",
+              "el-0055"
+            ],
+            "extra": {},
+            "interface_type": "http",
+            "method": null,
+            "path": null,
+            "target": "企业微信"
+          },
+          {
+            "id": "INT-002",
+            "name": "GitLab API",
+            "description": "代码仓库关联",
+            "evidence_element_ids": [
+              "el-0054",
+              "el-0055"
+            ],
+            "extra": {},
+            "interface_type": "http",
+            "method": null,
+            "path": null,
+            "target": "GitLab"
+          },
+          {
+            "id": "INT-003",
+            "name": "文档解析服务接口",
+            "description": "文档解析服务接口，使用gRPC协议",
+            "evidence_element_ids": [
+              "el-0057"
+            ],
+            "extra": {},
+            "interface_type": "rpc",
+            "method": "gRPC",
+            "path": null,
+            "target": "文档解析服务"
+          },
+          {
+            "id": "INT-004",
+            "name": "搜索服务接口",
+            "description": "搜索服务接口，使用HTTP协议",
+            "evidence_element_ids": [
+              "el-0057"
+            ],
+            "extra": {
+              "protocol": "HTTP"
+            },
+            "interface_type": "http",
+            "method": "OTHER",
+            "path": null,
+            "target": "搜索服务"
+          }
+        ],
+        "artifacts": [
+          {
+            "id": "ART-001",
+            "name": "文档信息",
+            "description": "文档版本 v1.0, 编制日期 2026-04-25",
+            "evidence_element_ids": [
+              "el-0002",
+              "el-0003"
+            ],
+            "extra": {
+              "文档版本": "v1.0",
+              "编制日期": "2026-04-25"
+            },
+            "artifact_type": "table",
+            "status": null
+          },
+          {
+            "id": "ART-002",
+            "name": "术语定义表",
+            "description": "Table defining terms SRS, OCR, API",
+            "evidence_element_ids": [
+              "el-0009",
+              "el-0010",
+              "el-0011"
+            ],
+            "extra": {},
+            "artifact_type": "table",
+            "status": null
+          },
+          {
+            "id": "ART-003",
+            "name": "用户登录",
+            "description": null,
+            "evidence_element_ids": [
+              "el-0020",
+              "el-0021",
+              "el-0022",
+              "el-0023",
+              "el-0024",
+              "el-0025"
+            ],
+            "extra": {},
+            "artifact_type": "manual_section",
+            "status": null
+          },
+          {
+            "id": "ART-004",
+            "name": "性能需求表",
+            "description": "性能需求表格，包含三个性能指标",
+            "evidence_element_ids": [
+              "el-0049"
+            ],
+            "extra": {},
+            "artifact_type": "table",
+            "status": null
+          },
+          {
+            "id": "ART-005",
+            "name": "安全需求表",
+            "description": "安全需求表格",
+            "evidence_element_ids": [
+              "el-0051"
+            ],
+            "extra": {},
+            "artifact_type": "table",
+            "status": null
+          },
+          {
+            "id": "ART-006",
+            "name": "外部接口表",
+            "description": "列出外部接口：企业微信 API（HTTP，消息推送）和 GitLab API（HTTP，代码仓库关联）",
+            "evidence_element_ids": [
+              "el-0054",
+              "el-0055"
+            ],
+            "extra": {},
+            "artifact_type": "table",
+            "status": null
+          },
+          {
+            "id": "ART-007",
+            "name": "内部接口表",
+            "description": "内部接口列表，包含文档解析服务和搜索服务",
+            "evidence_element_ids": [
+              "el-0057"
+            ],
+            "extra": {},
+            "artifact_type": "table",
+            "status": null
+          },
+          {
+            "id": "ART-008",
+            "name": "验收标准表格",
+            "description": "包含文档上传、文档解析、权限控制的验收标准",
+            "evidence_element_ids": [
+              "el-0059",
+              "el-0060"
+            ],
+            "extra": {},
+            "artifact_type": "table",
+            "status": null
+          }
+        ],
+        "views": [
+          {
+            "view_name": "user_management requirements",
+            "view_type": "requirement_group",
+            "object_ids": [
+              "REQ-001",
+              "REQ-002"
+            ],
+            "description": null,
+            "extra": {}
+          },
+          {
+            "view_name": "other requirements",
+            "view_type": "requirement_group",
+            "object_ids": [
+              "REQ-003",
+              "REQ-004"
+            ],
+            "description": null,
+            "extra": {}
+          },
+          {
+            "view_name": "performance requirements",
+            "view_type": "requirement_group",
+            "object_ids": [
+              "REQ-006",
+              "REQ-007",
+              "REQ-008"
+            ],
+            "description": null,
+            "extra": {}
+          },
+          {
+            "view_name": "security requirements",
+            "view_type": "requirement_group",
+            "object_ids": [
+              "REQ-009",
+              "REQ-010",
+              "REQ-011"
+            ],
+            "description": null,
+            "extra": {}
+          }
+        ],
+        "evidence": [
+          {
+            "evidence_id": "EVD-001",
+            "object_id": "ENT-001",
+            "element_id": "el-0005",
+            "text_span": "1.1 编写目的",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "1. 引言",
+              "1.1 编写目的"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-002",
+            "object_id": "ENT-001",
+            "element_id": "el-0006",
+            "text_span": "本文档描述\"智能文档系统\"的功能需求，为开发团队提供需求基准。",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "1. 引言",
+              "1.1 编写目的"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-003",
+            "object_id": "ENT-002",
+            "element_id": "el-0015",
+            "text_span": "**需求编号**：SRS-USER-001 **需求描述**：系统应支持新用户通过邮箱注册账号 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-004",
+            "object_id": "ENT-002",
+            "element_id": "el-0017",
+            "text_span": "用户输入邮箱、密码进行注册 系统发送验证码进行身份验证 密码需满足复杂度要求（8-20位，包含大小写字母和数字）",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-005",
+            "object_id": "ENT-003",
+            "element_id": "el-0026",
+            "text_span": "2.2 文档管理模块",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-006",
+            "object_id": "ENT-004",
+            "element_id": "el-0027",
+            "text_span": "2.2.1 文档上传",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.1 文档上传"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-007",
+            "object_id": "ENT-005",
+            "element_id": "el-0033",
+            "text_span": "2.2.2 文档解析",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-008",
+            "object_id": "ENT-005",
+            "element_id": "el-0034",
+            "text_span": "**需求编号**：SRS-DOC-002 **需求描述**：系统应自动解析上传的文档，提取结构化信息 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-009",
+            "object_id": "ENT-005",
+            "element_id": "el-0035",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-010",
+            "object_id": "ENT-005",
+            "element_id": "el-0036",
+            "text_span": "PDF 文档自动进行 OCR 文字识别 识别文档类型（SRS/SDD/测试计划等） 提取文档大纲结构",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-011",
+            "object_id": "ENT-005",
+            "element_id": "el-0037",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-012",
+            "object_id": "ENT-005",
+            "element_id": "el-0038",
+            "text_span": "OCR 识别准确率 > 95% 文档类型识别准确率 > 90%",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-013",
+            "object_id": "ENT-006",
+            "element_id": "el-0057",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.2 内部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-014",
+            "object_id": "ENT-007",
+            "element_id": "el-0057",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.2 内部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-015",
+            "object_id": "PROC-001",
+            "element_id": "el-0017",
+            "text_span": "用户输入邮箱、密码进行注册 系统发送验证码进行身份验证 密码需满足复杂度要求（8-20位，包含大小写字母和数字）",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-016",
+            "object_id": "REQ-001",
+            "element_id": "el-0015",
+            "text_span": "**需求编号**：SRS-USER-001 **需求描述**：系统应支持新用户通过邮箱注册账号 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-017",
+            "object_id": "REQ-001",
+            "element_id": "el-0016",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-018",
+            "object_id": "REQ-001",
+            "element_id": "el-0017",
+            "text_span": "用户输入邮箱、密码进行注册 系统发送验证码进行身份验证 密码需满足复杂度要求（8-20位，包含大小写字母和数字）",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-019",
+            "object_id": "REQ-001",
+            "element_id": "el-0018",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-020",
+            "object_id": "REQ-001",
+            "element_id": "el-0019",
+            "text_span": "验证码 5 分钟内有效 邮箱不可重复注册",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.1 用户注册"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-021",
+            "object_id": "REQ-002",
+            "element_id": "el-0020",
+            "text_span": "2.1.2 用户登录",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-022",
+            "object_id": "REQ-002",
+            "element_id": "el-0021",
+            "text_span": "**需求编号**：SRS-USER-002 **需求描述**：系统应支持用户通过账号密码登录 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-023",
+            "object_id": "REQ-002",
+            "element_id": "el-0022",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-024",
+            "object_id": "REQ-002",
+            "element_id": "el-0023",
+            "text_span": "支持邮箱+密码登录 支持\"记住我\"功能（7天免登录） 连续 5 次密码错误锁定账号 30 分钟",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-025",
+            "object_id": "REQ-002",
+            "element_id": "el-0024",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-026",
+            "object_id": "REQ-002",
+            "element_id": "el-0025",
+            "text_span": "登录响应时间 < 2 秒 Token 有效期 2 小时",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-027",
+            "object_id": "REQ-003",
+            "element_id": "el-0028",
+            "text_span": "**需求编号**：SRS-DOC-001 **需求描述**：系统应支持多种格式文档的上传 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.1 文档上传"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-028",
+            "object_id": "REQ-003",
+            "element_id": "el-0029",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.1 文档上传"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-029",
+            "object_id": "REQ-003",
+            "element_id": "el-0030",
+            "text_span": "支持格式：PDF、Word、Markdown 支持批量上传（单次最多 50 个文件） 上传过程中显示进度条",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.1 文档上传"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-030",
+            "object_id": "REQ-003",
+            "element_id": "el-0031",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.1 文档上传"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-031",
+            "object_id": "REQ-003",
+            "element_id": "el-0032",
+            "text_span": "单文件上传最大 100MB 格式校验失败给出明确错误提示",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.1 文档上传"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-032",
+            "object_id": "REQ-004",
+            "element_id": "el-0033",
+            "text_span": "2.2.2 文档解析",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-033",
+            "object_id": "REQ-004",
+            "element_id": "el-0034",
+            "text_span": "**需求编号**：SRS-DOC-002 **需求描述**：系统应自动解析上传的文档，提取结构化信息 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-034",
+            "object_id": "REQ-004",
+            "element_id": "el-0035",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-035",
+            "object_id": "REQ-004",
+            "element_id": "el-0036",
+            "text_span": "PDF 文档自动进行 OCR 文字识别 识别文档类型（SRS/SDD/测试计划等） 提取文档大纲结构",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-036",
+            "object_id": "REQ-004",
+            "element_id": "el-0037",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-037",
+            "object_id": "REQ-004",
+            "element_id": "el-0038",
+            "text_span": "OCR 识别准确率 > 95% 文档类型识别准确率 > 90%",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.2 文档管理模块",
+              "2.2.2 文档解析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-038",
+            "object_id": "REQ-005",
+            "element_id": "el-0041",
+            "text_span": "**需求编号**：SRS-ANALYSIS-001 **需求描述**：系统应自动分析文档间的关联关系 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.3 智能分析模块",
+              "2.3.1 文档关联分析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-039",
+            "object_id": "REQ-005",
+            "element_id": "el-0042",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.3 智能分析模块",
+              "2.3.1 文档关联分析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-040",
+            "object_id": "REQ-005",
+            "element_id": "el-0043",
+            "text_span": "识别文档间的引用关系 建立需求-设计-测试用例的追溯链 生成文档依赖关系图谱",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.3 智能分析模块",
+              "2.3.1 文档关联分析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-041",
+            "object_id": "REQ-005",
+            "element_id": "el-0044",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.3 智能分析模块",
+              "2.3.1 文档关联分析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-042",
+            "object_id": "REQ-005",
+            "element_id": "el-0045",
+            "text_span": "关联识别准确率 > 85%",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.3 智能分析模块",
+              "2.3.1 文档关联分析"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-043",
+            "object_id": "REQ-006",
+            "element_id": "el-0048",
+            "text_span": "3.1 性能需求",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-044",
+            "object_id": "REQ-006",
+            "element_id": "el-0049",
+            "text_span": "| 需求编号 | 需求描述 | 目标值 | | --- | --- | --- | | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-045",
+            "object_id": "REQ-007",
+            "element_id": "el-0048",
+            "text_span": "3.1 性能需求",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-046",
+            "object_id": "REQ-007",
+            "element_id": "el-0049",
+            "text_span": "| 需求编号 | 需求描述 | 目标值 | | --- | --- | --- | | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-047",
+            "object_id": "REQ-008",
+            "element_id": "el-0048",
+            "text_span": "3.1 性能需求",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-048",
+            "object_id": "REQ-008",
+            "element_id": "el-0049",
+            "text_span": "| 需求编号 | 需求描述 | 目标值 | | --- | --- | --- | | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-049",
+            "object_id": "REQ-009",
+            "element_id": "el-0051",
+            "text_span": "| 需求编号 | 需求描述 | 具体要求 | | --- | --- | --- | | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS，TLS 1.3 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.2 安全需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-050",
+            "object_id": "REQ-010",
+            "element_id": "el-0051",
+            "text_span": "| 需求编号 | 需求描述 | 具体要求 | | --- | --- | --- | | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS，TLS 1.3 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.2 安全需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-051",
+            "object_id": "REQ-011",
+            "element_id": "el-0051",
+            "text_span": "| 需求编号 | 需求描述 | 具体要求 | | --- | --- | --- | | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS，TLS 1.3 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.2 安全需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-052",
+            "object_id": "REQ-012",
+            "element_id": "el-0060",
+            "text_span": "| 验收项 | 验收方法 | 通过标准 | | --- | --- | --- | | 文档上传功能 | 功能测试 | 支持所有声明格式 | | 文档解析功能 | 准确性测试 | OCR 准确率 > 95% | | 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "5. 验收标准"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-053",
+            "object_id": "REQ-013",
+            "element_id": "el-0060",
+            "text_span": "| 验收项 | 验收方法 | 通过标准 | | --- | --- | --- | | 文档上传功能 | 功能测试 | 支持所有声明格式 | | 文档解析功能 | 准确性测试 | OCR 准确率 > 95% | | 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "5. 验收标准"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-054",
+            "object_id": "REQ-014",
+            "element_id": "el-0060",
+            "text_span": "| 验收项 | 验收方法 | 通过标准 | | --- | --- | --- | | 文档上传功能 | 功能测试 | 支持所有声明格式 | | 文档解析功能 | 准确性测试 | OCR 准确率 > 95% | | 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "5. 验收标准"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-055",
+            "object_id": "INT-001",
+            "element_id": "el-0054",
+            "text_span": "4.1 外部接口",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.1 外部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-056",
+            "object_id": "INT-001",
+            "element_id": "el-0055",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 企业微信 API | HTTP | 消息推送 | | GitLab API | HTTP | 代码仓库关联 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.1 外部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-057",
+            "object_id": "INT-002",
+            "element_id": "el-0054",
+            "text_span": "4.1 外部接口",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.1 外部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-058",
+            "object_id": "INT-002",
+            "element_id": "el-0055",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 企业微信 API | HTTP | 消息推送 | | GitLab API | HTTP | 代码仓库关联 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.1 外部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-059",
+            "object_id": "INT-003",
+            "element_id": "el-0057",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.2 内部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-060",
+            "object_id": "INT-004",
+            "element_id": "el-0057",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.2 内部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-061",
+            "object_id": "ART-001",
+            "element_id": "el-0002",
+            "text_span": "文档信息",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "文档信息"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-062",
+            "object_id": "ART-001",
+            "element_id": "el-0003",
+            "text_span": "| 项目 | 内容 | | --- | --- | | 文档版本 | v1.0 | | 编制日期 | 2026-04-25 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "文档信息"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-063",
+            "object_id": "ART-002",
+            "element_id": "el-0009",
+            "text_span": "1.3 术语定义",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "1. 引言",
+              "1.3 术语定义"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-064",
+            "object_id": "ART-002",
+            "element_id": "el-0010",
+            "text_span": "| 术语 | 定义 | | --- | --- | | SRS | 软件需求规格说明书 | | OCR | 光学字符识别 | | API | 应用程序编程接口 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "1. 引言",
+              "1.3 术语定义"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-065",
+            "object_id": "ART-002",
+            "element_id": "el-0011",
+            "text_span": "---",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "1. 引言",
+              "1.3 术语定义"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-066",
+            "object_id": "ART-003",
+            "element_id": "el-0020",
+            "text_span": "2.1.2 用户登录",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-067",
+            "object_id": "ART-003",
+            "element_id": "el-0021",
+            "text_span": "**需求编号**：SRS-USER-002 **需求描述**：系统应支持用户通过账号密码登录 **优先级**：高",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-068",
+            "object_id": "ART-003",
+            "element_id": "el-0022",
+            "text_span": "**功能点**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-069",
+            "object_id": "ART-003",
+            "element_id": "el-0023",
+            "text_span": "支持邮箱+密码登录 支持\"记住我\"功能（7天免登录） 连续 5 次密码错误锁定账号 30 分钟",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-070",
+            "object_id": "ART-003",
+            "element_id": "el-0024",
+            "text_span": "**验收标准**：",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-071",
+            "object_id": "ART-003",
+            "element_id": "el-0025",
+            "text_span": "登录响应时间 < 2 秒 Token 有效期 2 小时",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "2. 功能需求",
+              "2.1 用户管理模块",
+              "2.1.2 用户登录"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-072",
+            "object_id": "ART-004",
+            "element_id": "el-0049",
+            "text_span": "| 需求编号 | 需求描述 | 目标值 | | --- | --- | --- | | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.1 性能需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-073",
+            "object_id": "ART-005",
+            "element_id": "el-0051",
+            "text_span": "| 需求编号 | 需求描述 | 具体要求 | | --- | --- | --- | | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS，TLS 1.3 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "3. 非功能需求",
+              "3.2 安全需求"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-074",
+            "object_id": "ART-006",
+            "element_id": "el-0054",
+            "text_span": "4.1 外部接口",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.1 外部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-075",
+            "object_id": "ART-006",
+            "element_id": "el-0055",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 企业微信 API | HTTP | 消息推送 | | GitLab API | HTTP | 代码仓库关联 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.1 外部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-076",
+            "object_id": "ART-007",
+            "element_id": "el-0057",
+            "text_span": "| 接口名称 | 协议 | 用途 | | --- | --- | --- | | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "4. 接口需求",
+              "4.2 内部接口"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-077",
+            "object_id": "ART-008",
+            "element_id": "el-0059",
+            "text_span": "5. 验收标准",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "5. 验收标准"
+            ],
+            "page": null,
+            "bbox": null
+          },
+          {
+            "evidence_id": "EVD-078",
+            "object_id": "ART-008",
+            "element_id": "el-0060",
+            "text_span": "| 验收项 | 验收方法 | 通过标准 | | --- | --- | --- | | 文档上传功能 | 功能测试 | 支持所有声明格式 | | 文档解析功能 | 准确性测试 | OCR 准确率 > 95% | | 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+            "section_path": [
+              "智能文档系统需求规格说明书",
+              "5. 验收标准"
+            ],
+            "page": null,
+            "bbox": null
+          }
+        ]
+      }
+    }
+  ]
+}

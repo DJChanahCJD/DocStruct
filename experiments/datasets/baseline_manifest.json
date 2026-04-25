@@ -1,54 +1,14 @@
 {
-  "name": "docstruct-baseline",
-  "description": "最小离线实验清单，文档类型统一对齐当前主系统 6 类 schema。",
+  "name": "docstruct-mini",
+  "description": "最小验证实验，单文档快速验证。",
   "samples": [
     {
-      "sample_id": "srs-md-001",
-      "file_path": "static/examples/srs_example.md",
-      "golden_path": "experiments/goldens/srs-md-001.json",
+      "sample_id": "srs-mini-001",
+      "file_path": "static/examples/srs_mini.md",
+      "golden_path": "experiments/goldens/srs-mini-001.json",
       "doc_type": "srs",
-      "tags": ["baseline", "short", "zh", "md", "standard", "config_search", "generalization", "robustness"],
-      "notes": "SRS Markdown 短文档"
-    },
-    {
-      "sample_id": "api-md-001",
-      "file_path": "static/examples/api_example.md",
-      "golden_path": "experiments/goldens/api-pdf-001.json",
-      "doc_type": "api",
-      "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
-      "notes": "API Markdown 样例"
-    },
-    {
-      "sample_id": "design-md-001",
-      "file_path": "static/examples/sdd_example.md",
-      "golden_path": "experiments/goldens/design-md-001.json",
-      "doc_type": "design",
-      "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
-      "notes": "设计说明 Markdown 样例"
-    },
-    {
-      "sample_id": "test-md-001",
-      "file_path": "static/examples/test_plan_example.md",
-      "golden_path": "experiments/goldens/test-docx-001.json",
-      "doc_type": "test",
-      "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
-      "notes": "测试计划 Markdown 样例"
-    },
-    {
-      "sample_id": "manual-md-001",
-      "file_path": "static/examples/test_case_example.md",
-      "golden_path": "experiments/goldens/manual-md-001.json",
-      "doc_type": "manual",
-      "tags": ["baseline", "medium", "zh", "md", "standard", "config_search", "generalization", "robustness"],
-      "notes": "测试用例作为手册样例"
-    },
-    {
-      "sample_id": "issue-md-001",
-      "file_path": "static/examples/bug_report_example.md",
-      "golden_path": "experiments/goldens/issue-md-001.json",
-      "doc_type": "issue",
-      "tags": ["baseline", "short", "zh", "md", "non_standard", "config_search", "generalization", "robustness"],
-      "notes": "缺陷单 Markdown 样例"
+      "tags": ["mini", "zh", "md"],
+      "notes": "精简 SRS 文档 - 快速验证"
     }
   ]
 }
