@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from core.chunker import split_ir_into_chunks
+from core.chunker import render_element_marker, split_ir_into_chunks
 from core.config import get_settings
 from core.constants import EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
@@ -29,6 +29,30 @@ SLOT_DESCRIPTIONS = {
     "interfaces": "HTTP, RPC, message, database, file, external system, hardware, or UI interfaces explicitly present in the chunk.",
     "artifacts": "Document artifacts such as endpoints, design modules, test cases, manual sections, issues, decisions, or tables.",
 }
+
+FINALIZE_PROMPT_TEMPLATE = """
+You are an expert Software Engineering Document Analyst.
+Merge chunk-level extraction candidates into one final structured document using the provided JSON Schema.
+Use the document outline and evidence snippets to resolve duplicates and parent-child structure.
+Return one top-level JSON object only.
+Every extracted object should include evidence_element_ids using only IDs shown in the evidence snippets.
+Do not output relations, metrics, source_ref, or any top-level keys that are not defined by the schema.
+
+For SRS documents:
+- A numbered requirement section should normally produce one primary requirement object.
+- Requirement description belongs in description.
+- Functional points belong in details.
+- Acceptance criteria belong in acceptance_criteria.
+- Do not turn acceptance criteria lines into separate constraint or business_rule requirements unless they have their own requirement ID or independent requirement heading.
+
+Input:
+{content}
+
+Schema:
+{schema}
+
+{json_instruction}
+"""
 
 
 def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContract:
@@ -190,6 +214,33 @@ async def extract_structure_with_meta(
         )
 
     contract = build_extraction_contract(normalized_doc_type)
+    if content_length <= settings.extraction_threshold:
+        raw_data = await asyncio.to_thread(
+            _extract_once,
+            _render_document_elements(ir),
+            response_model,
+            context_note=_render_document_context(document_ir=ir, contract=contract),
+            prompt_template=prompt_template,
+            model_name=model_name,
+        )
+        reduced_data, evidence_meta = reduce_extraction_results(
+            doc_type=normalized_doc_type.value,
+            title=ir.title,
+            chunk_results=[raw_data],
+            document_ir=ir,
+        )
+        validated = response_model.model_validate(reduced_data)
+        return validated, {
+            "mode": "whole-document",
+            "chunk_count": 1,
+            "failed_chunks": 0,
+            "failed_chunk_indexes": [],
+            "partial": False,
+            "element_count": len(ir.elements),
+            "section_count": len(ir.outline.sections),
+            **evidence_meta,
+        }
+
     chunks = split_ir_into_chunks(
         ir,
         max_chars=settings.extraction_chunk_max_chars,
@@ -234,16 +285,24 @@ async def extract_structure_with_meta(
     if not partial_results:
         raise RuntimeError(f"分块提取失败，失败块数: {len(failed_chunk_indexes)}/{len(chunks)}")
 
+    finalized_data = await asyncio.to_thread(
+        _finalize_extraction_once,
+        document_ir=ir,
+        contract=contract,
+        chunk_results=partial_results,
+        response_model=response_model,
+        model_name=model_name,
+    )
     reduced_data, evidence_meta = reduce_extraction_results(
         doc_type=normalized_doc_type.value,
         title=ir.title,
-        chunk_results=partial_results,
+        chunk_results=[finalized_data],
         document_ir=ir,
     )
     validated = response_model.model_validate(reduced_data)
     failed_chunks = len(failed_chunk_indexes)
     return validated, {
-        "mode": "ir-map-reduce",
+        "mode": "ir-map-ai-finalize",
         "chunk_count": len(chunks),
         "failed_chunks": failed_chunks,
         "failed_chunk_indexes": failed_chunk_indexes,
@@ -277,6 +336,94 @@ def _prepare_document_ir(
     if not ir.outline.title:
         ir.outline.title = ir.title
     return ir
+
+
+def _finalize_extraction_once(
+    *,
+    document_ir: DocumentIR,
+    contract: ExtractionContract,
+    chunk_results: list[dict[str, Any]],
+    response_model: type[BaseModel],
+    model_name: str | None = None,
+) -> dict[str, object]:
+    """
+    Use the LLM to merge chunk candidates into one global structured document.
+    """
+    prompt = _render_prompt(
+        FINALIZE_PROMPT_TEMPLATE,
+        content=_render_finalizer_input(
+            document_ir=document_ir,
+            contract=contract,
+            chunk_results=chunk_results,
+        ),
+        schema=_json_schema_text(response_model),
+        json_instruction=JSON_FORMAT_INSTRUCTION,
+    )
+    response_text = _create_text_completion(
+        messages=[
+            {"role": "system", "content": "You are a precise software-engineering document extractor. Return JSON only."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        model_name=model_name,
+    )
+    data = clean_and_parse_json(response_text)
+    return normalize_extracted_data(data)
+
+
+def _render_document_context(
+    *,
+    document_ir: DocumentIR,
+    contract: ExtractionContract,
+) -> str:
+    """
+    Render document-level extraction context for whole-document extraction.
+    """
+    return "\n\n".join(
+        [
+            "[Document Outline]",
+            document_ir.outline.model_dump_json(indent=2),
+            "[Extraction Contract]",
+            contract.model_dump_json(indent=2),
+            (
+                "The input is the full document rendered with [ELEMENT: ...] markers. "
+                "Use those marker IDs as evidence_element_ids."
+            ),
+        ]
+    )
+
+
+def _render_document_elements(document_ir: DocumentIR) -> str:
+    """
+    Render all IR elements with stable evidence markers.
+    """
+    return "\n\n".join(
+        render_element_marker(element)
+        for element in sorted(document_ir.elements, key=lambda item: item.order)
+    )
+
+
+def _render_finalizer_input(
+    *,
+    document_ir: DocumentIR,
+    contract: ExtractionContract,
+    chunk_results: list[dict[str, Any]],
+) -> str:
+    """
+    Render finalizer input with candidates and source evidence snippets.
+    """
+    return "\n\n".join(
+        [
+            "[Document Outline]",
+            document_ir.outline.model_dump_json(indent=2),
+            "[Extraction Contract]",
+            contract.model_dump_json(indent=2),
+            "[Chunk Candidates]",
+            json.dumps(chunk_results, ensure_ascii=False, indent=2),
+            "[Evidence Snippets]",
+            _render_document_elements(document_ir),
+        ]
+    )
 
 
 def _render_chunk_context(

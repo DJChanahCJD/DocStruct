@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.parser import ParseResult
-from schemas.models import DocumentChunk, DocumentElement, DocumentIR
+from schemas.models import DocType, DocumentChunk, DocumentElement, DocumentIR
 
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -27,6 +27,7 @@ LOW_VALUE_API_BODY_PATTERN = re.compile(
     r"(all errors|所有错误统一返回|validation_error|resource_not_found|internal_error|rate_limited|trace_id|\"error\"\s*:)",
     re.IGNORECASE,
 )
+SRS_REQUIREMENT_SECTION_PATTERN = re.compile(r"^\s*\d+\.\d+(?:\.\d+)+\s+\S+")
 DEFAULT_TARGET_SIZE = 700
 DEFAULT_OVERLAP = 80
 DEFAULT_MIN_SIZE = 200
@@ -97,7 +98,7 @@ def split_ir_into_chunks(
             current_section = None
             continue
 
-        section_key = tuple(element.section_path)
+        section_key = _chunk_section_key(document_ir, element.section_path)
         rendered = render_element_marker(element)
         rendered_size = len(rendered)
         section_changed = current_section is not None and section_key != current_section
@@ -137,6 +138,20 @@ def _is_ignored_section(section_path: list[str], ignored: list[str]) -> bool:
         return False
     section_text = " > ".join(section_path).lower()
     return any(item in section_text for item in ignored)
+
+
+def _chunk_section_key(document_ir: DocumentIR, section_path: list[str]) -> tuple[str, ...]:
+    """
+    Return the section key used for extraction chunks.
+    """
+    if document_ir.doc_type not in {DocType.SRS, DocType.SRS.value}:
+        return tuple(section_path)
+
+    for index in range(len(section_path) - 1, -1, -1):
+        section = section_path[index].strip()
+        if SRS_REQUIREMENT_SECTION_PATTERN.match(section):
+            return tuple(section_path[: index + 1])
+    return tuple(section_path)
 
 
 @dataclass

@@ -1,8 +1,10 @@
-import { useMemo } from "react";
-import { FileSearch, MapPin } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FileSearch, MapPin, Save } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import {
   EXTRACTION_SLOT_CONFIGS,
   type ExtractionEvidence,
@@ -15,17 +17,31 @@ interface ExtractionResultPanelProps {
   items: ExtractionItem[];
   selectedEvidence: ExtractionEvidence | null;
   onSelectEvidence: (evidence: ExtractionEvidence) => void;
+  onPatchItem: (item: ExtractionItem, patch: Record<string, unknown>) => void;
 }
 
 /**
- * Display extraction objects as clickable evidence anchors.
+ * Display extraction objects with a review-focused detail editor.
  */
 export function ExtractionResultPanel({
   items,
   selectedEvidence,
   onSelectEvidence,
+  onPatchItem,
 }: ExtractionResultPanelProps) {
   const groupedItems = useMemo(() => groupItemsBySlot(items), [items]);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const selectedItem = items.find((item) => item.id === selectedItemId) ?? items[0] ?? null;
+
+  useEffect(() => {
+    if (!selectedItemId && items[0]) {
+      setSelectedItemId(items[0].id);
+      return;
+    }
+    if (selectedItemId && !items.some((item) => item.id === selectedItemId)) {
+      setSelectedItemId(items[0]?.id ?? null);
+    }
+  }, [items, selectedItemId]);
 
   if (items.length === 0) {
     return (
@@ -40,163 +56,237 @@ export function ExtractionResultPanel({
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="flex flex-col gap-4 px-4 py-4">
-        {EXTRACTION_SLOT_CONFIGS.map((slotConfig) => {
-          const slotItems = groupedItems[slotConfig.key];
-          if (slotItems.length === 0) {
-            return null;
-          }
+    <div className="grid h-full min-h-0 grid-cols-[minmax(160px,0.72fr)_minmax(220px,1fr)]">
+      <ScrollArea className="min-h-0 border-r">
+        <div className="flex flex-col gap-4 p-3">
+          {EXTRACTION_SLOT_CONFIGS.map((slotConfig) => {
+            const slotItems = groupedItems[slotConfig.key];
+            if (slotItems.length === 0) {
+              return null;
+            }
 
-          return (
-            <section key={slotConfig.key} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-foreground">{slotConfig.label}</h4>
-                <Badge variant="secondary">{slotItems.length}</Badge>
-              </div>
-              <div className="flex flex-col gap-2">
-                {slotItems.map((item) => (
-                  <ExtractionItemButton
-                    key={`${item.slot}-${item.id}`}
-                    item={item}
-                    selectedEvidence={selectedEvidence}
-                    onSelectEvidence={onSelectEvidence}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    </ScrollArea>
+            return (
+              <section key={slotConfig.key} className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-semibold text-foreground">{slotConfig.label}</h4>
+                  <Badge variant="secondary">{slotItems.length}</Badge>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {slotItems.map((item) => (
+                    <ExtractionItemRow
+                      key={`${item.slot}-${item.id}`}
+                      item={item}
+                      selected={item.id === selectedItem?.id}
+                      active={item.evidence.some((entry) => evidenceMatches(entry, selectedEvidence))}
+                      onClick={() => {
+                        setSelectedItemId(item.id);
+                        const evidence = getPrimaryEvidence(item);
+                        if (evidence) {
+                          onSelectEvidence(evidence);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </ScrollArea>
+
+      <ExtractionDetail
+        item={selectedItem}
+        selectedEvidence={selectedEvidence}
+        onSelectEvidence={onSelectEvidence}
+        onPatchItem={onPatchItem}
+      />
+    </div>
   );
 }
 
-interface ExtractionItemButtonProps {
+interface ExtractionItemRowProps {
   item: ExtractionItem;
-  selectedEvidence: ExtractionEvidence | null;
-  onSelectEvidence: (evidence: ExtractionEvidence) => void;
+  selected: boolean;
+  active: boolean;
+  onClick: () => void;
 }
 
 /**
- * Render one structured object with its evidence shortcuts.
+ * Render a compact object row for review navigation.
  */
-function ExtractionItemButton({
+function ExtractionItemRow({ item, selected, active, onClick }: ExtractionItemRowProps) {
+  const primaryEvidence = getPrimaryEvidence(item);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex w-full flex-col gap-1 rounded-md border px-2.5 py-2 text-left transition-colors",
+        selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/45",
+        active && "ring-1 ring-primary/20",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[11px] text-muted-foreground">{item.id}</span>
+        {primaryEvidence?.page && (
+          <span className="text-[11px] font-medium text-primary">P{primaryEvidence.page}</span>
+        )}
+      </div>
+      <div className="line-clamp-2 text-sm font-medium text-foreground">{item.title}</div>
+      <div className="flex items-center gap-1.5">
+        {item.typeLabel && (
+          <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
+            {item.typeLabel}
+          </Badge>
+        )}
+        {item.evidence.length > 1 && (
+          <span className="text-[11px] text-muted-foreground">{item.evidence.length} 条证据</span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+interface ExtractionDetailProps {
+  item: ExtractionItem | null;
+  selectedEvidence: ExtractionEvidence | null;
+  onSelectEvidence: (evidence: ExtractionEvidence) => void;
+  onPatchItem: (item: ExtractionItem, patch: Record<string, unknown>) => void;
+}
+
+/**
+ * Render object details, evidence shortcuts, and patch controls.
+ */
+function ExtractionDetail({
   item,
   selectedEvidence,
   onSelectEvidence,
-}: ExtractionItemButtonProps) {
+  onPatchItem,
+}: ExtractionDetailProps) {
+  const [nameDraft, setNameDraft] = useState("");
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [detailsDraft, setDetailsDraft] = useState("");
+  const [acceptanceDraft, setAcceptanceDraft] = useState("");
+
+  useEffect(() => {
+    setNameDraft(stringValue(item?.raw.name));
+    setDescriptionDraft(stringValue(item?.raw.description));
+    setDetailsDraft(arrayValue(item?.raw.details).join("\n"));
+    setAcceptanceDraft(arrayValue(item?.raw.acceptance_criteria).join("\n"));
+  }, [item]);
+
+  if (!item) {
+    return null;
+  }
+
   const primaryEvidence = getPrimaryEvidence(item);
-  const active = item.evidence.some((entry) => evidenceMatches(entry, selectedEvidence));
+
+  const handleSave = () => {
+    onPatchItem(item, {
+      name: nameDraft || null,
+      description: descriptionDraft || null,
+      details: detailsDraft.split("\n").map((line) => line.trim()).filter(Boolean),
+      acceptance_criteria: acceptanceDraft.split("\n").map((line) => line.trim()).filter(Boolean),
+    });
+  };
 
   return (
-    <div
-      role={primaryEvidence ? "button" : undefined}
-      tabIndex={primaryEvidence ? 0 : -1}
-      aria-disabled={!primaryEvidence}
-      onClick={() => {
-        if (primaryEvidence) {
-          onSelectEvidence(primaryEvidence);
-        }
-      }}
-      onKeyDown={(event) => {
-        if (!primaryEvidence) {
-          return;
-        }
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelectEvidence(primaryEvidence);
-        }
-      }}
-      className={cn(
-        "flex w-full flex-col gap-2 rounded-lg border bg-background px-3 py-3 text-left transition-colors",
-        active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:bg-muted/45",
-        !primaryEvidence && "cursor-default opacity-70 hover:bg-background",
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-muted-foreground">{item.id}</span>
-            {item.typeLabel && (
-              <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
-                {item.typeLabel}
-              </Badge>
-            )}
+    <div className="flex min-h-0 flex-col">
+      <div className="shrink-0 border-b px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-muted-foreground">{item.id}</span>
+              <Badge variant="secondary">{item.slotLabel}</Badge>
+              {item.typeLabel && <Badge variant="outline">{item.typeLabel}</Badge>}
+            </div>
+            <h4 className="mt-2 line-clamp-2 text-base font-semibold text-foreground">{item.title}</h4>
           </div>
-          <div className="mt-1 line-clamp-2 text-sm font-medium text-foreground">{item.title}</div>
-          {item.description && (
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-              {item.description}
-            </p>
+          {primaryEvidence && (
+            <Button variant="secondary" size="sm" onClick={() => onSelectEvidence(primaryEvidence)}>
+              <MapPin data-icon="inline-start" />
+              定位
+            </Button>
           )}
         </div>
-        <EvidenceStatus evidence={primaryEvidence} />
       </div>
 
-      {item.evidence.length > 1 && (
-        <div className="flex flex-wrap gap-1.5">
-          {item.evidence.map((entry, index) => (
-            <EvidenceChip
-              key={entry.evidenceId ?? `${item.id}-${index}`}
-              evidence={entry}
-              active={evidenceMatches(entry, selectedEvidence)}
-              onSelectEvidence={onSelectEvidence}
-            />
-          ))}
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-4 p-4">
+          <FieldEditor label="名称" value={nameDraft} onChange={setNameDraft} rows={2} />
+          <FieldEditor label="描述" value={descriptionDraft} onChange={setDescriptionDraft} rows={3} />
+          {item.slot === "requirements" && (
+            <>
+              <FieldEditor label="功能点 / 明细" value={detailsDraft} onChange={setDetailsDraft} rows={4} />
+              <FieldEditor label="验收标准" value={acceptanceDraft} onChange={setAcceptanceDraft} rows={3} />
+            </>
+          )}
+
+          <div className="rounded-lg border bg-muted/15">
+            <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">证据</div>
+            <div className="flex flex-col gap-2 p-3">
+              {item.evidence.length === 0 ? (
+                <p className="text-sm text-muted-foreground">暂无证据绑定</p>
+              ) : (
+                item.evidence.map((evidence, index) => (
+                  <button
+                    key={evidence.evidenceId ?? `${item.id}-${index}`}
+                    type="button"
+                    onClick={() => onSelectEvidence(evidence)}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-left text-xs transition-colors",
+                      evidenceMatches(evidence, selectedEvidence)
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:bg-muted/45",
+                    )}
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="font-mono text-muted-foreground">{evidence.evidenceId ?? "EVD"}</span>
+                      {evidence.page && <span className="font-medium text-primary">P{evidence.page}</span>}
+                    </div>
+                    <div className="line-clamp-3 leading-5 text-foreground">
+                      {evidence.textSpan ?? "无文本片段"}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          <Button onClick={handleSave}>
+            <Save data-icon="inline-start" />
+            保存当前对象
+          </Button>
         </div>
-      )}
+      </ScrollArea>
     </div>
   );
 }
 
 /**
- * Render the compact evidence location status.
+ * Render a labeled textarea editor.
  */
-function EvidenceStatus({ evidence }: { evidence: ExtractionEvidence | null }) {
-  if (!evidence) {
-    return <span className="shrink-0 text-xs text-muted-foreground">无证据</span>;
-  }
-
-  if (evidence.page && evidence.bbox) {
-    return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-        <MapPin />
-        P{evidence.page}
-      </span>
-    );
-  }
-
-  return <span className="shrink-0 text-xs text-muted-foreground">文本证据</span>;
-}
-
-interface EvidenceChipProps {
-  evidence: ExtractionEvidence;
-  active: boolean;
-  onSelectEvidence: (evidence: ExtractionEvidence) => void;
-}
-
-/**
- * Render a secondary evidence shortcut for multi-evidence objects.
- */
-function EvidenceChip({ evidence, active, onSelectEvidence }: EvidenceChipProps) {
+function FieldEditor({
+  label,
+  value,
+  rows,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  rows: number;
+  onChange: (value: string) => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelectEvidence(evidence);
-      }}
-      className={cn(
-        "inline-flex h-6 items-center rounded-md border px-2 text-[11px] font-medium",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-muted/35 text-muted-foreground",
-      )}
-    >
-      {evidence.evidenceId ?? "EVD"}
-      {evidence.page ? ` · P${evidence.page}` : ""}
-    </button>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <Textarea
+        value={value}
+        rows={rows}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-0 resize-none bg-muted/10 text-sm leading-6"
+      />
+    </label>
   );
 }
 
@@ -240,4 +330,21 @@ function evidenceMatches(
     return left.evidenceId === right.evidenceId;
   }
   return left.objectId === right.objectId && left.elementId === right.elementId;
+}
+
+/**
+ * Normalize an unknown value into a string.
+ */
+function stringValue(value: unknown): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+/**
+ * Normalize an unknown value into a string list.
+ */
+function arrayValue(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.map((item) => String(item));
 }

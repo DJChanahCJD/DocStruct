@@ -189,7 +189,6 @@ def _evidence_for_item(
         }
     ]
 
-
 def _entry_from_element(
     object_id: str,
     element: DocumentElement,

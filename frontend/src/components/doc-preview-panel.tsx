@@ -29,6 +29,7 @@ import {
   buildExtractionItems,
   findFirstPositionedEvidence,
   type ExtractionEvidence,
+  type ExtractionItem,
 } from "@/lib/evidence";
 
 interface DocPreviewPanelProps {
@@ -241,6 +242,30 @@ export function DocPreviewPanel({
     }
   };
 
+  const handlePatchExtractionItem = async (
+    item: ExtractionItem,
+    patch: Record<string, unknown>,
+  ) => {
+    if (!doc?.extracted_data) {
+      return;
+    }
+
+    const updatedData = patchExtractionItem(doc.extracted_data, item, patch);
+    try {
+      const updatedDoc = await updateDocument.mutateAsync({
+        extracted_data: updatedData,
+      });
+      const nextContent = updatedDoc.extracted_data
+        ? JSON.stringify(updatedDoc.extracted_data, null, 2)
+        : "";
+      setJsonDraft(nextContent);
+      setSavedJsonContent(nextContent);
+      toast.success("提取项已保存");
+    } catch {
+      toast.error("提取项保存失败");
+    }
+  };
+
   if (!docId) {
     return null;
   }
@@ -337,6 +362,7 @@ export function DocPreviewPanel({
                       items={extractionItems}
                       selectedEvidence={selectedEvidence}
                       onSelectEvidence={setSelectedEvidence}
+                      onPatchItem={handlePatchExtractionItem}
                     />
                   </TabsContent>
 
@@ -609,4 +635,38 @@ function containsEvidence(
       return entry.objectId === evidence.objectId && entry.elementId === evidence.elementId;
     }),
   );
+}
+
+/**
+ * Patch one extracted object inside the structured JSON payload.
+ */
+function patchExtractionItem(
+  extractedData: Record<string, unknown>,
+  item: ExtractionItem,
+  patch: Record<string, unknown>,
+): Record<string, unknown> {
+  const slotItems = extractedData[item.slot];
+  if (!Array.isArray(slotItems)) {
+    return extractedData;
+  }
+
+  return {
+    ...extractedData,
+    [item.slot]: slotItems.map((slotItem) => {
+      if (!isRecord(slotItem) || slotItem.id !== item.id) {
+        return slotItem;
+      }
+      return {
+        ...slotItem,
+        ...patch,
+      };
+    }),
+  };
+}
+
+/**
+ * Return true when a value is a JSON-like object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

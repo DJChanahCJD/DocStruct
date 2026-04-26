@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, FileSearch, Loader2 } from "lucide-react";
+import { AlertCircle, FileSearch, Loader2, RotateCcw } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DocumentFilePayload } from "@/lib/api";
 import type { ExtractionEvidence } from "@/lib/evidence";
@@ -60,6 +61,7 @@ export function PdfEvidenceViewer({
 }: PdfEvidenceViewerProps) {
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState(1);
   const pageRefs = useRef(new Map<number, HTMLDivElement>());
 
   useEffect(() => {
@@ -108,10 +110,13 @@ export function PdfEvidenceViewer({
       return;
     }
 
-    const target = pageRefs.current.get(pageNumber);
-    if (target) {
-      target.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
+    setActivePage(pageNumber);
+    window.setTimeout(() => {
+      const target = pageRefs.current.get(pageNumber);
+      if (target) {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }, 0);
   }, [pdf, selectedEvidence]);
 
   const pageNumbers = useMemo(() => {
@@ -182,6 +187,7 @@ export function PdfEvidenceViewer({
               pageNumber={pageNumber}
               evidence={selectedEvidence?.page === pageNumber ? selectedEvidence : null}
               active={selectedEvidence?.page === pageNumber}
+              shouldRender={Math.abs(pageNumber - activePage) <= 1}
               refCallback={registerPageRef}
             />
           ))}
@@ -196,6 +202,7 @@ interface PdfPageViewProps {
   pageNumber: number;
   evidence: ExtractionEvidence | null;
   active: boolean;
+  shouldRender: boolean;
   refCallback: (pageNumber: number, node: HTMLDivElement | null) => void;
 }
 
@@ -207,6 +214,7 @@ function PdfPageView({
   pageNumber,
   evidence,
   active,
+  shouldRender,
   refCallback,
 }: PdfPageViewProps) {
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -217,6 +225,7 @@ function PdfPageView({
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
   const [highlightRect, setHighlightRect] = useState<HighlightRect | null>(null);
   const [renderError, setRenderError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const node = frameRef.current;
@@ -246,6 +255,9 @@ function PdfPageView({
     let renderTask: PdfRenderTask | null = null;
 
     async function renderPage() {
+      if (!shouldRender) {
+        return;
+      }
       const page = await pdf.getPage(pageNumber);
       const baseViewport = page.getViewport({ scale: 1 });
       const availableWidth = Math.max(frameWidth - 32, 320);
@@ -287,7 +299,7 @@ function PdfPageView({
       cancelled = true;
       renderTask?.cancel();
     };
-  }, [frameWidth, pageNumber, pdf]);
+  }, [frameWidth, pageNumber, pdf, retryKey, shouldRender]);
 
   useEffect(() => {
     evidenceRef.current = evidence;
@@ -311,9 +323,17 @@ function PdfPageView({
           style={{
             width: pageSize.width ? `${pageSize.width}px` : undefined,
             height: pageSize.height ? `${pageSize.height}px` : undefined,
+            minWidth: pageSize.width ? undefined : "320px",
+            minHeight: pageSize.height ? undefined : "420px",
           }}
         >
-          <canvas ref={canvasRef} className="block" />
+          {shouldRender ? (
+            <canvas ref={canvasRef} className="block" />
+          ) : (
+            <div className="flex h-[420px] w-[320px] items-center justify-center text-xs text-muted-foreground">
+              Page {pageNumber}
+            </div>
+          )}
           {highlightRect && (
             <div
               className="pointer-events-none absolute rounded-sm border-2 border-primary bg-primary/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.08)]"
@@ -330,9 +350,13 @@ function PdfPageView({
             </div>
           )}
           {renderError && (
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background/85 text-sm text-muted-foreground">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/90 text-sm text-muted-foreground">
               <FileSearch />
-              页面渲染失败
+              <span>页面渲染失败</span>
+              <Button variant="secondary" size="sm" onClick={() => setRetryKey((value) => value + 1)}>
+                <RotateCcw data-icon="inline-start" />
+                重试
+              </Button>
             </div>
           )}
         </div>

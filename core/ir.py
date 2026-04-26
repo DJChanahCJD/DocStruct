@@ -17,6 +17,13 @@ BLOCK_TYPE_MAP = {
     "table": "table",
     "image": "image",
 }
+SRS_FIELD_LABELS = {
+    "需求编号",
+    "需求描述",
+    "优先级",
+    "功能点",
+    "验收标准",
+}
 
 
 def parse_result_to_ir(
@@ -31,14 +38,16 @@ def parse_result_to_ir(
     sections: list[str] = []
     seen_sections: set[str] = set()
     title = parse_result.title
+    normalized_doc_type = _normalize_doc_type_value(doc_type)
 
     ordered_blocks = sorted(parse_result.blocks, key=lambda block: block.order)
     for block in ordered_blocks:
         if block.type == "title":
             level = max(1, min(block.level or 1, 6))
             heading_text = block.text.strip()
-            heading_stack = heading_stack[: level - 1]
-            if heading_text:
+            is_field_label = normalized_doc_type == DocType.SRS and _is_srs_field_label_title(heading_text)
+            if heading_text and not is_field_label:
+                heading_stack = heading_stack[: level - 1]
                 heading_stack.append(heading_text)
                 section_label = " > ".join(heading_stack)
                 if section_label not in seen_sections:
@@ -67,7 +76,6 @@ def parse_result_to_ir(
         )
         elements.append(element)
 
-    normalized_doc_type = _normalize_doc_type_value(doc_type)
     outline = DocumentOutline(
         title=title,
         doc_type=normalized_doc_type,
@@ -146,6 +154,16 @@ def _normalize_doc_type_value(doc_type: str | DocType | None) -> DocType:
         return DocType(str(doc_type).strip())
     except ValueError:
         return DocType.UNKNOWN
+
+
+def _is_srs_field_label_title(value: str) -> bool:
+    """
+    Return true for SRS field labels that should not open a new section.
+    """
+    cleaned = re.sub(r"^[#\s]+", "", value or "").strip()
+    cleaned = cleaned.replace("*", "").replace("_", "").strip()
+    cleaned = re.sub(r"[\s:：]+$", "", cleaned).strip()
+    return cleaned in SRS_FIELD_LABELS
 
 
 def _extract_main_topics(sections: list[str], limit: int = 12) -> list[str]:
