@@ -13,6 +13,7 @@ DocStruct 当前聚焦于软件工程文档的结构化提取与离线评测。�
 - `unknown` 类型只保留解析后的原文与 IR，不执行结构化抽取
 - 解析结果同时保存 `parsed_content` 和 `document_ir`
 - 抽取结果统一输出五类主干对象、业务视图和证据回溯
+- 前端支持 PDF 原文与结构化结果左右对照，并可点击提取项定位 Docling bbox 证据
 - 提供离线评测脚本，便于论文实验复现
 
 ## 设计概要
@@ -41,6 +42,7 @@ Final JSON
 - `ExtractionContract` 控制每类文档抽什么，不使用任意动态 Schema
 - LLM 只负责 chunk 内局部语义抽取，Reduce 尽量使用确定性逻辑
 - 每个对象通过 `evidence_element_ids` 绑定到原文元素，最终生成 `evidence`
+- 前端通过 `evidence.object_id/page/bbox` 将结构化对象映射回 PDF 页面证据
 - `views` 表达业务分组，`extra` 只保存少量文档级补充信息
 
 ## 边界说明
@@ -211,10 +213,12 @@ Evidence Binding 回填 page / bbox / text_span
 2. 检查 `parsed_content` 是否正常生成
 3. 检查 `document_ir` 是否包含 `elements`、`outline`、`section_path`
 4. 检查 `extracted_data` 是否符合五类主干对象、`views` 和 `evidence`
-5. 上传 `unknown` 类型文档，确认只保留原文和 IR
-6. 上传超长文档，确认返回明确错误
-7. 修改 `parsed_content` 或 `extracted_data`，确认 `PATCH` 生效
-8. 删除文档后确认数据库记录与上传文件一并清理
+5. 对使用 Docling 解析的 PDF，点击前端提取项，确认 PDF 跳转到对应页并高亮 bbox
+6. 对 basic parser 或非 PDF 文档，确认前端仍可展示文本证据且不会错误绘制 PDF 框
+7. 上传 `unknown` 类型文档，确认只保留原文和 IR
+8. 上传超长文档，确认返回明确错误
+9. 修改 `parsed_content` 或 `extracted_data`，确认 `PATCH` 生效
+10. 删除文档后确认数据库记录与上传文件一并清理
 
 ## CI Test
 

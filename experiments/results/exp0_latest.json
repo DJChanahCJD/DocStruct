@@ -1,0 +1,1945 @@
+{
+  "parsed_markdown_path": "experiments/results/exp0_parsed.md",
+  "parse_meta": {
+    "parser_name": "DoclingParser",
+    "file_path": "C:/Users/DJCHAN/SE/1_CourseProject/DocStruct/experiments/assets/srs_mini.pdf",
+    "title": "智能文档系统需求规格说明书",
+    "block_count": 98,
+    "element_count": 98,
+    "source_type": "pdf",
+    "enable_ocr": false,
+    "enable_table_structure": true
+  },
+  "extracted_data": {
+    "doc_type": "srs",
+    "title": "智能文档系统需求规格说明书",
+    "summary": null,
+    "version": null,
+    "extra": {},
+    "entities": [
+      {
+        "id": "ENT-001",
+        "name": "文档解析服务",
+        "description": "文档解析",
+        "evidence_element_ids": [
+          "el-0095"
+        ],
+        "extra": {},
+        "entity_type": "service"
+      },
+      {
+        "id": "ENT-002",
+        "name": "搜索服务",
+        "description": "全文检索",
+        "evidence_element_ids": [
+          "el-0095"
+        ],
+        "extra": {},
+        "entity_type": "service"
+      }
+    ],
+    "processes": [],
+    "requirements": [
+      {
+        "id": "REQ-001",
+        "name": "用户注册",
+        "description": "系统应支持新用户通过邮箱注册账号",
+        "evidence_element_ids": [
+          "el-0013",
+          "el-0014",
+          "el-0015",
+          "el-0016",
+          "el-0017",
+          "el-0018",
+          "el-0019"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": "high",
+        "category": "user_management",
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-002",
+        "name": "功能点",
+        "description": null,
+        "evidence_element_ids": [
+          "el-0020",
+          "el-0021",
+          "el-0022",
+          "el-0023"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": null,
+        "category": "user_management",
+        "details": [
+          "用户输入邮箱、密码进行注册",
+          "系统发送验证码进行身份验证",
+          "密码需满足复杂度要求（ 8-20"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-003",
+        "name": null,
+        "description": null,
+        "evidence_element_ids": [
+          "el-0025",
+          "el-0026",
+          "el-0027"
+        ],
+        "extra": {},
+        "requirement_type": "acceptance",
+        "priority": null,
+        "category": null,
+        "details": [],
+        "acceptance_criteria": [
+          "验证码 5 分钟内有效",
+          "邮箱不可重复注册"
+        ],
+        "metric": null
+      },
+      {
+        "id": "REQ-004",
+        "name": "用户登录",
+        "description": "系统应支持用户通过账号密码登录",
+        "evidence_element_ids": [
+          "el-0028",
+          "el-0029",
+          "el-0030",
+          "el-0031",
+          "el-0032",
+          "el-0033",
+          "el-0034"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": "high",
+        "category": "user_management",
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-005",
+        "name": "用户登录",
+        "description": "用户登录功能点",
+        "evidence_element_ids": [
+          "el-0035",
+          "el-0036",
+          "el-0037",
+          "el-0038"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": null,
+        "category": "user_management",
+        "details": [
+          "支持邮箱 + 密码登录",
+          "支持 \"记住我\" 功能（7 天免登录）",
+          "连续 5 次密码错误锁定账号 30 分钟"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-006",
+        "name": null,
+        "description": null,
+        "evidence_element_ids": [
+          "el-0039",
+          "el-0040",
+          "el-0041"
+        ],
+        "extra": {},
+        "requirement_type": "other",
+        "priority": null,
+        "category": null,
+        "details": [],
+        "acceptance_criteria": [
+          "登录响应时间 < 2 秒",
+          "Token 有效期 2 小时"
+        ],
+        "metric": null
+      },
+      {
+        "id": "REQ-007",
+        "name": "文档上传",
+        "description": "系统应支持多种格式文档的上传",
+        "evidence_element_ids": [
+          "el-0043",
+          "el-0044",
+          "el-0045",
+          "el-0046",
+          "el-0047",
+          "el-0048",
+          "el-0049",
+          "el-0050",
+          "el-0051",
+          "el-0052",
+          "el-0053",
+          "el-0054"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": "high",
+        "category": "other",
+        "details": [
+          "支持格式： PDF 、 Word 、 Markdown",
+          "支持批量上传（单次最多 50 个文件）",
+          "上传过程中显示进度条"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-008",
+        "name": "文档解析",
+        "description": "系统应自动解析上传的文档，提取结构化信息",
+        "evidence_element_ids": [
+          "el-0058",
+          "el-0059",
+          "el-0060",
+          "el-0061",
+          "el-0062",
+          "el-0063",
+          "el-0064"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": "high",
+        "category": null,
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-009",
+        "name": null,
+        "description": null,
+        "evidence_element_ids": [
+          "el-0065",
+          "el-0066",
+          "el-0067",
+          "el-0068"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": null,
+        "category": null,
+        "details": [
+          "PDF 文档自动进行 OCR 文字识别",
+          "识别文档类型（ SRS/SDD/ 测试计划等）",
+          "提取文档大纲结构"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-010",
+        "name": "文档关联分析",
+        "description": "系统应自动分析文档间的关联关系",
+        "evidence_element_ids": [
+          "el-0072",
+          "el-0073",
+          "el-0074",
+          "el-0075",
+          "el-0076",
+          "el-0077",
+          "el-0078",
+          "el-0079"
+        ],
+        "extra": {},
+        "requirement_type": "functional",
+        "priority": "high",
+        "category": "data",
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-011",
+        "name": "首页加载时间",
+        "description": "首页加载时间",
+        "evidence_element_ids": [
+          "el-0088"
+        ],
+        "extra": {},
+        "requirement_type": "non_functional",
+        "priority": null,
+        "category": "performance",
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": "< 3 秒"
+      },
+      {
+        "id": "REQ-012",
+        "name": "文档搜索响应时间",
+        "description": "文档搜索响应时间",
+        "evidence_element_ids": [
+          "el-0088"
+        ],
+        "extra": {},
+        "requirement_type": "non_functional",
+        "priority": null,
+        "category": "performance",
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": "< 2 秒"
+      },
+      {
+        "id": "REQ-013",
+        "name": "并发用户数支持",
+        "description": "并发用户数支持",
+        "evidence_element_ids": [
+          "el-0088"
+        ],
+        "extra": {},
+        "requirement_type": "non_functional",
+        "priority": null,
+        "category": "performance",
+        "details": [],
+        "acceptance_criteria": [],
+        "metric": "> 1000"
+      },
+      {
+        "id": "REQ-014",
+        "name": "用户认证",
+        "description": "用户认证",
+        "evidence_element_ids": [
+          "el-0089",
+          "el-0090"
+        ],
+        "extra": {},
+        "requirement_type": "non_functional",
+        "priority": null,
+        "category": "security",
+        "details": [
+          "采用 JWT + Refresh Token 机制"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-015",
+        "name": "密码安全",
+        "description": "密码安全",
+        "evidence_element_ids": [
+          "el-0089",
+          "el-0090"
+        ],
+        "extra": {},
+        "requirement_type": "non_functional",
+        "priority": null,
+        "category": "security",
+        "details": [
+          "密码 bcrypt 加密存储"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-016",
+        "name": "传输安全",
+        "description": "传输安全",
+        "evidence_element_ids": [
+          "el-0089",
+          "el-0090"
+        ],
+        "extra": {},
+        "requirement_type": "non_functional",
+        "priority": null,
+        "category": "security",
+        "details": [
+          "全站 HTTPS ， TLS 1.3"
+        ],
+        "acceptance_criteria": [],
+        "metric": null
+      },
+      {
+        "id": "REQ-017",
+        "name": "验收标准",
+        "description": "验收标准",
+        "evidence_element_ids": [
+          "el-0096",
+          "el-0097",
+          "el-0098"
+        ],
+        "extra": {
+          "ocr_accuracy": ">95%"
+        },
+        "requirement_type": "acceptance",
+        "priority": null,
+        "category": null,
+        "details": [],
+        "acceptance_criteria": [
+          "文档上传功能: 验收方法: 功能测试, 通过标准: 支持所有声明格式",
+          "文档解析功能: 验收方法: 准确性测试, 通过标准: OCR 准确率 > 95%",
+          "权限控制功能: 验收方法: 安全测试, 通过标准: 未授权访问被拒绝"
+        ],
+        "metric": null
+      }
+    ],
+    "interfaces": [
+      {
+        "id": "INT-001",
+        "name": "企业微信 API",
+        "description": "消息推送",
+        "evidence_element_ids": [
+          "el-0092",
+          "el-0093"
+        ],
+        "extra": {},
+        "interface_type": "http",
+        "method": null,
+        "path": null,
+        "target": "企业微信"
+      },
+      {
+        "id": "INT-002",
+        "name": "GitLab API",
+        "description": "代码仓库关联",
+        "evidence_element_ids": [
+          "el-0092",
+          "el-0093"
+        ],
+        "extra": {},
+        "interface_type": "http",
+        "method": null,
+        "path": null,
+        "target": "GitLab"
+      },
+      {
+        "id": "INT-003",
+        "name": "文档解析服务",
+        "description": "文档解析",
+        "evidence_element_ids": [
+          "el-0095"
+        ],
+        "extra": {
+          "protocol": "gRPC"
+        },
+        "interface_type": "rpc",
+        "method": "gRPC",
+        "path": null,
+        "target": null
+      },
+      {
+        "id": "INT-004",
+        "name": "搜索服务",
+        "description": "全文检索",
+        "evidence_element_ids": [
+          "el-0095"
+        ],
+        "extra": {
+          "protocol": "HTTP"
+        },
+        "interface_type": "http",
+        "method": "OTHER",
+        "path": null,
+        "target": null
+      }
+    ],
+    "artifacts": [
+      {
+        "id": "ART-001",
+        "name": "验收标准",
+        "description": "Acceptance criteria for OCR and document type recognition",
+        "evidence_element_ids": [
+          "el-0069",
+          "el-0070",
+          "el-0071"
+        ],
+        "extra": {
+          "ocr_accuracy": ">95%",
+          "doc_type_accuracy": ">90%"
+        },
+        "artifact_type": "other",
+        "status": null
+      },
+      {
+        "id": "ART-002",
+        "name": "性能需求表",
+        "description": "性能需求表格，包含需求编号、描述和目标值",
+        "evidence_element_ids": [
+          "el-0088"
+        ],
+        "extra": {},
+        "artifact_type": "table",
+        "status": null
+      },
+      {
+        "id": "ART-003",
+        "name": "外部接口",
+        "description": "外部接口表格",
+        "evidence_element_ids": [
+          "el-0092",
+          "el-0093"
+        ],
+        "extra": {},
+        "artifact_type": "table",
+        "status": null
+      },
+      {
+        "id": "ART-004",
+        "name": "内部接口表",
+        "description": "内部接口列表",
+        "evidence_element_ids": [
+          "el-0095"
+        ],
+        "extra": {},
+        "artifact_type": "table",
+        "status": null
+      }
+    ],
+    "views": [
+      {
+        "view_name": "user_management requirements",
+        "view_type": "requirement_group",
+        "object_ids": [
+          "REQ-001",
+          "REQ-002",
+          "REQ-004",
+          "REQ-005"
+        ],
+        "description": null,
+        "extra": {}
+      },
+      {
+        "view_name": "performance requirements",
+        "view_type": "requirement_group",
+        "object_ids": [
+          "REQ-011",
+          "REQ-012",
+          "REQ-013"
+        ],
+        "description": null,
+        "extra": {}
+      },
+      {
+        "view_name": "security requirements",
+        "view_type": "requirement_group",
+        "object_ids": [
+          "REQ-014",
+          "REQ-015",
+          "REQ-016"
+        ],
+        "description": null,
+        "extra": {}
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "EVD-001",
+        "object_id": "ENT-001",
+        "element_id": "el-0095",
+        "text_span": "| 接口名称 | 协议 | 用途 | |--------|------|------| | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+        "section_path": [
+          "4.2 内部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.55193328857422,
+          178.221435546875,
+          493.9778747558594,
+          241.3507080078125
+        ]
+      },
+      {
+        "evidence_id": "EVD-002",
+        "object_id": "ENT-002",
+        "element_id": "el-0095",
+        "text_span": "| 接口名称 | 协议 | 用途 | |--------|------|------| | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+        "section_path": [
+          "4.2 内部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.55193328857422,
+          178.221435546875,
+          493.9778747558594,
+          241.3507080078125
+        ]
+      },
+      {
+        "evidence_id": "EVD-003",
+        "object_id": "REQ-001",
+        "element_id": "el-0013",
+        "text_span": "2.1.1 用户注册",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          758.9593115034096,
+          192.0483530637573,
+          767.540333495533
+        ]
+      },
+      {
+        "evidence_id": "EVD-004",
+        "object_id": "REQ-001",
+        "element_id": "el-0014",
+        "text_span": "需求编号 ：",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          725.124179728188,
+          162.0344624194388,
+          731.9585670294655
+        ]
+      },
+      {
+        "evidence_id": "EVD-005",
+        "object_id": "REQ-001",
+        "element_id": "el-0015",
+        "text_span": "SRS-USER-001",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          162.0344624194388,
+          724.8077157418029,
+          243.08383722400637,
+          730.827182020801
+        ]
+      },
+      {
+        "evidence_id": "EVD-006",
+        "object_id": "REQ-001",
+        "element_id": "el-0016",
+        "text_span": "需求描述",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          707.1158129265367,
+          150.0288845516712,
+          713.9502002278142
+        ]
+      },
+      {
+        "evidence_id": "EVD-007",
+        "object_id": "REQ-001",
+        "element_id": "el-0017",
+        "text_span": "：系统应支持新用户通过邮箱注册账号",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          150.0288845516712,
+          707.1158129265367,
+          354.12370830371987,
+          713.9502002278142
+        ]
+      },
+      {
+        "evidence_id": "EVD-008",
+        "object_id": "REQ-001",
+        "element_id": "el-0018",
+        "text_span": "优先级",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          689.1074461248853,
+          138.02330668390366,
+          695.9418334261628
+        ]
+      },
+      {
+        "evidence_id": "EVD-009",
+        "object_id": "REQ-001",
+        "element_id": "el-0019",
+        "text_span": "：高",
+        "section_path": [
+          "2.1.1 用户注册"
+        ],
+        "page": 2,
+        "bbox": [
+          138.02330668390366,
+          689.1074461248853,
+          162.0344624194388,
+          695.9418334261628
+        ]
+      },
+      {
+        "evidence_id": "EVD-010",
+        "object_id": "REQ-002",
+        "element_id": "el-0020",
+        "text_span": "功能点 ：",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          659.0935014554664,
+          150.0288845516712,
+          665.9278887567439
+        ]
+      },
+      {
+        "evidence_id": "EVD-011",
+        "object_id": "REQ-002",
+        "element_id": "el-0021",
+        "text_span": "用户输入邮箱、密码进行注册",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          119.79218013665896,
+          628.7630927996623,
+          288.09303003099825,
+          635.9139440873249
+        ]
+      },
+      {
+        "evidence_id": "EVD-012",
+        "object_id": "REQ-002",
+        "element_id": "el-0022",
+        "text_span": "系统发送验证码进行身份验证",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          119.79218013665896,
+          610.7547259980109,
+          288.09303003099825,
+          617.9055772856736
+        ]
+      },
+      {
+        "evidence_id": "EVD-013",
+        "object_id": "REQ-002",
+        "element_id": "el-0023",
+        "text_span": "密码需满足复杂度要求（ 8-20",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          119.79218013665896,
+          592.7463591963597,
+          286.08819229064426,
+          599.8972104840223
+        ]
+      },
+      {
+        "evidence_id": "EVD-014",
+        "object_id": "REQ-003",
+        "element_id": "el-0025",
+        "text_span": "：",
+        "section_path": [
+          "："
+        ],
+        "page": 2,
+        "bbox": [
+          150.0288845516712,
+          563.0488785133258,
+          162.0344624194388,
+          569.8832658146033
+        ]
+      },
+      {
+        "evidence_id": "EVD-015",
+        "object_id": "REQ-003",
+        "element_id": "el-0026",
+        "text_span": "验证码 5 分钟内有效",
+        "section_path": [
+          "："
+        ],
+        "page": 2,
+        "bbox": [
+          132.02051775001988,
+          532.7184698575219,
+          240.070718559928,
+          539.8693211451845
+        ]
+      },
+      {
+        "evidence_id": "EVD-016",
+        "object_id": "REQ-003",
+        "element_id": "el-0027",
+        "text_span": "邮箱不可重复注册",
+        "section_path": [
+          "："
+        ],
+        "page": 2,
+        "bbox": [
+          132.02051775001988,
+          515.0265670422556,
+          228.0651406921604,
+          521.8609543435331
+        ]
+      },
+      {
+        "evidence_id": "EVD-017",
+        "object_id": "REQ-004",
+        "element_id": "el-0028",
+        "text_span": "2.1.2 用户登录",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          480.57997469454915,
+          192.0483530637573,
+          489.16099668667255
+        ]
+      },
+      {
+        "evidence_id": "EVD-018",
+        "object_id": "REQ-004",
+        "element_id": "el-0029",
+        "text_span": "需求编号 ：",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          447.4951915360631,
+          162.0344624194388,
+          454.3295788373406
+        ]
+      },
+      {
+        "evidence_id": "EVD-019",
+        "object_id": "REQ-004",
+        "element_id": "el-0030",
+        "text_span": "SRS-USER-002",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          162.0344624194388,
+          447.1787275496778,
+          243.08383722400637,
+          453.1981938286759
+        ]
+      },
+      {
+        "evidence_id": "EVD-020",
+        "object_id": "REQ-004",
+        "element_id": "el-0031",
+        "text_span": "需求描述",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          429.4868247344117,
+          150.0288845516712,
+          436.3212120356892
+        ]
+      },
+      {
+        "evidence_id": "EVD-021",
+        "object_id": "REQ-004",
+        "element_id": "el-0032",
+        "text_span": "：系统应支持用户通过账号密码登录",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          150.0288845516712,
+          429.4868247344117,
+          342.1181304359523,
+          436.3212120356892
+        ]
+      },
+      {
+        "evidence_id": "EVD-022",
+        "object_id": "REQ-004",
+        "element_id": "el-0033",
+        "text_span": "优先级",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          411.4784579327603,
+          138.02330668390366,
+          418.3128452340378
+        ]
+      },
+      {
+        "evidence_id": "EVD-023",
+        "object_id": "REQ-004",
+        "element_id": "el-0034",
+        "text_span": "：高",
+        "section_path": [
+          "2.1.2 用户登录"
+        ],
+        "page": 2,
+        "bbox": [
+          138.02330668390366,
+          411.4784579327603,
+          162.0344624194388,
+          418.3128452340378
+        ]
+      },
+      {
+        "evidence_id": "EVD-024",
+        "object_id": "REQ-005",
+        "element_id": "el-0035",
+        "text_span": "功能点 ：",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          381.4645132633415,
+          150.0288845516712,
+          388.298900564619
+        ]
+      },
+      {
+        "evidence_id": "EVD-025",
+        "object_id": "REQ-005",
+        "element_id": "el-0036",
+        "text_span": "支持邮箱 + 密码登录",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          119.79218013665896,
+          351.1341046075373,
+          234.83586491365872,
+          358.2849558951999
+        ]
+      },
+      {
+        "evidence_id": "EVD-026",
+        "object_id": "REQ-005",
+        "element_id": "el-0037",
+        "text_span": "支持 \" 记住我 \" 功能（ 7 天免登录）",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          119.79218013665896,
+          333.12573780588593,
+          303.89724777098917,
+          340.2765890935485
+        ]
+      },
+      {
+        "evidence_id": "EVD-027",
+        "object_id": "REQ-005",
+        "element_id": "el-0038",
+        "text_span": "连续 5 次密码错误锁定账号 30 分钟",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 2,
+        "bbox": [
+          119.79218013665896,
+          315.11737100423454,
+          318.1069747004172,
+          322.26822229189713
+        ]
+      },
+      {
+        "evidence_id": "EVD-028",
+        "object_id": "REQ-006",
+        "element_id": "el-0039",
+        "text_span": "验收标准 ：",
+        "section_path": [
+          "验收标准 ："
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          285.4198903212008,
+          162.0344624194388,
+          292.2542776224783
+        ]
+      },
+      {
+        "evidence_id": "EVD-029",
+        "object_id": "REQ-006",
+        "element_id": "el-0040",
+        "text_span": "登录响应时间 < 2 秒",
+        "section_path": [
+          "验收标准 ："
+        ],
+        "page": 2,
+        "bbox": [
+          132.02051775001988,
+          255.08948166539665,
+          237.8372593806006,
+          262.24033295305946
+        ]
+      },
+      {
+        "evidence_id": "EVD-030",
+        "object_id": "REQ-006",
+        "element_id": "el-0041",
+        "text_span": "Token 有效期 2 小时",
+        "section_path": [
+          "验收标准 ："
+        ],
+        "page": 2,
+        "bbox": [
+          132.02051775001988,
+          237.08111486374548,
+          236.88759941254477,
+          244.23196615140807
+        ]
+      },
+      {
+        "evidence_id": "EVD-031",
+        "object_id": "REQ-007",
+        "element_id": "el-0043",
+        "text_span": "2.2.1 文档上传",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          158.68041811503133,
+          192.0483530637573,
+          167.2614401071545
+        ]
+      },
+      {
+        "evidence_id": "EVD-032",
+        "object_id": "REQ-007",
+        "element_id": "el-0044",
+        "text_span": "需求编号 ：",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          125.59563495654504,
+          162.0344624194388,
+          132.43002225782254
+        ]
+      },
+      {
+        "evidence_id": "EVD-033",
+        "object_id": "REQ-007",
+        "element_id": "el-0045",
+        "text_span": "SRS-DOC-001",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          162.0344624194388,
+          125.27917097015995,
+          237.74933127864568,
+          131.2986372491581
+        ]
+      },
+      {
+        "evidence_id": "EVD-034",
+        "object_id": "REQ-007",
+        "element_id": "el-0046",
+        "text_span": "需求描述",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          107.58726815489365,
+          150.0288845516712,
+          114.42165545617115
+        ]
+      },
+      {
+        "evidence_id": "EVD-035",
+        "object_id": "REQ-007",
+        "element_id": "el-0047",
+        "text_span": "：系统应支持多种格式文档的上传",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          150.0288845516712,
+          107.58726815489365,
+          330.11255256818475,
+          114.42165545617115
+        ]
+      },
+      {
+        "evidence_id": "EVD-036",
+        "object_id": "REQ-007",
+        "element_id": "el-0048",
+        "text_span": "优先级",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          89.57890135324249,
+          138.02330668390366,
+          96.41328865451976
+        ]
+      },
+      {
+        "evidence_id": "EVD-037",
+        "object_id": "REQ-007",
+        "element_id": "el-0049",
+        "text_span": "：高",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          138.02330668390366,
+          89.57890135324249,
+          162.0344624194388,
+          96.41328865451976
+        ]
+      },
+      {
+        "evidence_id": "EVD-038",
+        "object_id": "REQ-007",
+        "element_id": "el-0050",
+        "text_span": "功能点 ：",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          102.00657308060094,
+          59.56495668382365,
+          150.0288845516712,
+          66.39934398510093
+        ]
+      },
+      {
+        "evidence_id": "EVD-039",
+        "object_id": "REQ-007",
+        "element_id": "el-0051",
+        "text_span": "位，包含大小写字母和数字）",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 2,
+        "bbox": [
+          286.0881960724012,
+          593.0628231827448,
+          442.1607083533796,
+          599.8972104840223
+        ]
+      },
+      {
+        "evidence_id": "EVD-040",
+        "object_id": "REQ-007",
+        "element_id": "el-0052",
+        "text_span": "支持格式： PDF 、 Word 、 Markdown",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 3,
+        "bbox": [
+          119.79218013665896,
+          802.0935694575588,
+          317.1397285116915,
+          809.2444207452212
+        ]
+      },
+      {
+        "evidence_id": "EVD-041",
+        "object_id": "REQ-007",
+        "element_id": "el-0053",
+        "text_span": "支持批量上传（单次最多 50 个文件）",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 3,
+        "bbox": [
+          119.79218013665896,
+          784.0852026559074,
+          330.11255256818475,
+          791.23605394357
+        ]
+      },
+      {
+        "evidence_id": "EVD-042",
+        "object_id": "REQ-007",
+        "element_id": "el-0054",
+        "text_span": "上传过程中显示进度条",
+        "section_path": [
+          "2.2.1 文档上传"
+        ],
+        "page": 3,
+        "bbox": [
+          119.79218013665896,
+          766.076835854256,
+          252.07629642769555,
+          773.2276871419186
+        ]
+      },
+      {
+        "evidence_id": "EVD-043",
+        "object_id": "REQ-008",
+        "element_id": "el-0058",
+        "text_span": "2.2.2 文档解析",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          653.9104513524459,
+          192.0483530637573,
+          662.491473344569
+        ]
+      },
+      {
+        "evidence_id": "EVD-044",
+        "object_id": "REQ-008",
+        "element_id": "el-0059",
+        "text_span": "需求编号 ：",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          620.8256681939596,
+          162.0344624194388,
+          627.6600554952369
+        ]
+      },
+      {
+        "evidence_id": "EVD-045",
+        "object_id": "REQ-008",
+        "element_id": "el-0060",
+        "text_span": "SRS-DOC-002",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          162.0344624194388,
+          620.5092042075743,
+          237.74933127864568,
+          626.5286704865724
+        ]
+      },
+      {
+        "evidence_id": "EVD-046",
+        "object_id": "REQ-008",
+        "element_id": "el-0061",
+        "text_span": "需求描述",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          602.8173013923082,
+          150.0288845516712,
+          609.6516886935855
+        ]
+      },
+      {
+        "evidence_id": "EVD-047",
+        "object_id": "REQ-008",
+        "element_id": "el-0062",
+        "text_span": "：系统应自动解析上传的文档，提取结构化信息",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          150.0288845516712,
+          602.8173013923082,
+          402.14601977479015,
+          609.6516886935855
+        ]
+      },
+      {
+        "evidence_id": "EVD-048",
+        "object_id": "REQ-008",
+        "element_id": "el-0063",
+        "text_span": "优先级",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          584.808934590657,
+          138.02330668390366,
+          591.6433218919341
+        ]
+      },
+      {
+        "evidence_id": "EVD-049",
+        "object_id": "REQ-008",
+        "element_id": "el-0064",
+        "text_span": "：高",
+        "section_path": [
+          "2.2.2 文档解析"
+        ],
+        "page": 3,
+        "bbox": [
+          138.02330668390366,
+          584.808934590657,
+          162.0344624194388,
+          591.6433218919341
+        ]
+      },
+      {
+        "evidence_id": "EVD-050",
+        "object_id": "REQ-009",
+        "element_id": "el-0065",
+        "text_span": "功能点 ：",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          554.794989921238,
+          150.0288845516712,
+          561.6293772225152
+        ]
+      },
+      {
+        "evidence_id": "EVD-051",
+        "object_id": "REQ-009",
+        "element_id": "el-0066",
+        "text_span": "PDF 文档自动进行 OCR 文字识别",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 3,
+        "bbox": [
+          119.79218013665896,
+          524.4645812654338,
+          307.78968122030443,
+          531.6154325530962
+        ]
+      },
+      {
+        "evidence_id": "EVD-052",
+        "object_id": "REQ-009",
+        "element_id": "el-0067",
+        "text_span": "识别文档类型（ SRS/SDD/ 测试计划等）",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 3,
+        "bbox": [
+          119.79218013665896,
+          506.45621446378243,
+          340.142605094325,
+          513.6070657514448
+        ]
+      },
+      {
+        "evidence_id": "EVD-053",
+        "object_id": "REQ-009",
+        "element_id": "el-0068",
+        "text_span": "提取文档大纲结构",
+        "section_path": [
+          "功能点 ："
+        ],
+        "page": 3,
+        "bbox": [
+          119.79218013665896,
+          488.44784766213104,
+          228.0651406921604,
+          495.59869894979363
+        ]
+      },
+      {
+        "evidence_id": "EVD-054",
+        "object_id": "REQ-010",
+        "element_id": "el-0072",
+        "text_span": "2.3 智能分析模块",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          370.66458199375495,
+          228.06510017333508,
+          380.6757737964823
+        ]
+      },
+      {
+        "evidence_id": "EVD-055",
+        "object_id": "REQ-010",
+        "element_id": "el-0073",
+        "text_span": "2.3.1 文档关联分析",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          332.0108947729278,
+          220.86173544430778,
+          340.591916765051
+        ]
+      },
+      {
+        "evidence_id": "EVD-056",
+        "object_id": "REQ-010",
+        "element_id": "el-0074",
+        "text_span": "需求编号 ：",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          298.92611161444177,
+          162.0344624194388,
+          305.76049891571904
+        ]
+      },
+      {
+        "evidence_id": "EVD-057",
+        "object_id": "REQ-010",
+        "element_id": "el-0075",
+        "text_span": "SRS-ANALYSIS-001",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          162.0344624194388,
+          298.60964762805645,
+          270.56535531194305,
+          304.6291139070546
+        ]
+      },
+      {
+        "evidence_id": "EVD-058",
+        "object_id": "REQ-010",
+        "element_id": "el-0076",
+        "text_span": "需求描述",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          280.9177448127904,
+          150.0288845516712,
+          287.75213211406765
+        ]
+      },
+      {
+        "evidence_id": "EVD-059",
+        "object_id": "REQ-010",
+        "element_id": "el-0077",
+        "text_span": "：系统应自动分析文档间的关联关系",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          150.0288845516712,
+          280.9177448127904,
+          342.1181304359523,
+          287.75213211406765
+        ]
+      },
+      {
+        "evidence_id": "EVD-060",
+        "object_id": "REQ-010",
+        "element_id": "el-0078",
+        "text_span": "优先级",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          262.909378011139,
+          138.02330668390366,
+          269.74376531241626
+        ]
+      },
+      {
+        "evidence_id": "EVD-061",
+        "object_id": "REQ-010",
+        "element_id": "el-0079",
+        "text_span": "：高",
+        "section_path": [
+          "2.3 智能分析模块"
+        ],
+        "page": 3,
+        "bbox": [
+          138.02330668390366,
+          262.909378011139,
+          162.0344624194388,
+          269.74376531241626
+        ]
+      },
+      {
+        "evidence_id": "EVD-062",
+        "object_id": "REQ-011",
+        "element_id": "el-0088",
+        "text_span": "| 需求编号 | 需求描述 | 目标值 | |--------------|----------|--------| | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+        "section_path": [
+          "3.1 性能需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.7647705078125,
+          634.4471740722656,
+          493.7664794921875,
+          718.801513671875
+        ]
+      },
+      {
+        "evidence_id": "EVD-063",
+        "object_id": "REQ-012",
+        "element_id": "el-0088",
+        "text_span": "| 需求编号 | 需求描述 | 目标值 | |--------------|----------|--------| | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+        "section_path": [
+          "3.1 性能需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.7647705078125,
+          634.4471740722656,
+          493.7664794921875,
+          718.801513671875
+        ]
+      },
+      {
+        "evidence_id": "EVD-064",
+        "object_id": "REQ-013",
+        "element_id": "el-0088",
+        "text_span": "| 需求编号 | 需求描述 | 目标值 | |--------------|----------|--------| | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+        "section_path": [
+          "3.1 性能需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.7647705078125,
+          634.4471740722656,
+          493.7664794921875,
+          718.801513671875
+        ]
+      },
+      {
+        "evidence_id": "EVD-065",
+        "object_id": "REQ-014",
+        "element_id": "el-0089",
+        "text_span": "3.2 安全需求",
+        "section_path": [
+          "3.2 安全需求"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          602.5224187570117,
+          194.44949114776932,
+          612.533610559739
+        ]
+      },
+      {
+        "evidence_id": "EVD-066",
+        "object_id": "REQ-014",
+        "element_id": "el-0090",
+        "text_span": "| 需求编号 | 需求描述 | 具体要求 | |-------------|--------|---------------------------| | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS ， TLS 1.3 |",
+        "section_path": [
+          "3.2 安全需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.67483520507812,
+          494.0260925292969,
+          493.91705322265625,
+          577.253173828125
+        ]
+      },
+      {
+        "evidence_id": "EVD-067",
+        "object_id": "REQ-015",
+        "element_id": "el-0089",
+        "text_span": "3.2 安全需求",
+        "section_path": [
+          "3.2 安全需求"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          602.5224187570117,
+          194.44949114776932,
+          612.533610559739
+        ]
+      },
+      {
+        "evidence_id": "EVD-068",
+        "object_id": "REQ-015",
+        "element_id": "el-0090",
+        "text_span": "| 需求编号 | 需求描述 | 具体要求 | |-------------|--------|---------------------------| | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS ， TLS 1.3 |",
+        "section_path": [
+          "3.2 安全需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.67483520507812,
+          494.0260925292969,
+          493.91705322265625,
+          577.253173828125
+        ]
+      },
+      {
+        "evidence_id": "EVD-069",
+        "object_id": "REQ-016",
+        "element_id": "el-0089",
+        "text_span": "3.2 安全需求",
+        "section_path": [
+          "3.2 安全需求"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          602.5224187570117,
+          194.44949114776932,
+          612.533610559739
+        ]
+      },
+      {
+        "evidence_id": "EVD-070",
+        "object_id": "REQ-016",
+        "element_id": "el-0090",
+        "text_span": "| 需求编号 | 需求描述 | 具体要求 | |-------------|--------|---------------------------| | SRS-SEC-001 | 用户认证 | 采用 JWT + Refresh Token 机制 | | SRS-SEC-002 | 密码安全 | 密码 bcrypt 加密存储 | | SRS-SEC-003 | 传输安全 | 全站 HTTPS ， TLS 1.3 |",
+        "section_path": [
+          "3.2 安全需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.67483520507812,
+          494.0260925292969,
+          493.91705322265625,
+          577.253173828125
+        ]
+      },
+      {
+        "evidence_id": "EVD-071",
+        "object_id": "REQ-017",
+        "element_id": "el-0096",
+        "text_span": "5. 验收标准",
+        "section_path": [
+          "5. 验收标准"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          120.82007385133477,
+          210.05673712342684,
+          133.69160572219891
+        ]
+      },
+      {
+        "evidence_id": "EVD-072",
+        "object_id": "REQ-017",
+        "element_id": "el-0097",
+        "text_span": "| 验收项 | 验收方法 | 通过标准 | |--------|--------|----------| | 文档上传功能 | 功能测试 | 支持所有声明格式 |",
+        "section_path": [
+          "5. 验收标准"
+        ],
+        "page": 4,
+        "bbox": [
+          100.52898406982422,
+          44.2994384765625,
+          493.799560546875,
+          87.6243896484375
+        ]
+      },
+      {
+        "evidence_id": "EVD-073",
+        "object_id": "REQ-017",
+        "element_id": "el-0098",
+        "text_span": "| 验收项 | 验收方法 | 通过标准 | |--------|--------|---------------| | 文档解析功能 | 准确性测试 | OCR 准确率 > 95% | | 权限控制功能 | 安全测试 | 未授权访问被拒绝 |",
+        "section_path": [
+          "5. 验收标准"
+        ],
+        "page": 5,
+        "bbox": [
+          100.83660888671875,
+          749.8829803466797,
+          493.84368896484375,
+          813.665433883667
+        ]
+      },
+      {
+        "evidence_id": "EVD-074",
+        "object_id": "INT-001",
+        "element_id": "el-0092",
+        "text_span": "4.1 外部接口",
+        "section_path": [
+          "4.1 外部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          387.17236575393065,
+          194.44949114776932,
+          397.183557556658
+        ]
+      },
+      {
+        "evidence_id": "EVD-075",
+        "object_id": "INT-001",
+        "element_id": "el-0093",
+        "text_span": "| 接口名称 | 协议 | 用途 | |------------|------|--------| | 企业微信 API | HTTP | 消息推送 | | GitLab API | HTTP | 代码仓库关联 |",
+        "section_path": [
+          "4.1 外部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.4151611328125,
+          298.4437255859375,
+          493.9937438964844,
+          362.390625
+        ]
+      },
+      {
+        "evidence_id": "EVD-076",
+        "object_id": "INT-002",
+        "element_id": "el-0092",
+        "text_span": "4.1 外部接口",
+        "section_path": [
+          "4.1 外部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          387.17236575393065,
+          194.44949114776932,
+          397.183557556658
+        ]
+      },
+      {
+        "evidence_id": "EVD-077",
+        "object_id": "INT-002",
+        "element_id": "el-0093",
+        "text_span": "| 接口名称 | 协议 | 用途 | |------------|------|--------| | 企业微信 API | HTTP | 消息推送 | | GitLab API | HTTP | 代码仓库关联 |",
+        "section_path": [
+          "4.1 外部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.4151611328125,
+          298.4437255859375,
+          493.9937438964844,
+          362.390625
+        ]
+      },
+      {
+        "evidence_id": "EVD-078",
+        "object_id": "INT-003",
+        "element_id": "el-0095",
+        "text_span": "| 接口名称 | 协议 | 用途 | |--------|------|------| | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+        "section_path": [
+          "4.2 内部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.55193328857422,
+          178.221435546875,
+          493.9778747558594,
+          241.3507080078125
+        ]
+      },
+      {
+        "evidence_id": "EVD-079",
+        "object_id": "INT-004",
+        "element_id": "el-0095",
+        "text_span": "| 接口名称 | 协议 | 用途 | |--------|------|------| | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+        "section_path": [
+          "4.2 内部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.55193328857422,
+          178.221435546875,
+          493.9778747558594,
+          241.3507080078125
+        ]
+      },
+      {
+        "evidence_id": "EVD-080",
+        "object_id": "ART-001",
+        "element_id": "el-0069",
+        "text_span": "验收标准 ：",
+        "section_path": [
+          "验收标准 ："
+        ],
+        "page": 3,
+        "bbox": [
+          102.00657308060094,
+          458.7503669790975,
+          162.0344624194388,
+          465.58475428037457
+        ]
+      },
+      {
+        "evidence_id": "EVD-081",
+        "object_id": "ART-001",
+        "element_id": "el-0070",
+        "text_span": "OCR 识别准确率 > 95%",
+        "section_path": [
+          "验收标准 ："
+        ],
+        "page": 3,
+        "bbox": [
+          132.02051775001988,
+          428.41995832329314,
+          254.5149297322253,
+          435.57080961095573
+        ]
+      },
+      {
+        "evidence_id": "EVD-082",
+        "object_id": "ART-001",
+        "element_id": "el-0071",
+        "text_span": "文档类型识别准确率 > 90%",
+        "section_path": [
+          "验收标准 ："
+        ],
+        "page": 3,
+        "bbox": [
+          132.02051775001988,
+          410.41159152164175,
+          274.850549290296,
+          417.56244280930434
+        ]
+      },
+      {
+        "evidence_id": "EVD-083",
+        "object_id": "ART-002",
+        "element_id": "el-0088",
+        "text_span": "| 需求编号 | 需求描述 | 目标值 | |--------------|----------|--------| | SRS-PERF-001 | 首页加载时间 | < 3 秒 | | SRS-PERF-002 | 文档搜索响应时间 | < 2 秒 | | SRS-PERF-003 | 并发用户数支持 | > 1000 |",
+        "section_path": [
+          "3.1 性能需求"
+        ],
+        "page": 4,
+        "bbox": [
+          100.7647705078125,
+          634.4471740722656,
+          493.7664794921875,
+          718.801513671875
+        ]
+      },
+      {
+        "evidence_id": "EVD-084",
+        "object_id": "ART-003",
+        "element_id": "el-0092",
+        "text_span": "4.1 外部接口",
+        "section_path": [
+          "4.1 外部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          102.00657308060094,
+          387.17236575393065,
+          194.44949114776932,
+          397.183557556658
+        ]
+      },
+      {
+        "evidence_id": "EVD-085",
+        "object_id": "ART-003",
+        "element_id": "el-0093",
+        "text_span": "| 接口名称 | 协议 | 用途 | |------------|------|--------| | 企业微信 API | HTTP | 消息推送 | | GitLab API | HTTP | 代码仓库关联 |",
+        "section_path": [
+          "4.1 外部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.4151611328125,
+          298.4437255859375,
+          493.9937438964844,
+          362.390625
+        ]
+      },
+      {
+        "evidence_id": "EVD-086",
+        "object_id": "ART-004",
+        "element_id": "el-0095",
+        "text_span": "| 接口名称 | 协议 | 用途 | |--------|------|------| | 文档解析服务 | gRPC | 文档解析 | | 搜索服务 | HTTP | 全文检索 |",
+        "section_path": [
+          "4.2 内部接口"
+        ],
+        "page": 4,
+        "bbox": [
+          100.55193328857422,
+          178.221435546875,
+          493.9778747558594,
+          241.3507080078125
+        ]
+      }
+    ]
+  },
+  "extraction_meta": {
+    "mode": "ir-map-reduce",
+    "chunk_count": 30,
+    "failed_chunks": 14,
+    "failed_chunk_indexes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      9,
+      14,
+      16,
+      21,
+      22,
+      23,
+      26
+    ],
+    "partial": true,
+    "element_count": 98,
+    "section_count": 25,
+    "evidence_count": 86,
+    "objects_total": 27,
+    "objects_with_evidence": 27,
+    "evidence_coverage": 1.0,
+    "doc_type": "srs",
+    "model_name": "deepseek-v4-flash",
+    "supported": true
+  }
+}

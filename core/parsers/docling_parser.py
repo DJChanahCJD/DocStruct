@@ -146,19 +146,20 @@ class DoclingParser:
         # 使用 iterate_items 遍历文档元素
         if hasattr(document, "iterate_items"):
             for idx, (item, level) in enumerate(document.iterate_items()):
-                element = self._convert_element(item, idx)
+                element = self._convert_element(item, idx, document)
                 if element:
                     elements.append(element)
 
         return elements
 
-    def _convert_element(self, item, idx: int) -> ParsedElement | None:
+    def _convert_element(self, item, idx: int, document) -> ParsedElement | None:
         """
         将 Docling 元素转换为 ParsedElement。
 
         Args:
             item: Docling 的元素对象
             idx: 元素索引
+            document: Docling 的 DoclingDocument 对象
 
         Returns:
             ParsedElement 或 None
@@ -176,7 +177,7 @@ class DoclingParser:
             text = str(item.text)
         elif hasattr(item, "export_to_markdown"):
             try:
-                text = item.export_to_markdown()
+                text = item.export_to_markdown(doc=document)
             except Exception:
                 pass
 
@@ -193,7 +194,7 @@ class DoclingParser:
             text=text,
             page=page,
             bbox=bbox,
-            extra=self._extract_extra(item, item_type),
+            extra=self._extract_extra(item, item_type, document),
         )
 
     def _convert_text_element(self, text_item, idx: int) -> ParsedElement | None:
@@ -272,7 +273,7 @@ class DoclingParser:
 
         return page, bbox
 
-    def _extract_extra(self, item, item_type: str) -> dict[str, Any]:
+    def _extract_extra(self, item, item_type: str, document) -> dict[str, Any]:
         """提取额外属性。"""
         extra: dict[str, Any] = {}
 
@@ -287,7 +288,7 @@ class DoclingParser:
         if item_type == "table":
             if hasattr(item, "export_to_dataframe"):
                 try:
-                    df = item.export_to_dataframe()
+                    df = item.export_to_dataframe(doc=document)
                     extra["rows"] = [df.columns.tolist()] + df.values.tolist()
                 except Exception:
                     pass

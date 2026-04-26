@@ -195,7 +195,10 @@ class DocumentElement(BaseModel):
     markdown: Optional[str] = Field(None, description="Markdown rendering for this element")
     section_path: list[str] = Field(default_factory=list, description="Heading path containing this element")
     page: Optional[int] = Field(None, description="Source page number when available")
-    bbox: Optional[list[float]] = Field(None, description="Bounding box [x0, y0, x1, y1] when available")
+    bbox: Optional[list[float]] = Field(
+        None,
+        description="PDF point bbox [x0, y0, x1, y1] when available, usually from Docling provenance",
+    )
     order: int = Field(..., description="Reading order")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Parser-specific metadata")
 
@@ -415,7 +418,10 @@ class Evidence(BaseModel):
     text_span: Optional[str] = Field(None, description="Source text span")
     section_path: list[str] = Field(default_factory=list, description="Source section path")
     page: Optional[int] = Field(None, description="Source page when available")
-    bbox: Optional[list[float]] = Field(None, description="Source bbox when available")
+    bbox: Optional[list[float]] = Field(
+        None,
+        description="Source PDF point bbox [x0, y0, x1, y1] when available for frontend evidence highlighting",
+    )
 
 
 # =========================

@@ -18,28 +18,40 @@ import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 
+import { ExtractionResultPanel } from "@/components/extraction-result-panel";
+import { PdfEvidenceViewer } from "@/components/pdf-evidence-viewer";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocument, useDocumentFile, useUpdateDocument } from "@/hooks/use-api";
+import {
+  buildExtractionItems,
+  findFirstPositionedEvidence,
+  type ExtractionEvidence,
+} from "@/lib/evidence";
 
 interface DocPreviewPanelProps {
   docId: number | null;
   onRawDirtyChange?: (dirty: boolean) => void;
 }
 
+/**
+ * Coordinate document preview, evidence navigation, Markdown edits, and JSON edits.
+ */
 export function DocPreviewPanel({
   docId,
   onRawDirtyChange,
 }: DocPreviewPanelProps) {
   const { data: doc, isLoading } = useDocument(docId);
   const { data: documentFile, isLoading: isFileLoading } = useDocumentFile(docId);
-  const [tab, setTab] = useState("json");
+  const [tab, setTab] = useState("evidence");
+  const [resultTab, setResultTab] = useState("items");
   const [rawDraft, setRawDraft] = useState("");
   const [savedRawContent, setSavedRawContent] = useState("");
   const [jsonDraft, setJsonDraft] = useState("");
   const [savedJsonContent, setSavedJsonContent] = useState("");
+  const [selectedEvidence, setSelectedEvidence] = useState<ExtractionEvidence | null>(null);
   const [sourcePreview, setSourcePreview] = useState<SourcePreviewState>({
     kind: "empty",
   });
@@ -55,9 +67,25 @@ export function DocPreviewPanel({
     [jsonDraft, savedJsonContent],
   );
 
+  const extractionItems = useMemo(
+    () => buildExtractionItems(doc?.extracted_data),
+    [doc?.extracted_data],
+  );
+
   useEffect(() => {
-    setTab("raw");
+    setTab("evidence");
+    setResultTab("items");
+    setSelectedEvidence(null);
   }, [docId]);
+
+  useEffect(() => {
+    setSelectedEvidence((current) => {
+      if (current && containsEvidence(extractionItems, current)) {
+        return current;
+      }
+      return findFirstPositionedEvidence(extractionItems);
+    });
+  }, [extractionItems]);
 
   useEffect(() => {
     const nextRawContent = doc?.parsed_content ?? "";
@@ -88,9 +116,8 @@ export function DocPreviewPanel({
       const blob = documentFile.blob;
 
       if (extension === "pdf" || documentFile.contentType.includes("pdf")) {
-        objectUrl = URL.createObjectURL(blob);
         if (!disposed) {
-          setSourcePreview({ kind: "pdf", url: objectUrl });
+          setSourcePreview({ kind: "pdf" });
         }
         return;
       }
@@ -240,8 +267,8 @@ export function DocPreviewPanel({
       <Tabs value={tab} onValueChange={handleTabChange} className="flex flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b px-4 py-2">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="raw">原文</TabsTrigger>
-            <TabsTrigger value="json">JSON</TabsTrigger>
+            <TabsTrigger value="evidence">证据对照</TabsTrigger>
+            <TabsTrigger value="raw">Markdown 校对</TabsTrigger>
           </TabsList>
         </div>
 
@@ -252,94 +279,122 @@ export function DocPreviewPanel({
           </div>
         )}
 
-        <TabsContent value="json" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <div className="flex h-full min-h-0 flex-col">
+        <TabsContent value="evidence" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
+          <div className="flex h-full min-h-0 flex-col bg-background">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  结构化结果
+                  证据定位
                 </p>
-                <h3 className="mt-1 text-base font-semibold text-foreground">可直接编辑 JSON</h3>
+                <h3 className="mt-1 text-base font-semibold text-foreground">原始 PDF 与提取结果对照</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCopyJson}
-                  disabled={!jsonDraft}
-                >
-                  <Copy className="mr-1.5 h-3.5 w-3.5" />
-                  复制
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDownloadJson}
-                  disabled={!jsonDraft}
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  下载
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleResetJson}
-                  disabled={!hasJsonChanges || updateDocument.isPending}
-                >
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                  恢复
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSaveJson}
-                  disabled={!hasJsonChanges || updateDocument.isPending}
-                >
-                  {updateDocument.isPending ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
-                  )}
-                  保存 JSON
-                </Button>
+              <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                {extractionItems.length > 0 ? `${extractionItems.length} 个对象` : "暂无对象"}
               </div>
             </div>
-            <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <section className="flex min-h-0 flex-col rounded-2xl border bg-muted/15 shadow-sm">
-                <div className="border-b px-4 py-3">
+
+            <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/15 shadow-sm">
+                <div className="flex items-center justify-between border-b px-4 py-3">
                   <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                    Markdown 对照
+                    原始文档 PDF
                   </p>
+                  {selectedEvidence?.evidenceId && (
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {selectedEvidence.evidenceId}
+                    </span>
+                  )}
                 </div>
-                <ScrollArea className="min-h-0 flex-1">
-                  <div className="prose prose-sm max-w-none px-5 py-4 text-foreground prose-headings:font-semibold prose-pre:bg-muted">
-                    {rawDraft ? (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeKatex, rehypeHighlight]}
-                      >
-                        {rawDraft}
-                      </ReactMarkdown>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">暂无 Markdown 内容</div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </section>
-              <section className="flex min-h-0 flex-col rounded-2xl border bg-background shadow-sm">
-                <div className="border-b px-4 py-3">
-                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                    结构化结果
-                  </p>
-                </div>
-                <div className="min-h-0 flex-1 p-4">
-                  <Textarea
-                    value={jsonDraft}
-                    onChange={(event) => setJsonDraft(event.target.value)}
-                    placeholder="这里显示结构化提取结果，可直接修正 JSON。"
-                    spellCheck={false}
-                    className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                <div className="min-h-0 flex-1">
+                  <SourcePreview
+                    preview={sourcePreview}
+                    isLoading={isFileLoading}
+                    file={documentFile}
+                    selectedEvidence={selectedEvidence}
                   />
                 </div>
+              </section>
+
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
+                <Tabs value={resultTab} onValueChange={setResultTab} className="flex min-h-0 flex-1 flex-col gap-0">
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+                    <div>
+                      <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                        结构化结果
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        点击对象定位对应原文证据
+                      </p>
+                    </div>
+                    <TabsList>
+                      <TabsTrigger value="items">提取项</TabsTrigger>
+                      <TabsTrigger value="json">JSON</TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="items" className="m-0 min-h-0 flex-1 overflow-hidden focus-visible:outline-none">
+                    <ExtractionResultPanel
+                      items={extractionItems}
+                      selectedEvidence={selectedEvidence}
+                      onSelectEvidence={setSelectedEvidence}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="json" className="m-0 min-h-0 flex-1 overflow-hidden focus-visible:outline-none">
+                    <div className="flex h-full min-h-0 flex-col">
+                      <div className="flex flex-wrap items-center justify-end gap-2 border-b px-4 py-3">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleCopyJson}
+                          disabled={!jsonDraft}
+                        >
+                          <Copy data-icon="inline-start" />
+                          复制
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleDownloadJson}
+                          disabled={!jsonDraft}
+                        >
+                          <Download data-icon="inline-start" />
+                          下载
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleResetJson}
+                          disabled={!hasJsonChanges || updateDocument.isPending}
+                        >
+                          <RotateCcw data-icon="inline-start" />
+                          恢复
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveJson}
+                          disabled={!hasJsonChanges || updateDocument.isPending}
+                        >
+                          {updateDocument.isPending ? (
+                            <Loader2 data-icon="inline-start" className="animate-spin" />
+                          ) : (
+                            <Save data-icon="inline-start" />
+                          )}
+                          保存 JSON
+                        </Button>
+                      </div>
+                      <div className="min-h-0 flex-1 p-4">
+                        <Textarea
+                          value={jsonDraft}
+                          onChange={(event) => setJsonDraft(event.target.value)}
+                          placeholder="这里显示结构化提取结果，可直接修正 JSON。"
+                          spellCheck={false}
+                          className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </section>
             </div>
           </div>
@@ -368,7 +423,7 @@ export function DocPreviewPanel({
                   onClick={handleResetRaw}
                   disabled={!hasRawChanges || updateDocument.isPending}
                 >
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  <RotateCcw data-icon="inline-start" />
                   恢复
                 </Button>
                 <Button
@@ -377,9 +432,9 @@ export function DocPreviewPanel({
                   disabled={!hasRawChanges || updateDocument.isPending}
                 >
                   {updateDocument.isPending ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    <Loader2 data-icon="inline-start" className="animate-spin" />
                   ) : (
-                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                    <Save data-icon="inline-start" />
                   )}
                   保存 Markdown
                 </Button>
@@ -387,7 +442,7 @@ export function DocPreviewPanel({
             </div>
 
             <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-muted/15 shadow-sm">
+              <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/15 shadow-sm">
                 <div className="flex items-center justify-between border-b px-4 py-3">
                   <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
                     原始文档对照
@@ -409,10 +464,12 @@ export function DocPreviewPanel({
                   <SourcePreview
                     preview={sourcePreview}
                     isLoading={isFileLoading}
+                    file={documentFile}
+                    selectedEvidence={null}
                   />
                 </div>
               </section>
-              <section className="flex min-h-0 flex-col rounded-2xl border bg-background shadow-sm">
+              <section className="flex min-h-0 flex-col rounded-lg border bg-background shadow-sm">
                 <div className="border-b px-4 py-3">
                   <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
                     Markdown 编辑
@@ -438,18 +495,25 @@ export function DocPreviewPanel({
 
 type SourcePreviewState =
   | { kind: "empty" }
-  | { kind: "pdf"; url: string }
+  | { kind: "pdf" }
   | { kind: "text"; text: string }
   | { kind: "markdown"; text: string }
   | { kind: "download"; url: string; fileName: string }
   | { kind: "error" };
 
+/**
+ * Render the best available source preview for the original uploaded file.
+ */
 function SourcePreview({
   preview,
   isLoading,
+  file,
+  selectedEvidence,
 }: {
   preview: SourcePreviewState;
   isLoading: boolean;
+  file: { blob: Blob; contentType: string; fileName: string } | undefined;
+  selectedEvidence: ExtractionEvidence | null;
 }) {
   if (isLoading) {
     return (
@@ -461,7 +525,13 @@ function SourcePreview({
   }
 
   if (preview.kind === "pdf") {
-    return <iframe title="原始 PDF 预览" src={preview.url} className="h-full w-full" />;
+    return (
+      <PdfEvidenceViewer
+        file={file}
+        isLoading={isLoading}
+        selectedEvidence={selectedEvidence}
+      />
+    );
   }
 
   if (preview.kind === "text") {
@@ -516,7 +586,27 @@ function SourcePreview({
   );
 }
 
+/**
+ * Read a lower-case extension from a file name.
+ */
 function getFileExtension(fileName: string): string {
   const ext = fileName.split(".").pop();
   return ext ? ext.toLowerCase() : "";
+}
+
+/**
+ * Check whether the current selected evidence still exists in fresh extraction data.
+ */
+function containsEvidence(
+  items: ReturnType<typeof buildExtractionItems>,
+  evidence: ExtractionEvidence,
+): boolean {
+  return items.some((item) =>
+    item.evidence.some((entry) => {
+      if (entry.evidenceId && evidence.evidenceId) {
+        return entry.evidenceId === evidence.evidenceId;
+      }
+      return entry.objectId === evidence.objectId && entry.elementId === evidence.elementId;
+    }),
+  );
 }

@@ -4,12 +4,12 @@
 
 ### 实验0：最小验证实验，单文档快速验证系统核心功能
 
-实验0是开发期快速测试脚本，用于验证单个文档从解析到结构化抽取的核心链路是否可用。
+实验0是开发期快速测试脚本，用于验证单个 PDF 从解析到结构化抽取的核心链路是否可用。
 
 默认样本文档：
 
 ```text
-experiments/assets/srs_mini.md
+experiments/assets/srs_mini.pdf
 ```
 
 运行：
@@ -18,25 +18,20 @@ experiments/assets/srs_mini.md
 uv run python experiments/exp0.py
 ```
 
-只验证解析链路，不调用 LLM：
+固定输出：
 
-```bash
-uv run python experiments/exp0.py --parse-only
+```text
+experiments/results/exp0_parsed.md
+experiments/results/exp0_latest.json
 ```
 
-写出完整结果：
+控制台会输出 parser、文档块数、IR 元素数、抽取模型、支持状态和结果路径。JSON 包含精简后的 `parse_meta.document_ir`、`extracted_data`、`extraction_meta`。
 
-```bash
-uv run python experiments/exp0.py --output experiments/results/exp0_latest.json
-```
+说明：
 
-可选参数：
-
-```bash
-uv run python experiments/exp0.py --file experiments/assets/srs_mini.md --doc-type srs
-```
-
-控制台会输出 parser、文档块数、IR 元素数、抽取模型和支持状态。完整 JSON 包含 `markdown_content`、`parse_meta`、`extracted_data`、`extraction_meta`。
+- `element_id` 是稳定引用 ID；`order` 是阅读顺序。实验0导出层省略 `order`，核心 IR schema 不变。
+- `page` 和 `bbox` 只有解析器提供位置信息时才会出现。默认 basic PDF parser 不提供坐标；如需坐标，应使用 Docling backend。
+- `text` 和 `markdown` 相同时，实验0导出层只保留 `markdown`；二者不同时才同时保留。
 
 ### 实验一：选择最优 LLM
 
@@ -57,8 +52,11 @@ uv run python experiments/exp0.py --file experiments/assets/srs_mini.md --doc-ty
 ```
 experiments/
 |── assets/
-|   ├── srs_mini.md            # 测试文档   
+|   ├── srs_mini.pdf           # 测试文档
 |── exp0.py                    # 单文档快速验证脚本
+|── results/
+|   ├── exp0_parsed.md         # 解析后的 Markdown
+|   └── exp0_latest.json       # JSON 抽取结果
 |── exp1/
     ├── configs/              # 实验配置
     └── results/              # 运行结果
