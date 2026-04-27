@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from core.chunker import render_element_marker, split_ir_into_chunks, summarize_chunk
 from core.config import get_settings
-from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SYSTEM_PROMPT, EVIDENCE_ELEMENT_IDS_INSTRUCTION
+from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SYSTEM_PROMPT
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
 from core.reducer import OBJECT_SLOTS, reduce_extraction_results
@@ -125,7 +125,6 @@ def _extract_once(
     template = prompt_template or MAP_USER_PROMPT_TEMPLATE
     prompt = template.format(
         content=prompt_content,
-        evidence_element_ids_instruction=EVIDENCE_ELEMENT_IDS_INSTRUCTION,
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
     )
@@ -379,7 +378,6 @@ def _finalize_extraction_once(
     prompt = FINALIZE_USER_PROMPT_TEMPLATE.format(
         content=_render_finalizer_input(
             document_ir=document_ir,
-            evidence_element_ids_instruction=EVIDENCE_ELEMENT_IDS_INSTRUCTION,
             contract=contract,
             chunk_results=chunk_results,
         ),
@@ -488,7 +486,6 @@ def _render_chunk_context(
             (
                 "只返回五个目标槽位。evidence_element_ids 必须来自 allowed_evidence_element_ids。"
                 "当前分块可能包含多个章节或多个需求，请逐项抽取为列表对象。"
-                "只选择少量高价值证据，不逐行罗列字段名、冒号行、普通列表项或相邻弱相关元素。"
                 "当前分块没有某类对象时，该槽位返回空列表。"
             ),
         ]

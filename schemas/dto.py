@@ -41,3 +41,22 @@ class UploadResponse(BaseModel):
     filename: str
     status: str
     message: str
+
+
+class DocumentChunkDebugDTO(BaseModel):
+    chunk_id: str
+    section_path: list[str]
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    element_count: int
+    markdown_chars: int
+    element_ids: list[str]
+    markdown: str
+
+
+class DocumentChunksResponse(BaseModel):
+    doc_id: int
+    chunk_count: int
+    chunk_max_chars: int
+    ignored_sections: list[str]
+    chunks: list[DocumentChunkDebugDTO]

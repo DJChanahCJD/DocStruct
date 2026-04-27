@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ACTIVE_DOCUMENT_STATUSES,
   deleteDocument,
+  getDocumentChunks,
   getDocumentFile,
   getDocument,
   listDocuments,
@@ -10,6 +11,7 @@ import {
   updateDocument,
   uploadFile,
   type DocumentFilePayload,
+  type DocumentChunksResponse,
   type UpdateDocumentRequest,
 } from "@/lib/api";
 
@@ -50,6 +52,14 @@ export function useDocumentFile(id: number | null) {
   });
 }
 
+export function useDocumentChunks(id: number | null) {
+  return useQuery<DocumentChunksResponse>({
+    queryKey: ["document-chunks", id],
+    queryFn: () => getDocumentChunks(id!),
+    enabled: id !== null,
+  });
+}
+
 export function useDeleteDocument() {
   const qc = useQueryClient();
   return useMutation({
@@ -57,6 +67,7 @@ export function useDeleteDocument() {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ["documents"] });
       qc.removeQueries({ queryKey: ["document", id] });
+      qc.removeQueries({ queryKey: ["document-chunks", id] });
     },
   });
 }
@@ -75,6 +86,7 @@ export function useUpdateDocument(id: number) {
     mutationFn: (req: UpdateDocumentRequest) => updateDocument(id, req),
     onSuccess: (document) => {
       qc.setQueryData(["document", id], document);
+      qc.invalidateQueries({ queryKey: ["document-chunks", id] });
       qc.invalidateQueries({ queryKey: ["documents"] });
     },
   });
@@ -86,6 +98,7 @@ export function useRetryExtraction() {
     mutationFn: retryExtraction,
     onSuccess: (document) => {
       qc.setQueryData(["document", document.id], document);
+      qc.invalidateQueries({ queryKey: ["document-chunks", document.id] });
       qc.invalidateQueries({ queryKey: ["documents"] });
     },
   });

@@ -4,9 +4,19 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DocumentFilePayload } from "@/lib/api";
-import type { ExtractionEvidence } from "@/lib/evidence";
+import {
+  evidenceMatches,
+  type ExtractionEvidence,
+  type ExtractionItem,
+} from "@/lib/evidence";
 import { cn } from "@/lib/utils";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -14,7 +24,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 interface PdfEvidenceViewerProps {
   file: DocumentFilePayload | undefined;
   isLoading: boolean;
+  items: ExtractionItem[];
   selectedEvidence: ExtractionEvidence | null;
+  onSelectEvidence: (evidence: ExtractionEvidence) => void;
 }
 
 interface PdfDocument {
@@ -50,13 +62,26 @@ interface HighlightRect {
   height: number;
 }
 
+interface EvidenceOverlay {
+  evidence: ExtractionEvidence;
+  label: string;
+  slotLabel: string;
+}
+
+interface EvidenceOverlayCluster {
+  rect: HighlightRect;
+  overlays: EvidenceOverlay[];
+}
+
 /**
  * Render the source PDF and highlight the selected Docling evidence bbox.
  */
 export function PdfEvidenceViewer({
   file,
   isLoading,
+  items,
   selectedEvidence,
+  onSelectEvidence,
 }: PdfEvidenceViewerProps) {
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -124,6 +149,8 @@ export function PdfEvidenceViewer({
     return Array.from({ length: pdf.numPages }, (_item, index) => index + 1);
   }, [pdf]);
 
+  const overlaysByPage = useMemo(() => buildOverlaysByPage(items), [items]);
+
   const registerPageRef = useCallback((pageNumber: number, node: HTMLDivElement | null) => {
     if (node) {
       pageRefs.current.set(pageNumber, node);
@@ -167,8 +194,10 @@ export function PdfEvidenceViewer({
               key={pageNumber}
               pdf={pdf}
               pageNumber={pageNumber}
-              evidence={selectedEvidence?.page === pageNumber ? selectedEvidence : null}
+              overlays={overlaysByPage.get(pageNumber) ?? []}
+              selectedEvidence={selectedEvidence}
               active={selectedEvidence?.page === pageNumber}
+              onSelectEvidence={onSelectEvidence}
               refCallback={registerPageRef}
             />
           ))}
@@ -181,8 +210,10 @@ export function PdfEvidenceViewer({
 interface PdfPageViewProps {
   pdf: PdfDocument;
   pageNumber: number;
-  evidence: ExtractionEvidence | null;
+  overlays: EvidenceOverlay[];
+  selectedEvidence: ExtractionEvidence | null;
   active: boolean;
+  onSelectEvidence: (evidence: ExtractionEvidence) => void;
   refCallback: (pageNumber: number, node: HTMLDivElement | null) => void;
 }
 
@@ -192,17 +223,19 @@ interface PdfPageViewProps {
 function PdfPageView({
   pdf,
   pageNumber,
-  evidence,
+  overlays,
+  selectedEvidence,
   active,
+  onSelectEvidence,
   refCallback,
 }: PdfPageViewProps) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const viewportRef = useRef<PdfViewport | null>(null);
-  const evidenceRef = useRef<ExtractionEvidence | null>(evidence);
+  const overlaysRef = useRef<EvidenceOverlay[]>(overlays);
   const [frameWidth, setFrameWidth] = useState(0);
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
-  const [highlightRect, setHighlightRect] = useState<HighlightRect | null>(null);
+  const [highlightClusters, setHighlightClusters] = useState<EvidenceOverlayCluster[]>([]);
   const [isRenderReady, setIsRenderReady] = useState(false);
   const [renderError, setRenderError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -293,7 +326,7 @@ function PdfPageView({
       if (!cancelled) {
         viewportRef.current = viewport;
         setPageSize({ width: viewport.width, height: viewport.height });
-        setHighlightRect(calculateHighlightRect(evidenceRef.current, viewport));
+        setHighlightClusters(calculateOverlayClusters(overlaysRef.current, viewport));
         setRenderError(false);
       }
     }
@@ -311,9 +344,9 @@ function PdfPageView({
   }, [frameWidth, isRenderReady, pageNumber, pdf, retryKey]);
 
   useEffect(() => {
-    evidenceRef.current = evidence;
-    setHighlightRect(calculateHighlightRect(evidence, viewportRef.current));
-  }, [evidence]);
+    overlaysRef.current = overlays;
+    setHighlightClusters(calculateOverlayClusters(overlays, viewportRef.current));
+  }, [overlays]);
 
   return (
     <div ref={frameRef} className="flex w-full justify-center">
@@ -325,7 +358,7 @@ function PdfPageView({
       >
         <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>Page {pageNumber}</span>
-          {evidence?.elementId && <span className="font-mono">{evidence.elementId}</span>}
+          {overlays.length > 0 && <span>{overlays.length} 条证据</span>}
         </div>
         <div
           className="relative overflow-hidden rounded-md bg-white"
@@ -343,21 +376,62 @@ function PdfPageView({
               Page {pageNumber}
             </div>
           )}
-          {highlightRect && (
-            <div
-              className="pointer-events-none absolute rounded-sm border-2 border-primary bg-primary/20 shadow-[0_0_0_9999px_rgba(0,0,0,0.08)]"
-              style={{
-                left: `${highlightRect.left}px`,
-                top: `${highlightRect.top}px`,
-                width: `${highlightRect.width}px`,
-                height: `${highlightRect.height}px`,
-              }}
-            >
-              <div className="absolute -top-6 left-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
-                证据
-              </div>
-            </div>
-          )}
+          {highlightClusters.map((cluster, index) => {
+            const primaryOverlay = cluster.overlays[0];
+            const isSelected = cluster.overlays.some((overlay) => evidenceMatches(overlay.evidence, selectedEvidence));
+            const clusterTitle = cluster.overlays
+              .map((overlay) => `${overlay.slotLabel}: ${overlay.label}`)
+              .join("\n");
+            const buttonClassName = cn(
+              "absolute rounded-sm border text-left transition-colors",
+              isSelected
+                ? "z-20 border-primary bg-primary/10 ring-2 ring-primary/45"
+                : "z-10 border-amber-500/80 bg-amber-300/10 hover:bg-amber-300/18",
+            );
+            const buttonStyle = {
+              left: `${cluster.rect.left}px`,
+              top: `${cluster.rect.top}px`,
+              width: `${cluster.rect.width}px`,
+              height: `${cluster.rect.height}px`,
+            };
+
+            if (cluster.overlays.length > 1) {
+              return (
+                <DropdownMenu key={`${pageNumber}-${cluster.rect.left}-${cluster.rect.top}-${index}`}>
+                  <DropdownMenuTrigger
+                    title={clusterTitle}
+                    className={buttonClassName}
+                    style={buttonStyle}
+                  />
+                  <DropdownMenuContent className="w-64">
+                    {cluster.overlays.map((overlay, overlayIndex) => (
+                      <DropdownMenuItem
+                        key={`${overlay.evidence.objectId}-${overlay.evidence.elementId ?? overlay.evidence.textSpan ?? overlayIndex}`}
+                        onClick={() => onSelectEvidence(overlay.evidence)}
+                        className="flex-col items-start gap-0.5"
+                      >
+                        <span className="max-w-full truncate text-sm font-medium">{overlay.label}</span>
+                        <span className="max-w-full truncate font-mono text-[11px] text-muted-foreground">
+                          {overlay.slotLabel} / {overlay.evidence.objectId}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+
+            return primaryOverlay ? (
+              <button
+                key={`${primaryOverlay.evidence.objectId}-${primaryOverlay.evidence.elementId ?? primaryOverlay.evidence.textSpan ?? index}`}
+                type="button"
+                title={clusterTitle}
+                onClick={() => onSelectEvidence(primaryOverlay.evidence)}
+                className={buttonClassName}
+                style={buttonStyle}
+              />
+            ) : null;
+          })}
           {renderError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/90 text-sm text-muted-foreground">
               <FileSearch />
@@ -381,6 +455,76 @@ function findScrollAreaViewport(node: HTMLElement): Element | null {
   return node.closest('[data-slot="scroll-area-viewport"]');
 }
 
+/**
+ * Group positioned extraction evidence by PDF page with display labels.
+ */
+function buildOverlaysByPage(items: ExtractionItem[]): Map<number, EvidenceOverlay[]> {
+  const overlaysByPage = new Map<number, EvidenceOverlay[]>();
+
+  for (const item of items) {
+    for (const evidence of item.evidence) {
+      if (!evidence.page || !evidence.bbox) {
+        continue;
+      }
+      const pageOverlays = overlaysByPage.get(evidence.page) ?? [];
+      pageOverlays.push({
+        evidence,
+        label: item.title || evidence.objectId,
+        slotLabel: item.slotLabel,
+      });
+      overlaysByPage.set(evidence.page, pageOverlays);
+    }
+  }
+
+  return overlaysByPage;
+}
+
+/**
+ * Convert all page evidence boxes into deduplicated viewport overlay clusters.
+ */
+function calculateOverlayClusters(
+  overlays: EvidenceOverlay[],
+  viewport: PdfViewport | null,
+): EvidenceOverlayCluster[] {
+  if (!viewport) {
+    return [];
+  }
+
+  const clustersByRect = new Map<string, EvidenceOverlayCluster>();
+
+  for (const overlay of overlays) {
+    const rect = calculateHighlightRect(overlay.evidence, viewport);
+    if (!rect) {
+      continue;
+    }
+
+    const key = getRectClusterKey(rect);
+    const cluster = clustersByRect.get(key);
+    if (cluster) {
+      cluster.overlays.push(overlay);
+      continue;
+    }
+
+    clustersByRect.set(key, {
+      rect,
+      overlays: [overlay],
+    });
+  }
+
+  return Array.from(clustersByRect.values());
+}
+
+/**
+ * Round overlay geometry so tiny PDF viewport differences do not split one visual target.
+ */
+function getRectClusterKey(rect: HighlightRect): string {
+  return [
+    Math.round(rect.left),
+    Math.round(rect.top),
+    Math.round(rect.width),
+    Math.round(rect.height),
+  ].join(":");
+}
 
 /**
  * Convert a backend PDF bbox into viewport overlay coordinates.

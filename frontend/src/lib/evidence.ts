@@ -90,6 +90,22 @@ export function findFirstPositionedEvidence(items: ExtractionItem[]): Extraction
 }
 
 /**
+ * Compare evidence entries without depending on generated evidence IDs.
+ */
+export function evidenceMatches(
+  left: ExtractionEvidence | null,
+  right: ExtractionEvidence | null,
+): boolean {
+  if (!left || !right) {
+    return false;
+  }
+  if (left.elementId || right.elementId) {
+    return left.objectId === right.objectId && left.elementId === right.elementId;
+  }
+  return left.objectId === right.objectId && left.textSpan === right.textSpan && left.page === right.page;
+}
+
+/**
  * Build an object_id keyed evidence map from the extracted payload.
  */
 function buildEvidenceMap(extractedData: Record<string, unknown>): Map<string, ExtractionEvidence[]> {

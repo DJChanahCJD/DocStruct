@@ -7,9 +7,18 @@ from fastapi.responses import FileResponse
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
+from core.chunker import split_ir_into_chunks
 from core.document_service import process_document_record, process_uploaded_file, retry_extraction
-from schemas.dto import DocumentRecordDTO, DocumentUpdateRequest, UploadResponse
-from schemas.models import DocumentRecord
+from core.extractor import build_extraction_contract
+from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
+from schemas.dto import (
+    DocumentChunkDebugDTO,
+    DocumentChunksResponse,
+    DocumentRecordDTO,
+    DocumentUpdateRequest,
+    UploadResponse,
+)
+from schemas.models import DocumentChunk, DocumentRecord, DocumentIR
 
 
 logging.basicConfig(level=logging.INFO)
@@ -79,6 +88,19 @@ async def update_document(doc_id: int, body: DocumentUpdateRequest) -> DocumentR
     return DocumentRecordDTO.model_validate(doc)
 
 
+@app.get("/api/documents/{doc_id}/chunks", response_model=DocumentChunksResponse)
+async def get_document_chunks(doc_id: int) -> DocumentChunksResponse:
+    """返回当前分块规则生成的只读调试数据。"""
+    doc = await DocumentRecord.get_or_none(id=doc_id)
+    if not doc:
+        raise HTTPException(404, "记录不存在")
+
+    try:
+        return build_document_chunks_response(doc)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: int) -> dict[str, object]:
     doc = await DocumentRecord.get_or_none(id=doc_id)
@@ -120,6 +142,47 @@ async def get_document_file(doc_id: int) -> FileResponse:
         raise HTTPException(404, "原始文件不存在")
 
     return FileResponse(path=doc.stored_path, filename=doc.filename)
+
+
+def build_document_chunks_response(doc: DocumentRecord) -> DocumentChunksResponse:
+    """基于文档当前 IR 或 Markdown 即时生成分块调试响应。"""
+    document_ir = _prepare_debug_document_ir(doc)
+    contract = build_extraction_contract(doc.doc_type)
+    chunks = split_ir_into_chunks(
+        document_ir,
+        max_chars=settings.extraction_chunk_max_chars,
+        ignore_sections=contract.ignore_sections,
+    )
+    return DocumentChunksResponse(
+        doc_id=doc.id,
+        chunk_count=len(chunks),
+        chunk_max_chars=settings.extraction_chunk_max_chars,
+        ignored_sections=list(contract.ignore_sections),
+        chunks=[_chunk_to_debug_dto(chunk) for chunk in chunks],
+    )
+
+
+def _prepare_debug_document_ir(doc: DocumentRecord) -> DocumentIR:
+    """读取已保存 IR，缺失时用 parsed_content 临时构造基础 IR。"""
+    if doc.document_ir:
+        return document_ir_from_payload(doc.document_ir)
+    if doc.parsed_content:
+        return build_basic_ir_from_markdown(doc.parsed_content, doc_type=doc.doc_type)
+    raise ValueError("文档尚未解析，暂无分块数据")
+
+
+def _chunk_to_debug_dto(chunk: DocumentChunk) -> DocumentChunkDebugDTO:
+    """将内部 DocumentChunk 转换为前端调试视图需要的 DTO。"""
+    return DocumentChunkDebugDTO(
+        chunk_id=chunk.chunk_id,
+        section_path=list(chunk.section_path),
+        page_start=chunk.page_start,
+        page_end=chunk.page_end,
+        element_count=len(chunk.elements),
+        markdown_chars=len(chunk.markdown),
+        element_ids=[element.element_id for element in chunk.elements],
+        markdown=chunk.markdown,
+    )
 
 
 register_tortoise(

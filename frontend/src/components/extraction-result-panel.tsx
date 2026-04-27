@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileSearch, MapPin, Save } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   EXTRACTION_SLOT_CONFIGS,
+  evidenceMatches,
   type ExtractionEvidence,
   type ExtractionItem,
   type ExtractionSlotKey,
@@ -31,7 +32,19 @@ export function ExtractionResultPanel({
 }: ExtractionResultPanelProps) {
   const groupedItems = useMemo(() => groupItemsBySlot(items), [items]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const selectedItem = items.find((item) => item.id === selectedItemId) ?? items[0] ?? null;
+  const itemRowRefs = useRef(new Map<string, HTMLButtonElement>());
+  const selectedItemFromEvidence = selectedEvidence
+    ? items.find((item) => item.evidence.some((entry) => evidenceMatches(entry, selectedEvidence)))
+    : null;
+  const selectedItem = selectedItemFromEvidence ?? items.find((item) => item.id === selectedItemId) ?? items[0] ?? null;
+
+  const registerItemRowRef = useCallback((itemId: string, node: HTMLButtonElement | null) => {
+    if (node) {
+      itemRowRefs.current.set(itemId, node);
+      return;
+    }
+    itemRowRefs.current.delete(itemId);
+  }, []);
 
   useEffect(() => {
     if (!selectedItemId && items[0]) {
@@ -42,6 +55,21 @@ export function ExtractionResultPanel({
       setSelectedItemId(items[0]?.id ?? null);
     }
   }, [items, selectedItemId]);
+
+  useEffect(() => {
+    if (!selectedEvidence || !selectedItem) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      itemRowRefs.current.get(selectedItem.id)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [selectedEvidence, selectedItem]);
 
   if (items.length === 0) {
     return (
@@ -78,6 +106,7 @@ export function ExtractionResultPanel({
                       item={item}
                       selected={item.id === selectedItem?.id}
                       active={item.evidence.some((entry) => evidenceMatches(entry, selectedEvidence))}
+                      refCallback={registerItemRowRef}
                       onClick={() => {
                         setSelectedItemId(item.id);
                         const evidence = getPrimaryEvidence(item);
@@ -108,16 +137,18 @@ interface ExtractionItemRowProps {
   item: ExtractionItem;
   selected: boolean;
   active: boolean;
+  refCallback: (itemId: string, node: HTMLButtonElement | null) => void;
   onClick: () => void;
 }
 
 /**
  * Render a compact object row for review navigation.
  */
-function ExtractionItemRow({ item, selected, active, onClick }: ExtractionItemRowProps) {
+function ExtractionItemRow({ item, selected, active, refCallback, onClick }: ExtractionItemRowProps) {
   const primaryEvidence = getPrimaryEvidence(item);
   return (
     <button
+      ref={(node) => refCallback(item.id, node)}
       type="button"
       onClick={onClick}
       className={cn(
@@ -167,6 +198,7 @@ function ExtractionDetail({
   const [descriptionDraft, setDescriptionDraft] = useState("");
   const [detailsDraft, setDetailsDraft] = useState("");
   const [acceptanceDraft, setAcceptanceDraft] = useState("");
+  const selectedEvidenceRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setNameDraft(stringValue(item?.raw.name));
@@ -174,6 +206,21 @@ function ExtractionDetail({
     setDetailsDraft(arrayValue(item?.raw.details).join("\n"));
     setAcceptanceDraft(arrayValue(item?.raw.acceptance_criteria).join("\n"));
   }, [item]);
+
+  useEffect(() => {
+    if (!selectedEvidence) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      selectedEvidenceRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [item, selectedEvidence]);
 
   if (!item) {
     return null;
@@ -231,6 +278,11 @@ function ExtractionDetail({
                 item.evidence.map((evidence, index) => (
                   <button
                     key={`${evidence.objectId}-${evidence.elementId ?? evidence.textSpan ?? index}`}
+                    ref={(node) => {
+                      if (evidenceMatches(evidence, selectedEvidence)) {
+                        selectedEvidenceRef.current = node;
+                      }
+                    }}
                     type="button"
                     onClick={() => onSelectEvidence(evidence)}
                     className={cn(
@@ -314,22 +366,6 @@ function groupItemsBySlot(items: ExtractionItem[]): Record<ExtractionSlotKey, Ex
  */
 function getPrimaryEvidence(item: ExtractionItem): ExtractionEvidence | null {
   return item.evidence.find((entry) => entry.page && entry.bbox) ?? item.evidence[0] ?? null;
-}
-
-/**
- * Compare evidence entries without depending on generated evidence IDs.
- */
-function evidenceMatches(
-  left: ExtractionEvidence | null,
-  right: ExtractionEvidence | null,
-): boolean {
-  if (!left || !right) {
-    return false;
-  }
-  if (left.elementId || right.elementId) {
-    return left.objectId === right.objectId && left.elementId === right.elementId;
-  }
-  return left.objectId === right.objectId && left.textSpan === right.textSpan && left.page === right.page;
 }
 
 /**

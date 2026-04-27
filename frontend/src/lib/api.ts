@@ -42,6 +42,25 @@ export interface DocumentFilePayload {
   fileName: string;
 }
 
+export interface DocumentChunkDebug {
+  chunk_id: string;
+  section_path: string[];
+  page_start: number | null;
+  page_end: number | null;
+  element_count: number;
+  markdown_chars: number;
+  element_ids: string[];
+  markdown: string;
+}
+
+export interface DocumentChunksResponse {
+  doc_id: number;
+  chunk_count: number;
+  chunk_max_chars: number;
+  ignored_sections: string[];
+  chunks: DocumentChunkDebug[];
+}
+
 export async function listDocuments(): Promise<DocumentRecord[]> {
   const { data } = await api.get<DocumentRecord[]>("/documents");
   return data;
@@ -87,6 +106,11 @@ export async function getDocumentFile(id: number): Promise<DocumentFilePayload> 
     contentType: response.headers["content-type"] ?? response.data.type ?? "",
     fileName,
   };
+}
+
+export async function getDocumentChunks(id: number): Promise<DocumentChunksResponse> {
+  const { data } = await api.get<DocumentChunksResponse>(`/documents/${id}/chunks`);
+  return data;
 }
 
 export async function retryExtraction(id: number): Promise<DocumentRecord> {

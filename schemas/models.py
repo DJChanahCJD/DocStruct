@@ -178,10 +178,10 @@ class BaseNode(BaseModel):
     id: Optional[str] = Field(None, description="系统生成 ID；抽取时不要编造")
     source_id: Optional[str] = Field(None, description="原文显式编号；不要编造")
     name: str
-    description: Optional[str] = None
+    summary: Optional[str] = None
     evidence_element_ids: list[str] = Field(
         default_factory=list,
-        description="来源元素 ID 锚点；只保留能定位对象的高价值锚点，不逐行罗列字段名、冒号或普通条目",
+        description="来源元素 ID 锚点；只保留能定位对象的高价值锚点",
     )
     extra: dict[str, Any] = Field(default_factory=dict, description="少量无法归入声明字段的原文属性")
 
@@ -198,8 +198,6 @@ class BaseNode(BaseModel):
 class StepItem(BaseModel):
     id: Optional[str] = Field(None, description="原文显式步骤 ID；没有则留空")
     name: str
-    description: Optional[str] = None
-    evidence_element_ids: list[str] = Field(default_factory=list, description="来源元素 ID 锚点；只保留高价值锚点")
 
 
 class EntityItem(BaseNode):

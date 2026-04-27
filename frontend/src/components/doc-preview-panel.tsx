@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Save,
 } from "lucide-react";
+import { diffJson, diffLines } from "diff";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -18,6 +19,7 @@ import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 
+import { ChunkDebugPanel } from "@/components/chunk-debug-panel";
 import { ExtractionResultPanel } from "@/components/extraction-result-panel";
 import { PdfEvidenceViewer } from "@/components/pdf-evidence-viewer";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,7 @@ import {
   type ExtractionEvidence,
   type ExtractionItem,
 } from "@/lib/evidence";
+import { cn } from "@/lib/utils";
 
 interface DocPreviewPanelProps {
   docId: number | null;
@@ -291,9 +294,10 @@ export function DocPreviewPanel({
     <div className="flex h-full w-full flex-1 flex-col overflow-hidden bg-background">
       <Tabs value={tab} onValueChange={handleTabChange} className="flex flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b px-4 py-2">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="evidence">证据对照</TabsTrigger>
             <TabsTrigger value="raw">Markdown 校对</TabsTrigger>
+            <TabsTrigger value="chunks">分块调试</TabsTrigger>
           </TabsList>
         </div>
 
@@ -338,7 +342,9 @@ export function DocPreviewPanel({
                     preview={sourcePreview}
                     isLoading={isFileLoading}
                     file={documentFile}
+                    items={extractionItems}
                     selectedEvidence={selectedEvidence}
+                    onSelectEvidence={setSelectedEvidence}
                   />
                 </div>
               </section>
@@ -412,13 +418,20 @@ export function DocPreviewPanel({
                           保存 JSON
                         </Button>
                       </div>
-                      <div className="min-h-0 flex-1 p-4">
-                        <Textarea
-                          value={jsonDraft}
-                          onChange={(event) => setJsonDraft(event.target.value)}
-                          placeholder="这里显示结构化提取结果，可直接修正 JSON。"
-                          spellCheck={false}
-                          className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                      <div className="grid min-h-0 flex-1 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)]">
+                        <div className="min-h-0">
+                          <Textarea
+                            value={jsonDraft}
+                            onChange={(event) => setJsonDraft(event.target.value)}
+                            placeholder="这里显示结构化提取结果，可直接修正 JSON。"
+                            spellCheck={false}
+                            className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                          />
+                        </div>
+                        <JsonDiffPreview
+                          savedJsonContent={savedJsonContent}
+                          jsonDraft={jsonDraft}
+                          hasJsonChanges={hasJsonChanges}
                         />
                       </div>
                     </div>
@@ -494,7 +507,9 @@ export function DocPreviewPanel({
                     preview={sourcePreview}
                     isLoading={isFileLoading}
                     file={documentFile}
+                    items={[]}
                     selectedEvidence={null}
+                    onSelectEvidence={() => undefined}
                   />
                 </div>
               </section>
@@ -517,6 +532,10 @@ export function DocPreviewPanel({
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="chunks" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
+          <ChunkDebugPanel docId={docId} />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -530,6 +549,96 @@ type SourcePreviewState =
   | { kind: "download"; url: string; fileName: string }
   | { kind: "error" };
 
+interface DiffPart {
+  value: string;
+  added?: boolean;
+  removed?: boolean;
+}
+
+/**
+ * Render a compact diff between saved JSON and the current draft.
+ */
+function JsonDiffPreview({
+  savedJsonContent,
+  jsonDraft,
+  hasJsonChanges,
+}: {
+  savedJsonContent: string;
+  jsonDraft: string;
+  hasJsonChanges: boolean;
+}) {
+  const diffParts = useMemo(
+    () => buildJsonDiffParts(savedJsonContent, jsonDraft),
+    [jsonDraft, savedJsonContent],
+  );
+
+  return (
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/10">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+        <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+          差异预览
+        </span>
+        <span className="rounded-full border bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+          {hasJsonChanges ? "未保存" : "已同步"}
+        </span>
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        {hasJsonChanges ? (
+          <pre className="whitespace-pre-wrap break-words p-3 font-mono text-xs leading-5">
+            {diffParts.map((part, index) => (
+              <span
+                key={`${index}-${part.value.slice(0, 16)}`}
+                className={cn(
+                  part.added && "bg-emerald-100 text-emerald-900",
+                  part.removed && "bg-rose-100 text-rose-900 line-through decoration-rose-500",
+                  !part.added && !part.removed && "text-muted-foreground",
+                )}
+              >
+                {part.value}
+              </span>
+            ))}
+          </pre>
+        ) : (
+          <div className="flex h-full min-h-[180px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+            暂无未保存修改
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+/**
+ * Build a structured JSON diff when possible, falling back to line diff for invalid drafts.
+ */
+function buildJsonDiffParts(savedJsonContent: string, jsonDraft: string): DiffPart[] {
+  if (savedJsonContent === jsonDraft) {
+    return [];
+  }
+
+  try {
+    return diffJson(parseJsonForDiff(savedJsonContent), parseJsonForDiff(jsonDraft));
+  } catch {
+    return diffLines(savedJsonContent, jsonDraft);
+  }
+}
+
+/**
+ * Parse a JSON editor value for diffing, treating an empty editor as an empty object.
+ */
+function parseJsonForDiff(value: string): string | object {
+  const text = value.trim();
+  if (!text) {
+    return {};
+  }
+
+  const parsed = JSON.parse(text) as unknown;
+  if (typeof parsed === "object" && parsed !== null) {
+    return parsed;
+  }
+  return String(parsed);
+}
+
 /**
  * Render the best available source preview for the original uploaded file.
  */
@@ -537,12 +646,16 @@ function SourcePreview({
   preview,
   isLoading,
   file,
+  items,
   selectedEvidence,
+  onSelectEvidence,
 }: {
   preview: SourcePreviewState;
   isLoading: boolean;
   file: { blob: Blob; contentType: string; fileName: string } | undefined;
+  items: ExtractionItem[];
   selectedEvidence: ExtractionEvidence | null;
+  onSelectEvidence: (evidence: ExtractionEvidence) => void;
 }) {
   if (isLoading) {
     return (
@@ -558,7 +671,9 @@ function SourcePreview({
       <PdfEvidenceViewer
         file={file}
         isLoading={isLoading}
+        items={items}
         selectedEvidence={selectedEvidence}
+        onSelectEvidence={onSelectEvidence}
       />
     );
   }
