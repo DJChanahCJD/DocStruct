@@ -3,7 +3,6 @@ import { AlertCircle, FileSearch, Loader2, RotateCcw } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DocumentFilePayload } from "@/lib/api";
@@ -61,7 +60,6 @@ export function PdfEvidenceViewer({
 }: PdfEvidenceViewerProps) {
   const [pdf, setPdf] = useState<PdfDocument | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [activePage, setActivePage] = useState(1);
   const pageRefs = useRef(new Map<number, HTMLDivElement>());
 
   useEffect(() => {
@@ -110,11 +108,11 @@ export function PdfEvidenceViewer({
       return;
     }
 
-    setActivePage(pageNumber);
     window.setTimeout(() => {
       const target = pageRefs.current.get(pageNumber);
       if (target) {
         target.scrollIntoView({ block: "center", behavior: "smooth" });
+        // scrollPageIntoReadingPosition(target);
       }
     }, 0);
   }, [pdf, selectedEvidence]);
@@ -162,22 +160,6 @@ export function PdfEvidenceViewer({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-muted/20">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b bg-background px-4 py-2">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium text-foreground">{file?.fileName}</div>
-          <div className="mt-0.5 text-xs text-muted-foreground">{pdf.numPages} 页</div>
-        </div>
-        {selectedEvidence?.page ? (
-          <Badge variant="secondary" className="shrink-0">
-            Page {selectedEvidence.page}
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="shrink-0">
-            无定位
-          </Badge>
-        )}
-      </div>
-
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 py-5">
           {pageNumbers.map((pageNumber) => (
@@ -187,7 +169,6 @@ export function PdfEvidenceViewer({
               pageNumber={pageNumber}
               evidence={selectedEvidence?.page === pageNumber ? selectedEvidence : null}
               active={selectedEvidence?.page === pageNumber}
-              shouldRender={Math.abs(pageNumber - activePage) <= 1}
               refCallback={registerPageRef}
             />
           ))}
@@ -202,7 +183,6 @@ interface PdfPageViewProps {
   pageNumber: number;
   evidence: ExtractionEvidence | null;
   active: boolean;
-  shouldRender: boolean;
   refCallback: (pageNumber: number, node: HTMLDivElement | null) => void;
 }
 
@@ -214,7 +194,6 @@ function PdfPageView({
   pageNumber,
   evidence,
   active,
-  shouldRender,
   refCallback,
 }: PdfPageViewProps) {
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -224,6 +203,7 @@ function PdfPageView({
   const [frameWidth, setFrameWidth] = useState(0);
   const [pageSize, setPageSize] = useState({ width: 0, height: 0 });
   const [highlightRect, setHighlightRect] = useState<HighlightRect | null>(null);
+  const [isRenderReady, setIsRenderReady] = useState(false);
   const [renderError, setRenderError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -251,11 +231,40 @@ function PdfPageView({
   }, []);
 
   useEffect(() => {
+    const node = frameRef.current;
+    if (!node) {
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      setIsRenderReady(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) {
+          return;
+        }
+        setIsRenderReady(true);
+        observer.disconnect();
+      },
+      {
+        root: findScrollAreaViewport(node),
+        rootMargin: "600px 0px",
+      },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     let renderTask: PdfRenderTask | null = null;
 
     async function renderPage() {
-      if (!shouldRender) {
+      if (!isRenderReady) {
         return;
       }
       const page = await pdf.getPage(pageNumber);
@@ -299,7 +308,7 @@ function PdfPageView({
       cancelled = true;
       renderTask?.cancel();
     };
-  }, [frameWidth, pageNumber, pdf, retryKey, shouldRender]);
+  }, [frameWidth, isRenderReady, pageNumber, pdf, retryKey]);
 
   useEffect(() => {
     evidenceRef.current = evidence;
@@ -327,7 +336,7 @@ function PdfPageView({
             minHeight: pageSize.height ? undefined : "420px",
           }}
         >
-          {shouldRender ? (
+          {isRenderReady ? (
             <canvas ref={canvasRef} className="block" />
           ) : (
             <div className="flex h-[420px] w-[320px] items-center justify-center text-xs text-muted-foreground">
@@ -364,6 +373,14 @@ function PdfPageView({
     </div>
   );
 }
+
+/**
+ * Find the nearest Base UI scroll viewport that should drive page lazy rendering.
+ */
+function findScrollAreaViewport(node: HTMLElement): Element | null {
+  return node.closest('[data-slot="scroll-area-viewport"]');
+}
+
 
 /**
  * Convert a backend PDF bbox into viewport overlay coordinates.

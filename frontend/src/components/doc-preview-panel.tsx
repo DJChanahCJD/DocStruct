@@ -320,15 +320,18 @@ export function DocPreviewPanel({
 
             <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
               <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/15 shadow-sm">
-                <div className="flex items-center justify-between border-b px-4 py-3">
-                  <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                    原始文档 PDF
+                <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+                  <p className="min-w-0 truncate text-sm font-medium text-foreground">
+                    {documentFile?.fileName ?? "原始文档"}
                   </p>
-                  {selectedEvidence?.elementId && (
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {selectedEvidence.elementId}
-                    </span>
-                  )}
+                  <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                    {selectedEvidence?.page && <span>Page {selectedEvidence.page}</span>}
+                    {selectedEvidence?.elementId && (
+                      <span className="max-w-40 truncate font-mono">
+                        {selectedEvidence.elementId}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="min-h-0 flex-1">
                   <SourcePreview
