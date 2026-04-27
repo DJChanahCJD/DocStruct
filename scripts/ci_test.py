@@ -12,6 +12,7 @@ FRONTEND_DIR = ROOT / "frontend"
 
 
 def run_step(label: str, command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
+    """Run one CI step and stop the process when the command fails."""
     print(f"\n==> {label}")
     result = subprocess.run(command, cwd=cwd, env=env, check=False)
     if result.returncode != 0:
@@ -19,6 +20,7 @@ def run_step(label: str, command: list[str], cwd: Path, env: dict[str, str] | No
 
 
 def main() -> int:
+    """Run backend and/or frontend CI checks selected by command-line flags."""
     parser = argparse.ArgumentParser(description="Run core CI checks for DocStruct.")
     parser.add_argument("--backend-only", action="store_true")
     parser.add_argument("--frontend-only", action="store_true")
@@ -47,14 +49,8 @@ def main() -> int:
             env=env,
         )
         run_step(
-            "Backend parser contract test",
-            ["uv", "run", "python", "-m", "unittest", "scripts.test_parser_contract"],
-            ROOT,
-            env=env,
-        )
-        run_step(
-            "Backend extraction resilience test",
-            ["uv", "run", "python", "-m", "unittest", "scripts.test_extraction_resilience"],
+            "Backend core tests",
+            ["uv", "run", "python", "-m", "unittest", "discover", "-s", "scripts/tests", "-p", "test_*.py"],
             ROOT,
             env=env,
         )

@@ -8,7 +8,7 @@ from schemas.models import DocumentElement, DocumentIR
 
 
 OBJECT_SLOTS = ("entities", "processes", "requirements", "interfaces", "artifacts")
-MAX_EVIDENCE_ANCHORS_PER_OBJECT = 3
+MAX_EVIDENCE_ANCHORS_PER_OBJECT = 5
 ID_PREFIXES = {
     "entities": "ENT",
     "processes": "PROC",

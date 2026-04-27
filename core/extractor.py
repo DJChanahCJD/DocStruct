@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from core.chunker import render_element_marker, split_ir_into_chunks
 from core.config import get_settings
-from core.constants import EXTRACT_PROMPT_TEMPLATE, JSON_FORMAT_INSTRUCTION
+from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SYSTEM_PROMPT
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
 from core.reducer import OBJECT_SLOTS, reduce_extraction_results
@@ -23,36 +23,19 @@ raw_client = get_openai_client()
 
 
 SLOT_DESCRIPTIONS = {
-    "entities": "Product-domain actors, modules, systems, services, components, or data objects explicitly present in the chunk; do not extract requirement titles as entities.",
-    "processes": "Business, workflow, operation, or test processes with ordered steps explicitly present in the chunk.",
-    "requirements": "Functional, non-functional, business-rule, or constraint requirements explicitly present in the chunk; acceptance criteria are fields on requirements, not standalone requirements.",
-    "interfaces": "Explicit system boundaries or callable surfaces such as APIs, RPC calls, message channels, database/file exchanges, external systems, or UI entry points.",
-    "artifacts": "Document-level work products such as test cases, decisions, issue records, tables, or independent sections; avoid duplicating entities, requirements, or interfaces.",
+    "entities": "产品领域中的参与者、系统、模块、服务、组件或数据对象。",
+    "processes": "业务流程、技术流程、操作流程、工作流或测试流程；应包含明确的有序步骤。",
+    "requirements": "功能需求、非功能需求、业务规则或约束。",
+    "interfaces": "明确的系统边界或调用/交换面，如 API、RPC、消息通道、数据库/文件交换、外部系统或 UI 入口。",
+    "artifacts": "独立文档产物，如测试用例、决策、问题记录、表格或独立章节；不要重复实体、需求或接口。",
 }
 
-FINALIZE_PROMPT_TEMPLATE = """
-You are an expert Software Engineering Document Analyst.
-Merge chunk-level extraction candidates into one final structured document using the provided JSON Schema.
-Use the document outline and evidence snippets to resolve duplicates and parent-child structure.
-Return one top-level JSON object only.
-Every extracted object should include 1-3 compact evidence_element_ids using only IDs shown in the evidence snippets.
-Use evidence_element_ids as anchors only: choose the best title, source ID, description, table, or paragraph markers.
-Do not include every field label, colon, detail, functional point, or acceptance line as evidence_element_ids.
-Do not output relations, metrics, source_ref, or any top-level keys that are not defined by the schema.
-Do not output views. Do not use extra fields to copy source sections.
-Interfaces should represent real boundaries or callable/exchange surfaces.
-Artifacts should represent independent document work products, not duplicate entities, requirements, or interfaces.
+FINALIZE_USER_PROMPT_TEMPLATE = """
+请使用给定 JSON Schema，把分块级抽取候选合并成一个最终结构化文档。
+结合文档大纲和证据片段处理去重、合并和父子结构。
+evidence_element_ids 只能使用证据片段中出现的元素 ID。
 
-For SRS documents:
-- A numbered requirement section should normally produce one primary requirement object.
-- Put original requirement identifiers such as SRS-USER-001 in source_id; keep id for system-generated IDs.
-- Requirement description belongs in description.
-- Functional points belong in details.
-- Acceptance criteria belong in acceptance_criteria.
-- Do not turn acceptance criteria lines or acceptance-standard tables into separate requirements unless they have their own requirement ID and are explicitly written as requirements.
-- Overall acceptance-standard sections should become artifacts when useful, not requirements.
-
-Input:
+输入:
 {content}
 
 Schema:
@@ -65,44 +48,15 @@ Schema:
 def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContract:
     normalized = _normalize_doc_type(doc_type)
     common_rules = [
-        "Only extract objects that are explicitly present in the current chunk.",
-        "Every object should include 1-3 compact evidence_element_ids using only IDs shown in [ELEMENT: ...] markers.",
-        "Use evidence_element_ids as anchors only: choose the best title, source ID, description, table, or paragraph markers; do not include every field label, colon, detail, functional point, or acceptance line.",
-        "Do not output relations or metrics as top-level slots.",
-        "Put quantified values on the relevant requirement.metric field when they are requirement metrics.",
-        "Do not output views or undeclared extra fields.",
-        "Use interfaces only for explicit system boundaries, callable surfaces, exchange points, or UI entry points.",
-        "Use artifacts only for independent document work products; do not duplicate entities, requirements, or interfaces as artifacts.",
+        "只抽取当前输入中明确出现的对象。",
+        "evidence_element_ids 只使用 [ELEMENT: ...] 标记中的元素 ID。",
+        "只返回目标对象槽位；未出现的对象槽返回空列表。",
     ]
-    doc_rules = {
-        DocType.SRS: [
-            "Content with requirement IDs or shall/must/support language should be requirements.",
-            "Put original requirement identifiers such as SRS-USER-001 in source_id, not id.",
-            "Functional points under one numbered requirement should stay in details.",
-            "Acceptance criteria belong in acceptance_criteria, not separate requirements.",
-            "Do not output requirements whose requirement_type is acceptance.",
-            "Keep one requirement section together as one requirement object: title, requirement ID, description, functional points, and acceptance criteria are parts of the same object.",
-            "Overall acceptance-standard sections or acceptance tables should not become requirements; represent them as table artifacts only when they add value.",
-            "Do not turn glossary terms, acronyms, document metadata tables, revision tables, or cover information into entities or artifacts.",
-            "Use entities only for real actors, systems, modules, services, components, or data objects in the product domain; do not extract requirement titles as entities.",
-            "Do not create artifacts for summary, document information, glossary, reference, separator, or final end-marker sections.",
-        ],
-        DocType.API: [
-            "Endpoint paths and methods should become interfaces.",
-            "Request, response, and operation metadata should stay on the relevant interface description or artifact details when explicitly useful.",
-        ],
-        DocType.TEST: [
-            "Test cases and reports should become artifacts; ordered execution flows should become processes.",
-        ],
-        DocType.ISSUE: [
-            "Issue descriptions should become issue artifacts; reproduction steps should become processes.",
-        ],
-    }
     return ExtractionContract(
         doc_type=normalized,
         target_slots=list(OBJECT_SLOTS),
         slot_descriptions=dict(SLOT_DESCRIPTIONS),
-        rules=common_rules + doc_rules.get(normalized, []),
+        rules=common_rules, # TODO: 可以依据不同的文档类型提供对应增强rules
         ignore_sections=["术语表", "术语定义", "参考资料", "参考文献", "附录", "references", "glossary"],
     )
 
@@ -125,13 +79,6 @@ def _has_meaningful_schema_fields(data: dict[str, object], response_model: type[
 
 def _json_schema_text(model: type[BaseModel]) -> str:
     return json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2)
-
-
-def _render_prompt(template: str, **kwargs: str) -> str:
-    rendered = template
-    for key, value in kwargs.items():
-        rendered = rendered.replace(f"{{{key}}}", value)
-    return rendered
 
 
 def _create_text_completion(
@@ -162,17 +109,15 @@ def _extract_once(
     if context_note:
         prompt_content = f"{context_note}\n\n[Current Chunk]\n{content}"
 
-    template = prompt_template or EXTRACT_PROMPT_TEMPLATE
-    prompt = _render_prompt(
-        template,
+    template = prompt_template or MAP_USER_PROMPT_TEMPLATE
+    prompt = template.format(
         content=prompt_content,
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
-        extra_instruction=JSON_FORMAT_INSTRUCTION,
     )
     response_text = _create_text_completion(
         messages=[
-            {"role": "system", "content": "You are a precise software-engineering document extractor. Return JSON only."},
+            {"role": "system", "content": SYSTEM_PROMPT.strip()},
             {"role": "user", "content": prompt},
         ],
         temperature=0.0,
@@ -362,8 +307,7 @@ def _finalize_extraction_once(
     """
     Use the LLM to merge chunk candidates into one global structured document.
     """
-    prompt = _render_prompt(
-        FINALIZE_PROMPT_TEMPLATE,
+    prompt = FINALIZE_USER_PROMPT_TEMPLATE.format(
         content=_render_finalizer_input(
             document_ir=document_ir,
             contract=contract,
@@ -374,7 +318,7 @@ def _finalize_extraction_once(
     )
     response_text = _create_text_completion(
         messages=[
-            {"role": "system", "content": "You are a precise software-engineering document extractor. Return JSON only."},
+            {"role": "system", "content": SYSTEM_PROMPT.strip()},
             {"role": "user", "content": prompt},
         ],
         temperature=0.0,
@@ -398,10 +342,7 @@ def _render_document_context(
             document_ir.outline.model_dump_json(indent=2),
             "[Extraction Contract]",
             contract.model_dump_json(indent=2),
-            (
-                "The input is the full document rendered with [ELEMENT: ...] markers. "
-                "Use 1-3 best marker IDs as compact evidence_element_ids anchors for each object."
-            ),
+            "输入是带 [ELEMENT: ...] 标记的完整文档。",
         ]
     )
 
@@ -464,9 +405,8 @@ def _render_chunk_context(
                 indent=2,
             ),
             (
-                "Return only the five target slots. Use evidence_element_ids from "
-                "allowed_evidence_element_ids. Use 1-3 compact anchors per object, not every related element. "
-                "Leave a list empty when the chunk has no object for that slot."
+                "只返回五个目标槽位。evidence_element_ids 必须来自 allowed_evidence_element_ids。"
+                "当前分块没有某类对象时，该槽位返回空列表。"
             ),
         ]
     )

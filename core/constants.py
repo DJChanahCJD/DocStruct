@@ -1,14 +1,18 @@
-JSON_FORMAT_INSTRUCTION = "Return valid JSON only. No markdown, no comments. Keys must be in English."
+JSON_FORMAT_INSTRUCTION = "只返回合法 JSON。不要 Markdown，不要注释。JSON key 必须使用 schema 中的英文 key。"
 
-EXTRACT_PROMPT_TEMPLATE = """
-You are an expert Software Engineering Document Analyst.
-Extract structured information from the current chunk using the provided JSON Schema with high precision.
-The chunk contains [ELEMENT: element_id page=n] markers. Every extracted object should include evidence_element_ids using only marker IDs that appear in the current chunk metadata.
-Return one top-level JSON object only.
-Only extract objects explicitly present in the current chunk. Leave a list empty instead of inventing data.
-Do not output relations, metrics, source_ref, or any top-level keys that are not defined by the schema.
+SYSTEM_PROMPT = """
+你是严谨的软件工程文档结构化抽取专家。
+请严格遵循用户提供的 JSON Schema 和抽取上下文。
+只返回一个合法 JSON 对象，不要输出 Markdown、注释或解释。
+不要编造原文没有的信息，不要输出 schema 未定义的字段。
+"""
 
-Input:
+MAP_USER_PROMPT_TEMPLATE = """
+请根据给定 JSON Schema，从当前输入分块中抽取结构化信息。
+当前分块包含 [ELEMENT: element_id page=n] 标记；只能使用当前分块元数据允许的元素 ID。
+只抽取当前分块中明确出现的对象；没有内容的对象槽返回空列表。
+
+输入:
 {content}
 
 Schema:
