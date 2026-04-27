@@ -100,6 +100,10 @@ class MarkdownRenderer:
         return "\n".join(rendered_lines)
 
     def _render_table_block(self, block: DocBlock) -> str:
+        raw_markdown = str(block.attrs.get("raw_markdown") or "").strip()
+        if raw_markdown and self._looks_like_markdown_table(raw_markdown):
+            return raw_markdown
+
         rows = block.attrs.get("rows")
         if not isinstance(rows, list) or not rows:
             return block.text.strip()
@@ -117,6 +121,14 @@ class MarkdownRenderer:
         if not isinstance(row, list):
             return []
         return [str(cell or "").strip() for cell in row]
+
+    @staticmethod
+    def _looks_like_markdown_table(value: str) -> bool:
+        """Return whether text already contains a Markdown table."""
+        lines = [line.strip() for line in value.splitlines() if line.strip()]
+        if len(lines) < 2 or not TABLE_ROW_PATTERN.match(lines[0]):
+            return False
+        return any(TABLE_SEPARATOR_PATTERN.match(line) for line in lines[1:])
 
     @staticmethod
     def _table_requires_html(rows: list[list[str]]) -> bool:

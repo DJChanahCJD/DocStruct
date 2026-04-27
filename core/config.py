@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from core.constants import DEFAULT_EXTRACTION_THRESHOLD, DEFAULT_EXTRACTION_CHUNK_MAX_CHARS, DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS, DEFAULT_EXTRACTION_MAX_CHARS, DEFAULT_EXTRACTION_CONCURRENCY
 
 from dotenv import load_dotenv
 
@@ -51,11 +52,11 @@ def get_settings() -> RuntimeSettings:
         llm_model=os.getenv("LLM_MODEL", "qwen-doc-turbo"),
         upload_dir=os.getenv("UPLOAD_DIR", os.path.join("db", "uploads")),
         db_path=os.getenv("DB_PATH", os.path.join("db", "db.sqlite3")),
-        extraction_threshold=_get_int("EXTRACTION_THRESHOLD", 6000),
-        extraction_chunk_max_chars=_get_int("EXTRACTION_CHUNK_MAX_CHARS", 5000),
-        extraction_chunk_overlap_chars=_get_int("EXTRACTION_CHUNK_OVERLAP_CHARS", 200),
-        extraction_max_chars=_get_int("EXTRACTION_MAX_CHARS", 100000),
-        extraction_concurrency=_get_int("EXTRACTION_CONCURRENCY", 3),
+        extraction_threshold=_get_int("EXTRACTION_THRESHOLD", DEFAULT_EXTRACTION_THRESHOLD),
+        extraction_chunk_max_chars=_get_int("EXTRACTION_CHUNK_MAX_CHARS", DEFAULT_EXTRACTION_CHUNK_MAX_CHARS),
+        extraction_chunk_overlap_chars=_get_int("EXTRACTION_CHUNK_OVERLAP_CHARS", DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS),
+        extraction_max_chars=_get_int("EXTRACTION_MAX_CHARS", DEFAULT_EXTRACTION_MAX_CHARS),
+        extraction_concurrency=_get_int("EXTRACTION_CONCURRENCY", DEFAULT_EXTRACTION_CONCURRENCY),
         parser_backend=os.getenv("PARSER_BACKEND", "basic"),
         docling_enable_ocr=_get_bool("DOCLING_ENABLE_OCR", False),
         docling_enable_table_structure=_get_bool("DOCLING_ENABLE_TABLE_STRUCTURE", True),

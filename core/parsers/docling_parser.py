@@ -14,6 +14,7 @@ DocStruct 负责：
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +23,11 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 
 if TYPE_CHECKING:
     from core.parser import BaseParser, DocBlock, ParseResult
+
+
+HEADING_MARKDOWN_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+TABLE_ROW_PATTERN = re.compile(r"^\s*\|.*\|\s*$")
+TABLE_SEPARATOR_PATTERN = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 
 
 @dataclass
@@ -109,6 +115,7 @@ class DoclingParser:
 
             # 5. 构建 DocBlock 列表
             blocks = self._build_blocks(elements)
+            blocks = self._merge_adjacent_paragraphs(blocks)
 
             # 6. 渲染 Markdown
             renderer = MarkdownRenderer()
@@ -177,21 +184,18 @@ class DoclingParser:
             ParsedElement 或 None
         """
         # 获取元素类型标签
-        label = getattr(item, "label", None)
-        if label:
-            item_type = str(label).lower()
-        else:
-            item_type = "text"
+        item_type = self._normalize_item_type(getattr(item, "label", None))
+        markdown = self._export_markdown(item, document)
 
         # 提取文本内容
         text = ""
         if hasattr(item, "text") and item.text:
             text = str(item.text)
-        elif hasattr(item, "export_to_markdown"):
-            try:
-                text = item.export_to_markdown(doc=document)
-            except Exception:
-                pass
+        elif markdown:
+            text = markdown
+
+        if item_type == "table" and markdown:
+            text = markdown
 
         if not text and item_type not in ("picture", "image", "figure"):
             return None
@@ -204,6 +208,7 @@ class DoclingParser:
             id=f"elem_{idx}",
             type=item_type,
             text=text,
+            markdown=markdown,
             page=page,
             bbox=bbox,
             extra=self._extract_extra(item, item_type, document),
@@ -228,9 +233,7 @@ class DoclingParser:
         page, bbox = self._extract_position(text_item)
 
         # 判断是否为标题
-        item_type = "text"
-        if hasattr(text_item, "label"):
-            item_type = str(text_item.label).lower()
+        item_type = self._normalize_item_type(getattr(text_item, "label", None))
 
         return ParsedElement(
             id=f"elem_{idx}",
@@ -290,14 +293,14 @@ class DoclingParser:
         extra: dict[str, Any] = {}
 
         # 标题级别
-        if item_type == "heading":
-            for attr in ["level", "heading_level"]:
-                if hasattr(item, attr):
-                    extra["level"] = getattr(item, attr)
-                    break
+        if item_type in {"title", "section_header", "heading"}:
+            extra["level"] = self._infer_heading_level(item, document)
 
         # 表格数据
         if item_type == "table":
+            markdown = self._export_markdown(item, document)
+            if self._looks_like_markdown_table(markdown):
+                extra["raw_markdown"] = markdown.strip()
             if hasattr(item, "export_to_dataframe"):
                 try:
                     df = item.export_to_dataframe(doc=document)
@@ -367,6 +370,8 @@ class DoclingParser:
         # 处理表格
         if block_type == "table" and "rows" in attrs:
             attrs["prefer_html"] = False
+        if block_type == "table" and self._looks_like_markdown_table(elem.markdown or elem.text):
+            attrs["raw_markdown"] = (elem.markdown or elem.text or "").strip()
 
         return DocBlock(
             type=block_type,
@@ -395,6 +400,101 @@ class DoclingParser:
             "list_item": "list",
         }
         return type_map.get(elem_type.lower(), "paragraph")
+
+    @staticmethod
+    def _normalize_item_type(label: Any) -> str:
+        """将 Docling label 统一转换为内部元素类型文本。"""
+        if label is None:
+            return "text"
+        value = getattr(label, "value", None)
+        return str(value if value is not None else label).strip().lower() or "text"
+
+    @staticmethod
+    def _export_markdown(item: Any, document: Any) -> str:
+        """调用 Docling 原生 Markdown 导出，失败时返回空字符串。"""
+        if not hasattr(item, "export_to_markdown"):
+            return ""
+        try:
+            return str(item.export_to_markdown(doc=document) or "").strip()
+        except TypeError:
+            try:
+                return str(item.export_to_markdown() or "").strip()
+            except Exception:
+                return ""
+        except Exception:
+            return ""
+
+    def _infer_heading_level(self, item: Any, document: Any) -> int:
+        """从 Docling Markdown 标题前缀推断标题层级。"""
+        markdown = self._export_markdown(item, document)
+        match = HEADING_MARKDOWN_PATTERN.match(markdown.strip())
+        if match:
+            return len(match.group(1))
+
+        for attr in ["level", "heading_level"]:
+            if not hasattr(item, attr):
+                continue
+            try:
+                return min(max(int(getattr(item, attr)), 1), 6)
+            except (TypeError, ValueError):
+                continue
+        return 1
+
+    @staticmethod
+    def _looks_like_markdown_table(value: str | None) -> bool:
+        """判断文本是否是可直接保留的 Markdown 表格。"""
+        lines = [line.strip() for line in (value or "").splitlines() if line.strip()]
+        if len(lines) < 2 or not TABLE_ROW_PATTERN.match(lines[0]):
+            return False
+        return any(TABLE_SEPARATOR_PATTERN.match(line) for line in lines[1:])
+
+    def _merge_adjacent_paragraphs(self, blocks: list["DocBlock"]) -> list["DocBlock"]:
+        """合并 Docling 按视觉行切碎的相邻段落。"""
+        from core.parser import DocBlock
+
+        merged: list[DocBlock] = []
+        for block in blocks:
+            if (
+                merged
+                and block.type == "paragraph"
+                and merged[-1].type == "paragraph"
+                and self._should_merge_paragraphs(merged[-1], block)
+            ):
+                previous = merged[-1]
+                separator = "" if block.text.strip().startswith((":", "：")) else " "
+                previous.text = f"{previous.text.rstrip()}{separator}{block.text.strip()}"
+                continue
+            merged.append(block)
+        return merged
+
+    def _should_merge_paragraphs(self, previous: "DocBlock", current: "DocBlock") -> bool:
+        """判断两个连续段落是否明显属于同一个逻辑句子。"""
+        previous_text = previous.text.strip()
+        current_text = current.text.strip()
+        if not previous_text or not current_text:
+            return False
+        if previous.source_page is not None and current.source_page is not None and previous.source_page != current.source_page:
+            return False
+        if self._looks_like_structural_text(current_text):
+            return False
+        if previous_text.endswith((":", "：")) or current_text.startswith((":", "：")):
+            return True
+        return not self._is_sentence_end(previous_text) and len(previous_text) >= 20
+
+    @staticmethod
+    def _looks_like_structural_text(value: str) -> bool:
+        """判断文本是否像标题、列表或表格等结构块。"""
+        stripped = value.strip()
+        if not stripped:
+            return True
+        if HEADING_MARKDOWN_PATTERN.match(stripped) or TABLE_ROW_PATTERN.match(stripped):
+            return True
+        return bool(re.match(r"^\s*(?:[-+*]|\d+\.)\s+\S+", stripped))
+
+    @staticmethod
+    def _is_sentence_end(value: str) -> bool:
+        """判断文本是否以完整句末标点结束。"""
+        return value.rstrip().endswith(("。", ".", "！", "!", "？", "?", "；", ";"))
 
     def _extract_title(self, blocks: list["DocBlock"]) -> str | None:
         """从 blocks 中提取文档标题。"""

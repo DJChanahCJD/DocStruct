@@ -7,9 +7,9 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from core.chunker import render_element_marker, split_ir_into_chunks
+from core.chunker import render_element_marker, split_ir_into_chunks, summarize_chunk
 from core.config import get_settings
-from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SYSTEM_PROMPT
+from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SYSTEM_PROMPT, EVIDENCE_ELEMENT_IDS_INSTRUCTION
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
 from core.reducer import OBJECT_SLOTS, reduce_extraction_results
@@ -20,6 +20,7 @@ from schemas.models import DocType, DocumentChunk, DocumentIR, ExtractedObjectSe
 logger = logging.getLogger(__name__)
 settings = get_settings()
 raw_client = get_openai_client()
+RESPONSE_PREVIEW_CHARS = 500
 
 
 SLOT_DESCRIPTIONS = {
@@ -33,7 +34,8 @@ SLOT_DESCRIPTIONS = {
 FINALIZE_USER_PROMPT_TEMPLATE = """
 请使用给定 JSON Schema，把分块级抽取候选合并成一个最终结构化文档。
 结合文档大纲和证据片段处理去重、合并和父子结构。
-evidence_element_ids 只能使用证据片段中出现的元素 ID。
+{evidence_element_ids_instruction}
+
 
 输入:
 {content}
@@ -50,6 +52,7 @@ def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContr
     common_rules = [
         "只抽取当前输入中明确出现的对象。",
         "evidence_element_ids 只使用 [ELEMENT: ...] 标记中的元素 ID。",
+        "evidence_element_ids 只保留能直接支撑对象存在、定义或关键约束的高价值元素。",
         "只返回目标对象槽位；未出现的对象槽返回空列表。",
     ]
     return ExtractionContract(
@@ -79,6 +82,16 @@ def _has_meaningful_schema_fields(data: dict[str, object], response_model: type[
 
 def _json_schema_text(model: type[BaseModel]) -> str:
     return json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2)
+
+
+def _preview_text(text: str, limit: int = RESPONSE_PREVIEW_CHARS) -> str:
+    """
+    返回适合日志记录的单行短文本预览。
+    """
+    normalized = " ".join((text or "").split())
+    if len(normalized) <= limit:
+        return normalized
+    return f"{normalized[:limit]}..."
 
 
 def _create_text_completion(
@@ -112,6 +125,7 @@ def _extract_once(
     template = prompt_template or MAP_USER_PROMPT_TEMPLATE
     prompt = template.format(
         content=prompt_content,
+        evidence_element_ids_instruction=EVIDENCE_ELEMENT_IDS_INSTRUCTION,
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
     )
@@ -123,7 +137,18 @@ def _extract_once(
         temperature=0.0,
         model_name=model_name,
     )
-    data = clean_and_parse_json(response_text)
+    try:
+        data = clean_and_parse_json(response_text)
+    except ValueError as exc:
+        logger.warning(
+            "LLM JSON parse failed: prompt_chars=%s response_chars=%s response_preview=%s",
+            len(prompt),
+            len(response_text),
+            _preview_text(response_text),
+        )
+        raise ValueError(
+            f"LLM JSON parse failed: prompt_chars={len(prompt)}, response_chars={len(response_text)}"
+        ) from exc
     return normalize_extracted_data(data)
 
 
@@ -137,14 +162,18 @@ async def _extract_chunk(
     model_name: str | None = None,
 ) -> dict[str, object]:
     async with semaphore:
-        return await asyncio.to_thread(
-            _extract_once,
-            chunk.markdown,
-            ExtractedObjectSet,
-            context_note=_render_chunk_context(document_ir=document_ir, contract=contract, chunk=chunk),
-            prompt_template=prompt_template,
-            model_name=model_name,
-        )
+        try:
+            return await asyncio.to_thread(
+                _extract_once,
+                chunk.markdown,
+                ExtractedObjectSet,
+                context_note=_render_chunk_context(document_ir=document_ir, contract=contract, chunk=chunk),
+                prompt_template=prompt_template,
+                model_name=model_name,
+            )
+        except Exception as exc:
+            summary = summarize_chunk(chunk)
+            raise RuntimeError(f"Chunk extraction failed: {summary}") from exc
 
 
 async def extract_structure_with_meta(
@@ -165,6 +194,15 @@ async def extract_structure_with_meta(
         doc_type=normalized_doc_type,
     )
     content_length = sum(len(element.markdown or element.text or "") for element in ir.elements)
+    logger.info(
+        "Extraction input prepared: doc_type=%s content_chars=%s element_count=%s section_count=%s threshold=%s max_chars=%s",
+        normalized_doc_type.value,
+        content_length,
+        len(ir.elements),
+        len(ir.outline.sections),
+        settings.extraction_threshold,
+        settings.extraction_max_chars,
+    )
     if content_length > settings.extraction_max_chars:
         raise ValueError(
             f"文档长度为 {content_length} 字符，超过系统上限 {settings.extraction_max_chars}。"
@@ -207,6 +245,15 @@ async def extract_structure_with_meta(
     if not chunks:
         raise ValueError("文档 IR 分块失败，无法继续提取")
 
+    chunk_summaries = [summarize_chunk(chunk) for chunk in chunks]
+    logger.info(
+        "Extraction chunks prepared: chunk_count=%s chunk_max_chars=%s concurrency=%s chunks=%s",
+        len(chunks),
+        settings.extraction_chunk_max_chars,
+        settings.extraction_concurrency,
+        chunk_summaries,
+    )
+
     semaphore = asyncio.Semaphore(max(1, settings.extraction_concurrency))
     tasks = [
         _extract_chunk(
@@ -223,38 +270,58 @@ async def extract_structure_with_meta(
 
     partial_results: list[dict[str, Any]] = []
     failed_chunk_indexes: list[int] = []
+    failed_chunk_details: list[dict[str, object]] = []
     for index, result in enumerate(results):
+        chunk_summary = summarize_chunk(chunks[index])
         if isinstance(result, Exception):
             failed_chunk_indexes.append(index)
-            logger.warning("Chunk extraction failed: %s", result)
+            failed_chunk_details.append({**chunk_summary, "index": index, "error": str(result)})
+            logger.warning("Chunk extraction failed: index=%s summary=%s error=%s", index, chunk_summary, result)
             continue
         if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, ExtractedObjectSet):
             failed_chunk_indexes.append(index)
-            logger.warning("Chunk returned no meaningful schema fields at index %s", index)
+            failed_chunk_details.append({**chunk_summary, "index": index, "error": "no_meaningful_schema_fields"})
+            logger.warning("Chunk returned no meaningful schema fields: index=%s summary=%s", index, chunk_summary)
             continue
         try:
             validated_chunk = ExtractedObjectSet.model_validate(result)
         except ValidationError as exc:
             failed_chunk_indexes.append(index)
-            logger.warning("Chunk validation failed at index %s: %s", index, exc)
+            failed_chunk_details.append({**chunk_summary, "index": index, "error": str(exc)})
+            logger.warning("Chunk validation failed: index=%s summary=%s error=%s", index, chunk_summary, exc)
             continue
         partial_results.append(validated_chunk.model_dump(mode="json", exclude_none=True))
 
     if not partial_results:
         raise RuntimeError(f"分块提取失败，失败块数: {len(failed_chunk_indexes)}/{len(chunks)}")
 
-    finalized_data = await asyncio.to_thread(
-        _finalize_extraction_once,
-        document_ir=ir,
-        contract=contract,
-        chunk_results=partial_results,
-        response_model=ExtractedObjectSet,
-        model_name=model_name,
-    )
+    finalizer_failed = False
+    try:
+        finalized_data = await asyncio.to_thread(
+            _finalize_extraction_once,
+            document_ir=ir,
+            contract=contract,
+            chunk_results=partial_results,
+            response_model=ExtractedObjectSet,
+            model_name=model_name,
+        )
+        chunk_results_for_reduce = [finalized_data]
+    except Exception as exc:
+        finalizer_failed = True
+        candidate_chars = len(json.dumps(partial_results, ensure_ascii=False))
+        evidence_chars = len(_render_document_elements(ir))
+        logger.warning(
+            "Finalizer failed, falling back to direct reducer: candidates=%s candidate_chars=%s evidence_chars=%s error=%s",
+            len(partial_results),
+            candidate_chars,
+            evidence_chars,
+            exc,
+        )
+        chunk_results_for_reduce = partial_results
     reduced_data, evidence_meta = reduce_extraction_results(
         doc_type=normalized_doc_type.value,
         title=ir.title,
-        chunk_results=[finalized_data],
+        chunk_results=chunk_results_for_reduce,
         document_ir=ir,
     )
     validated = response_model.model_validate(reduced_data)
@@ -264,7 +331,9 @@ async def extract_structure_with_meta(
         "chunk_count": len(chunks),
         "failed_chunks": failed_chunks,
         "failed_chunk_indexes": failed_chunk_indexes,
-        "partial": failed_chunks > 0,
+        "failed_chunk_details": failed_chunk_details,
+        "partial": failed_chunks > 0 or finalizer_failed,
+        "finalizer_failed": finalizer_failed,
         "element_count": len(ir.elements),
         "section_count": len(ir.outline.sections),
         **evidence_meta,
@@ -310,6 +379,7 @@ def _finalize_extraction_once(
     prompt = FINALIZE_USER_PROMPT_TEMPLATE.format(
         content=_render_finalizer_input(
             document_ir=document_ir,
+            evidence_element_ids_instruction=EVIDENCE_ELEMENT_IDS_INSTRUCTION,
             contract=contract,
             chunk_results=chunk_results,
         ),
@@ -324,7 +394,18 @@ def _finalize_extraction_once(
         temperature=0.0,
         model_name=model_name,
     )
-    data = clean_and_parse_json(response_text)
+    try:
+        data = clean_and_parse_json(response_text)
+    except ValueError as exc:
+        logger.warning(
+            "LLM finalizer JSON parse failed: prompt_chars=%s response_chars=%s response_preview=%s",
+            len(prompt),
+            len(response_text),
+            _preview_text(response_text),
+        )
+        raise ValueError(
+            f"LLM finalizer JSON parse failed: prompt_chars={len(prompt)}, response_chars={len(response_text)}"
+        ) from exc
     return normalize_extracted_data(data)
 
 
@@ -406,6 +487,8 @@ def _render_chunk_context(
             ),
             (
                 "只返回五个目标槽位。evidence_element_ids 必须来自 allowed_evidence_element_ids。"
+                "当前分块可能包含多个章节或多个需求，请逐项抽取为列表对象。"
+                "只选择少量高价值证据，不逐行罗列字段名、冒号行、普通列表项或相邻弱相关元素。"
                 "当前分块没有某类对象时，该槽位返回空列表。"
             ),
         ]

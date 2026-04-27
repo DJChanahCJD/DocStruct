@@ -7,10 +7,12 @@ SYSTEM_PROMPT = """
 不要编造原文没有的信息，不要输出 schema 未定义的字段。
 """
 
+EVIDENCE_ELEMENT_IDS_INSTRUCTION = "evidence_element_ids：仅用证据片段中的元素ID；只保留高价值证据（直接证明对象存在、定义或约束）；禁止罗列字段名、普通列表项。"
 MAP_USER_PROMPT_TEMPLATE = """
 请根据给定 JSON Schema，从当前输入分块中抽取结构化信息。
 当前分块包含 [ELEMENT: element_id page=n] 标记；只能使用当前分块元数据允许的元素 ID。
 只抽取当前分块中明确出现的对象；没有内容的对象槽返回空列表。
+{evidence_element_ids_instruction}
 
 输入:
 {content}
@@ -20,3 +22,10 @@ Schema:
 
 {json_instruction}
 """
+
+
+DEFAULT_EXTRACTION_THRESHOLD = 6000
+DEFAULT_EXTRACTION_CHUNK_MAX_CHARS = 5000
+DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS = 200
+DEFAULT_EXTRACTION_MAX_CHARS = 100000
+DEFAULT_EXTRACTION_CONCURRENCY = 3

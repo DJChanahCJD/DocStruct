@@ -332,7 +332,7 @@ class BaseExtractedDocument(BaseModel):
     extra: dict[str, Any] = Field(default_factory=dict, description="少量无法归入声明字段的文档级原文属性")
 
 
-class StructuredDocument(BaseExtractedDocument, ExtractedObjectSet):
+class StructuredDocument(ExtractedObjectSet, BaseExtractedDocument):
     evidence: list[Evidence] = Field(default_factory=list, description="后端生成的证据绑定；抽取时不要编造")
 
 

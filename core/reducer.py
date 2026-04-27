@@ -8,7 +8,6 @@ from schemas.models import DocumentElement, DocumentIR
 
 
 OBJECT_SLOTS = ("entities", "processes", "requirements", "interfaces", "artifacts")
-MAX_EVIDENCE_ANCHORS_PER_OBJECT = 5
 ID_PREFIXES = {
     "entities": "ENT",
     "processes": "PROC",
@@ -150,6 +149,7 @@ def _evidence_for_item(
     item: dict[str, Any],
     element_map: dict[str, DocumentElement],
 ) -> list[dict[str, Any]]:
+    """绑定对象声明的有效证据元素，不在 reducer 层裁剪数量。"""
     evidence_entries: list[dict[str, Any]] = []
     evidence_ids = _dedupe_strings(item.get("evidence_element_ids") or [])
     valid_evidence_ids: list[str] = []
@@ -157,8 +157,6 @@ def _evidence_for_item(
     for element_id in evidence_ids:
         element = element_map.get(element_id)
         if not element:
-            continue
-        if len(valid_evidence_ids) >= MAX_EVIDENCE_ANCHORS_PER_OBJECT:
             continue
         valid_evidence_ids.append(element_id)
         evidence_entries.append(_entry_from_element(object_id, element))
