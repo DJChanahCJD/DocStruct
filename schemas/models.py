@@ -1,10 +1,9 @@
 """
-ORM records and Pydantic models for DocStruct's final extraction design.
+ORM records and Pydantic models for DocStruct's extraction pipeline.
 
-The output contract is centered on five software-engineering object slots plus
-business views and evidence bindings. Source traceability is expressed through
-`evidence_element_ids` on objects and document-level `evidence` entries, not
-through per-object `source_ref` blobs.
+The output contract is centered on five software-engineering object slots and
+evidence bindings. Source traceability is expressed through `source_id` for
+document-native identifiers and `evidence_element_ids` for source grounding.
 """
 
 from __future__ import annotations
@@ -12,7 +11,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 from tortoise import fields, models
 
 
@@ -31,65 +30,31 @@ class DocType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class PriorityLevel(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-
-
 class TestStage(str, Enum):
     PLAN = "plan"
     CASE = "case"
     REPORT = "report"
 
 
+
 class EntityType(str, Enum):
-    ACTOR = "actor"
-    MODULE = "module"
-    DATA = "data"
-    SYSTEM = "system"
-    SERVICE = "service"
-    COMPONENT = "component"
-    OTHER = "other"
+    ACTOR = "actor"  # 参与者（人、角色等发起动作的对象）
+    SYSTEM = "system" # 内部系统、模块、服务、外部系统
+    DATA = "data"     # 数据实体（如数据库表、文件、日志、消息体等）
+    OTHER = "other"  # 兜底类型；若占比过高，需分析和升级为主类型
+
 
 
 class ProcessType(str, Enum):
-    BUSINESS = "business"
-    WORKFLOW = "workflow"
-    OPERATION = "operation"
-    TEST = "test"
-    OTHER = "other"
+    BUSINESS = "business"   # 业务视角的流程（含跨系统的端到端流程）
+    TECHNICAL = "technical" # 系统/技术视角的内部流程（含工作流、操作步骤等）
+    TEST = "test"           # 测试流程
+    OTHER = "other"         # 兜底
 
 
 class RequirementType(str, Enum):
     FUNCTIONAL = "functional"
     NON_FUNCTIONAL = "non_functional"
-    BUSINESS_RULE = "business_rule"
-    CONSTRAINT = "constraint"
-    ACCEPTANCE = "acceptance"
-    OTHER = "other"
-
-
-class InterfaceType(str, Enum):
-    HTTP = "http"
-    RPC = "rpc"
-    MESSAGE = "message"
-    DATABASE = "database"
-    FILE = "file"
-    EXTERNAL_SYSTEM = "external_system"
-    HARDWARE = "hardware"
-    USER_INTERFACE = "user_interface"
-    OTHER = "other"
-
-
-class ArtifactType(str, Enum):
-    API_ENDPOINT = "api_endpoint"
-    DESIGN_MODULE = "design_module"
-    TEST_CASE = "test_case"
-    MANUAL_SECTION = "manual_section"
-    ISSUE = "issue"
-    DECISION = "decision"
-    TABLE = "table"
     OTHER = "other"
 
 
@@ -100,35 +65,6 @@ class DocumentStatus(str, Enum):
     EXTRACTING = "extracting"
     COMPLETED = "completed"
     FAILED = "failed"
-
-
-class RequirementCategory(str, Enum):
-    USER_MANAGEMENT = "user_management"
-    PERFORMANCE = "performance"
-    SECURITY = "security"
-    DATA = "data"
-    INTERFACE = "interface"
-    OTHER = "other"
-
-
-class ArtifactStatus(str, Enum):
-    PENDING = "pending"
-    RESOLVED = "resolved"
-    PASSED = "passed"
-    FAILED = "failed"
-
-
-class HttpMethod(str, Enum):
-    GET = "GET"
-    POST = "POST"
-    PUT = "PUT"
-    DELETE = "DELETE"
-    PATCH = "PATCH"
-    OPTIONS = "OPTIONS"
-    HEAD = "HEAD"
-    GRPC = "gRPC"
-    AMQP = "AMQP"
-    OTHER = "OTHER"
 
 
 # =========================
@@ -241,8 +177,9 @@ class ExtractionContract(BaseModel):
 
 
 class BaseNode(BaseModel):
-    id: Optional[str] = Field(None, description="Global object ID, e.g. REQ-001")
-    name: Optional[str] = Field(None, description="Object name")
+    id: Optional[str] = Field(None, description="System-generated object ID, e.g. REQ-001")
+    source_id: Optional[str] = Field(None, description="Original source document ID, e.g. SRS-USER-001")
+    name: str = Field(..., description="Object name")
     description: Optional[str] = Field(None, description="Object description")
     evidence_element_ids: list[str] = Field(default_factory=list, description="Source IR element IDs")
     extra: dict[str, Any] = Field(default_factory=dict, description="Small supplementary fields")
@@ -255,7 +192,6 @@ class BaseNode(BaseModel):
         if isinstance(value, dict):
             return value
         return {}
-
 
 class StepItem(BaseModel):
     id: Optional[str] = Field(None, description="Step ID")
@@ -299,8 +235,6 @@ class ProcessItem(BaseNode):
 
 class RequirementItem(BaseNode):
     requirement_type: RequirementType = Field(default=RequirementType.OTHER, description="Requirement type")
-    priority: Optional[PriorityLevel] = Field(None, description="Priority")
-    category: Optional[RequirementCategory] = Field(None, description="Requirement category")
     details: list[str] = Field(default_factory=list, description="Details or functional points")
     acceptance_criteria: list[str] = Field(default_factory=list, description="Acceptance criteria")
     metric: Optional[str] = Field(None, description="Quantified metric")
@@ -317,106 +251,55 @@ class RequirementItem(BaseNode):
                 return RequirementType.OTHER
         return RequirementType.OTHER
 
-    @field_validator("category", mode="before")
-    @classmethod
-    def _normalize_category(cls, value: Any) -> Optional[RequirementCategory]:
-        if value is None:
-            return None
-        if isinstance(value, RequirementCategory):
-            return value
-        if isinstance(value, str):
-            try:
-                return RequirementCategory(value)
-            except ValueError:
-                return None
-        return None
-
 
 class InterfaceItem(BaseNode):
-    interface_type: InterfaceType = Field(default=InterfaceType.OTHER, description="Interface type")
-    method: Optional[HttpMethod] = Field(None, description="Method or call style")
+    interface_type: str = Field(default="other", description="Interface type, e.g. http, rpc, message, ui, database, file")
+    method: Optional[str] = Field(None, description="Method or call style")
     path: Optional[str] = Field(None, description="Endpoint path or protocol address")
     target: Optional[str] = Field(None, description="Target system, service, or resource")
 
     @field_validator("interface_type", mode="before")
     @classmethod
-    def _normalize_interface_type(cls, value: Any) -> InterfaceType:
-        if isinstance(value, InterfaceType):
-            return value
-        if isinstance(value, str):
-            try:
-                return InterfaceType(value)
-            except ValueError:
-                return InterfaceType.OTHER
-        return InterfaceType.OTHER
+    def _normalize_interface_type(cls, value: Any) -> str:
+        if value is None:
+            return "other"
+        text = str(value).strip().lower()
+        return text or "other"
 
     @field_validator("method", mode="before")
     @classmethod
-    def _normalize_method(cls, value: Any) -> Optional[HttpMethod]:
+    def _normalize_method(cls, value: Any) -> Optional[str]:
         if value is None:
             return None
-        if isinstance(value, HttpMethod):
-            return value
-        if isinstance(value, str):
-            try:
-                return HttpMethod(value)
-            except ValueError:
-                return HttpMethod.OTHER
-        return None
-
-    @field_validator("path", mode="before")
-    @classmethod
-    def validate_path(cls, value: Optional[str], info) -> Optional[str]:
-        if not value:
-            return value
-        interface_type = info.data.get("interface_type")
-        if interface_type == InterfaceType.HTTP:
-            if not value.startswith("/"):
-                raise ValueError(f"HTTP interface path must start with '/', got: {value}")
-            if len(value) > 255:
-                raise ValueError(f"Path exceeds max length 255: {value[:50]}...")
-        return value
+        text = str(value).strip()
+        return text or None
 
 
 class ArtifactItem(BaseNode):
-    artifact_type: ArtifactType = Field(default=ArtifactType.OTHER, description="Artifact type")
-    status: Optional[ArtifactStatus] = Field(None, description="Artifact status")
+    artifact_type: str = Field(default="other", description="Artifact type, e.g. test_case, decision, table, issue, section")
+    details: list[str] = Field(default_factory=list, description="Artifact details")
 
     @field_validator("artifact_type", mode="before")
     @classmethod
-    def _normalize_artifact_type(cls, value: Any) -> ArtifactType:
-        if isinstance(value, ArtifactType):
-            return value
-        if isinstance(value, str):
-            try:
-                return ArtifactType(value)
-            except ValueError:
-                return ArtifactType.OTHER
-        return ArtifactType.OTHER
+    def _normalize_artifact_type(cls, value: Any) -> str:
+        if value is None:
+            return "other"
+        text = str(value).strip().lower()
+        return text or "other"
 
 
-class StructuredChunk(BaseModel):
-    entities: list[EntityItem] = Field(default_factory=list, description="Entities in this chunk")
-    processes: list[ProcessItem] = Field(default_factory=list, description="Processes in this chunk")
-    requirements: list[RequirementItem] = Field(default_factory=list, description="Requirements in this chunk")
-    interfaces: list[InterfaceItem] = Field(default_factory=list, description="Interfaces in this chunk")
-    artifacts: list[ArtifactItem] = Field(default_factory=list, description="Artifacts in this chunk")
-
-
-class BusinessView(BaseModel):
-    view_name: str = Field(..., description="Business-facing view name")
-    view_type: str = Field(..., description="View type, e.g. requirement_group")
-    object_ids: list[str] = Field(default_factory=list, description="Referenced object IDs")
-    description: Optional[str] = Field(None, description="Short view description")
-    extra: dict[str, Any] = Field(default_factory=dict, description="Small supplementary fields")
+class ExtractedObjectSet(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="Entities")
+    processes: list[ProcessItem] = Field(default_factory=list, description="Processes")
+    requirements: list[RequirementItem] = Field(default_factory=list, description="Requirements")
+    interfaces: list[InterfaceItem] = Field(default_factory=list, description="Interfaces")
+    artifacts: list[ArtifactItem] = Field(default_factory=list, description="Artifacts")
 
 
 class Evidence(BaseModel):
-    evidence_id: str = Field(..., description="Evidence ID, e.g. EVD-001")
     object_id: str = Field(..., description="Bound object ID")
     element_id: Optional[str] = Field(None, description="Source element ID when available")
     text_span: Optional[str] = Field(None, description="Source text span")
-    section_path: list[str] = Field(default_factory=list, description="Source section path")
     page: Optional[int] = Field(None, description="Source page when available")
     bbox: Optional[list[float]] = Field(
         None,
@@ -437,13 +320,7 @@ class BaseExtractedDocument(BaseModel):
     extra: dict[str, Any] = Field(default_factory=dict, description="Document-level supplementary fields")
 
 
-class StructuredDocument(BaseExtractedDocument):
-    entities: list[EntityItem] = Field(default_factory=list, description="Entities")
-    processes: list[ProcessItem] = Field(default_factory=list, description="Processes")
-    requirements: list[RequirementItem] = Field(default_factory=list, description="Requirements")
-    interfaces: list[InterfaceItem] = Field(default_factory=list, description="Interfaces")
-    artifacts: list[ArtifactItem] = Field(default_factory=list, description="Artifacts")
-    views: list[BusinessView] = Field(default_factory=list, description="Business views")
+class StructuredDocument(BaseExtractedDocument, ExtractedObjectSet):
     evidence: list[Evidence] = Field(default_factory=list, description="Evidence bindings")
 
 

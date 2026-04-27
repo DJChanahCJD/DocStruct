@@ -230,7 +230,7 @@ function ExtractionDetail({
               ) : (
                 item.evidence.map((evidence, index) => (
                   <button
-                    key={evidence.evidenceId ?? `${item.id}-${index}`}
+                    key={`${evidence.objectId}-${evidence.elementId ?? evidence.textSpan ?? index}`}
                     type="button"
                     onClick={() => onSelectEvidence(evidence)}
                     className={cn(
@@ -241,7 +241,7 @@ function ExtractionDetail({
                     )}
                   >
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="font-mono text-muted-foreground">{evidence.evidenceId ?? "EVD"}</span>
+                      <span className="font-mono text-muted-foreground">{evidence.elementId ?? "无元素"}</span>
                       {evidence.page && <span className="font-medium text-primary">P{evidence.page}</span>}
                     </div>
                     <div className="line-clamp-3 leading-5 text-foreground">
@@ -317,7 +317,7 @@ function getPrimaryEvidence(item: ExtractionItem): ExtractionEvidence | null {
 }
 
 /**
- * Compare evidence entries without depending on generated object identity.
+ * Compare evidence entries without depending on generated evidence IDs.
  */
 function evidenceMatches(
   left: ExtractionEvidence | null,
@@ -326,10 +326,10 @@ function evidenceMatches(
   if (!left || !right) {
     return false;
   }
-  if (left.evidenceId && right.evidenceId) {
-    return left.evidenceId === right.evidenceId;
+  if (left.elementId || right.elementId) {
+    return left.objectId === right.objectId && left.elementId === right.elementId;
   }
-  return left.objectId === right.objectId && left.elementId === right.elementId;
+  return left.objectId === right.objectId && left.textSpan === right.textSpan && left.page === right.page;
 }
 
 /**

@@ -57,6 +57,7 @@ class DoclingParser:
         self,
         enable_ocr: bool = False,
         enable_table_structure: bool = True,
+        force_backend_text: bool = True,
     ):
         """
         初始化 Docling 解析器。
@@ -64,9 +65,11 @@ class DoclingParser:
         Args:
             enable_ocr: 是否启用 OCR（扫描件识别）
             enable_table_structure: 是否启用表格结构识别
+            force_backend_text: 是否优先使用 PDF 原生文本层
         """
         self.enable_ocr = enable_ocr
         self.enable_table_structure = enable_table_structure
+        self.force_backend_text = force_backend_text
 
     def parse_to_result(self, file_path: str) -> "ParseResult":
         """
@@ -89,9 +92,7 @@ class DoclingParser:
 
         try:
             # 1. 配置 Docling pipeline
-            pipeline_options = PdfPipelineOptions()
-            pipeline_options.do_ocr = self.enable_ocr
-            pipeline_options.do_table_structure = self.enable_table_structure
+            pipeline_options = self._build_pipeline_options()
 
             # 2. 创建转换器
             converter = DocumentConverter(
@@ -126,10 +127,21 @@ class DoclingParser:
                     "element_count": len(elements),
                     "enable_ocr": self.enable_ocr,
                     "enable_table_structure": self.enable_table_structure,
+                    "force_backend_text": self.force_backend_text,
                 },
             )
         except Exception as exc:
             raise RuntimeError(f"Failed to parse document with Docling: {exc}") from exc
+
+    def _build_pipeline_options(self) -> PdfPipelineOptions:
+        """
+        构建 Docling PDF pipeline 配置。
+        """
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = self.enable_ocr
+        pipeline_options.do_table_structure = self.enable_table_structure
+        pipeline_options.force_backend_text = self.force_backend_text
+        return pipeline_options
 
     def _extract_elements(self, document) -> list[ParsedElement]:
         """

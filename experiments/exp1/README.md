@@ -1,5 +1,8 @@
 # 实验一: 选最优模型
 
+> 固定最终选择为 deepseek-v4-flash
+> 论证：1. 国产最新模型，开源模型能力比较（引用一下榜单、Deepseek 官方文档等数据） 2. 适配国产华为芯片，应用前景更广  3. 性价比更高
+
 模型对比: qwen-doc-turbo / deepseek-v4-flash / kimi-k2.5
 > 价格对比详见[子目录](价格/README.md)
 

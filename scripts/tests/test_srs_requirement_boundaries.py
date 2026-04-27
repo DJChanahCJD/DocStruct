@@ -12,7 +12,8 @@ from core.extractor import (
 from core.ir import parse_result_to_ir
 from core.reducer import reduce_extraction_results
 from core.parser import DocBlock, ParseResult
-from schemas.models import DocType, DocumentElement, DocumentIR, SrsDocument
+from core.parsers.docling_parser import DoclingParser
+from schemas.models import DocType, DocumentElement, DocumentIR, ExtractedObjectSet, SrsDocument
 
 
 class SrsRequirementBoundaryTests(unittest.TestCase):
@@ -65,8 +66,8 @@ class SrsRequirementBoundaryTests(unittest.TestCase):
             [f"el-{index:04d}" for index in range(1, 8)],
         )
 
-    def test_reducer_keeps_srs_semantic_fragments_for_ai_finalizer(self) -> None:
-        """Ensure reducer does not apply SRS-specific semantic merge rules."""
+    def test_reducer_preserves_source_id_without_semantic_filtering(self) -> None:
+        """Ensure reducer preserves source IDs but does not apply SRS semantic filters."""
         elements = [
             DocumentElement(
                 element_id="el-0001",
@@ -107,16 +108,19 @@ class SrsRequirementBoundaryTests(unittest.TestCase):
                 {
                     "requirements": [
                         {
+                            "id": "SRS-USER-002",
                             "name": "用户登录",
                             "description": "系统应支持用户通过账号密码登录",
                             "requirement_type": "functional",
+                            "acceptance_criteria": ["登录响应时间 < 2 秒"],
                             "evidence_element_ids": ["el-0001", "el-0002"],
                         },
                         {
-                            "name": "功能点",
+                            "id": "SRS-USER-002",
+                            "name": "用户登录",
                             "requirement_type": "functional",
                             "details": ["支持邮箱+密码登录"],
-                            "evidence_element_ids": ["el-0003"],
+                            "evidence_element_ids": ["el-0001", "el-0003"],
                         },
                         {
                             "name": "验收标准",
@@ -129,15 +133,102 @@ class SrsRequirementBoundaryTests(unittest.TestCase):
             ],
         )
 
-        self.assertEqual(len(reduced["requirements"]), 3)
-        self.assertEqual(
-            [requirement["name"] for requirement in reduced["requirements"]],
-            ["用户登录", "功能点", "验收标准"],
+        self.assertEqual(len(reduced["requirements"]), 2)
+        requirement = reduced["requirements"][0]
+        acceptance = reduced["requirements"][1]
+        self.assertEqual(requirement["id"], "REQ-001")
+        self.assertEqual(requirement["source_id"], "SRS-USER-002")
+        self.assertEqual(requirement["details"], ["支持邮箱+密码登录"])
+        self.assertEqual(requirement["acceptance_criteria"], ["登录响应时间 < 2 秒"])
+        self.assertEqual(acceptance["id"], "REQ-002")
+        self.assertEqual(acceptance["requirement_type"], "acceptance")
+        self.assertNotIn("views", reduced)
+        self.assertNotIn("priority", requirement)
+        self.assertNotIn("category", requirement)
+        for evidence in reduced["evidence"]:
+            self.assertNotIn("evidence_id", evidence)
+            self.assertNotIn("section_path", evidence)
+
+    def test_reducer_limits_evidence_to_compact_anchors(self) -> None:
+        """Ensure each object keeps only a few valid evidence anchors."""
+        elements = [
+            DocumentElement(
+                element_id=f"el-{index:04d}",
+                element_type="paragraph",
+                text=f"证据 {index}",
+                section_path=["2.2.2 文档解析"],
+                order=index,
+            )
+            for index in range(1, 6)
+        ]
+        document_ir = DocumentIR(title="智能文档系统需求规格说明书", doc_type=DocType.SRS, elements=elements)
+
+        reduced, meta = reduce_extraction_results(
+            doc_type="srs",
+            title=document_ir.title,
+            document_ir=document_ir,
+            chunk_results=[
+                {
+                    "requirements": [
+                        {
+                            "name": "文档解析",
+                            "description": "系统应自动解析上传的文档，提取结构化信息",
+                            "requirement_type": "functional",
+                            "evidence_element_ids": [
+                                "el-0001",
+                                "missing-element",
+                                "el-0002",
+                                "el-0003",
+                                "el-0004",
+                                "el-0005",
+                            ],
+                        }
+                    ]
+                }
+            ],
         )
-        self.assertEqual(
-            [requirement["id"] for requirement in reduced["requirements"]],
-            ["REQ-001", "REQ-002", "REQ-003"],
+
+        requirement = reduced["requirements"][0]
+        self.assertEqual(requirement["evidence_element_ids"], ["el-0001", "el-0002", "el-0003"])
+        self.assertEqual([entry["element_id"] for entry in reduced["evidence"]], ["el-0001", "el-0002", "el-0003"])
+        self.assertEqual(meta["evidence_count"], 3)
+
+    def test_reducer_does_not_create_fallback_evidence_without_element_ids(self) -> None:
+        """Ensure evidence binding only uses valid element IDs from the IR."""
+        document_ir = DocumentIR(
+            title="智能文档系统需求规格说明书",
+            doc_type=DocType.SRS,
+            elements=[
+                DocumentElement(
+                    element_id="el-0001",
+                    element_type="table",
+                    text="| 验收项 | 验收方法 | 通过标准 |",
+                    section_path=["5. 验收标准"],
+                    order=0,
+                )
+            ],
         )
+
+        reduced, _ = reduce_extraction_results(
+            doc_type="srs",
+            title=document_ir.title,
+            document_ir=document_ir,
+            chunk_results=[
+                {
+                    "requirements": [
+                        {
+                            "name": "验收标准",
+                            "description": "文档上传功能：支持所有声明格式",
+                            "requirement_type": "acceptance",
+                            "evidence_element_ids": ["missing-element"],
+                        }
+                    ]
+                }
+            ],
+        )
+
+        self.assertEqual(len(reduced.get("requirements", [])), 1)
+        self.assertNotIn("evidence", reduced)
 
     def test_finalizer_input_contains_global_merge_context(self) -> None:
         """Ensure finalizer prompt input carries outline, candidates, and evidence."""
@@ -179,7 +270,25 @@ class SrsRequirementBoundaryTests(unittest.TestCase):
         self.assertIn("[Chunk Candidates]", rendered)
         self.assertIn("[Evidence Snippets]", rendered)
         self.assertIn("[ELEMENT: el-0004]", rendered)
-        self.assertIn("Do not turn acceptance criteria lines into separate constraint", FINALIZE_PROMPT_TEMPLATE)
+        self.assertIn("Do not turn acceptance criteria lines or acceptance-standard tables", FINALIZE_PROMPT_TEMPLATE)
+        self.assertIn("1-3 compact evidence_element_ids", FINALIZE_PROMPT_TEMPLATE)
+        self.assertIn("Use evidence_element_ids as anchors only", rendered)
+
+    def test_extracted_object_set_is_the_llm_facing_schema(self) -> None:
+        """Ensure the LLM-facing schema exposes only the five object slots."""
+        schema_fields = set(ExtractedObjectSet.model_fields)
+
+        self.assertEqual(schema_fields, {"entities", "processes", "requirements", "interfaces", "artifacts"})
+
+    def test_docling_pipeline_uses_backend_text_option(self) -> None:
+        """Ensure Docling parser can prefer the PDF backend text layer."""
+        parser = DoclingParser(enable_ocr=False, enable_table_structure=True, force_backend_text=True)
+
+        pipeline_options = parser._build_pipeline_options()
+
+        self.assertFalse(pipeline_options.do_ocr)
+        self.assertTrue(pipeline_options.do_table_structure)
+        self.assertTrue(pipeline_options.force_backend_text)
 
     def test_short_srs_uses_whole_document_extraction(self) -> None:
         """Ensure short documents bypass chunk Map and use one whole-document extraction call."""

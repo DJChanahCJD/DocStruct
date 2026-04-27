@@ -769,6 +769,7 @@ class ParserFactory:
             return DoclingParser(
                 enable_ocr=settings.docling_enable_ocr,
                 enable_table_structure=settings.docling_enable_table_structure,
+                force_backend_text=settings.docling_force_backend_text,
             )
 
         # 默认 basic parser

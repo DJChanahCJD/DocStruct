@@ -14,7 +14,7 @@ from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
 from core.reducer import OBJECT_SLOTS, reduce_extraction_results
 from core.utils import clean_and_parse_json, normalize_extracted_data
-from schemas.models import DocType, DocumentChunk, DocumentIR, ExtractionContract, StructuredChunk
+from schemas.models import DocType, DocumentChunk, DocumentIR, ExtractedObjectSet, ExtractionContract
 
 
 logger = logging.getLogger(__name__)
@@ -23,11 +23,11 @@ raw_client = get_openai_client()
 
 
 SLOT_DESCRIPTIONS = {
-    "entities": "Actors, modules, systems, services, components, or data objects explicitly present in the chunk.",
+    "entities": "Product-domain actors, modules, systems, services, components, or data objects explicitly present in the chunk; do not extract requirement titles as entities.",
     "processes": "Business, workflow, operation, or test processes with ordered steps explicitly present in the chunk.",
-    "requirements": "Functional, non-functional, business-rule, constraint, or acceptance requirements explicitly present in the chunk.",
-    "interfaces": "HTTP, RPC, message, database, file, external system, hardware, or UI interfaces explicitly present in the chunk.",
-    "artifacts": "Document artifacts such as endpoints, design modules, test cases, manual sections, issues, decisions, or tables.",
+    "requirements": "Functional, non-functional, business-rule, or constraint requirements explicitly present in the chunk; acceptance criteria are fields on requirements, not standalone requirements.",
+    "interfaces": "Explicit system boundaries or callable surfaces such as APIs, RPC calls, message channels, database/file exchanges, external systems, or UI entry points.",
+    "artifacts": "Document-level work products such as test cases, decisions, issue records, tables, or independent sections; avoid duplicating entities, requirements, or interfaces.",
 }
 
 FINALIZE_PROMPT_TEMPLATE = """
@@ -35,15 +35,22 @@ You are an expert Software Engineering Document Analyst.
 Merge chunk-level extraction candidates into one final structured document using the provided JSON Schema.
 Use the document outline and evidence snippets to resolve duplicates and parent-child structure.
 Return one top-level JSON object only.
-Every extracted object should include evidence_element_ids using only IDs shown in the evidence snippets.
+Every extracted object should include 1-3 compact evidence_element_ids using only IDs shown in the evidence snippets.
+Use evidence_element_ids as anchors only: choose the best title, source ID, description, table, or paragraph markers.
+Do not include every field label, colon, detail, functional point, or acceptance line as evidence_element_ids.
 Do not output relations, metrics, source_ref, or any top-level keys that are not defined by the schema.
+Do not output views. Do not use extra fields to copy source sections.
+Interfaces should represent real boundaries or callable/exchange surfaces.
+Artifacts should represent independent document work products, not duplicate entities, requirements, or interfaces.
 
 For SRS documents:
 - A numbered requirement section should normally produce one primary requirement object.
+- Put original requirement identifiers such as SRS-USER-001 in source_id; keep id for system-generated IDs.
 - Requirement description belongs in description.
 - Functional points belong in details.
 - Acceptance criteria belong in acceptance_criteria.
-- Do not turn acceptance criteria lines into separate constraint or business_rule requirements unless they have their own requirement ID or independent requirement heading.
+- Do not turn acceptance criteria lines or acceptance-standard tables into separate requirements unless they have their own requirement ID and are explicitly written as requirements.
+- Overall acceptance-standard sections should become artifacts when useful, not requirements.
 
 Input:
 {content}
@@ -59,24 +66,30 @@ def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContr
     normalized = _normalize_doc_type(doc_type)
     common_rules = [
         "Only extract objects that are explicitly present in the current chunk.",
-        "Every object should include evidence_element_ids using only IDs shown in [ELEMENT: ...] markers.",
+        "Every object should include 1-3 compact evidence_element_ids using only IDs shown in [ELEMENT: ...] markers.",
+        "Use evidence_element_ids as anchors only: choose the best title, source ID, description, table, or paragraph markers; do not include every field label, colon, detail, functional point, or acceptance line.",
         "Do not output relations or metrics as top-level slots.",
-        "Put quantified values on the relevant requirement.metric or artifact.extra field.",
-        "Use extra only for small document-specific details; do not copy source sections into extra.",
+        "Put quantified values on the relevant requirement.metric field when they are requirement metrics.",
+        "Do not output views or undeclared extra fields.",
+        "Use interfaces only for explicit system boundaries, callable surfaces, exchange points, or UI entry points.",
+        "Use artifacts only for independent document work products; do not duplicate entities, requirements, or interfaces as artifacts.",
     ]
     doc_rules = {
         DocType.SRS: [
             "Content with requirement IDs or shall/must/support language should be requirements.",
+            "Put original requirement identifiers such as SRS-USER-001 in source_id, not id.",
             "Functional points under one numbered requirement should stay in details.",
             "Acceptance criteria belong in acceptance_criteria, not separate requirements.",
+            "Do not output requirements whose requirement_type is acceptance.",
             "Keep one requirement section together as one requirement object: title, requirement ID, description, functional points, and acceptance criteria are parts of the same object.",
+            "Overall acceptance-standard sections or acceptance tables should not become requirements; represent them as table artifacts only when they add value.",
             "Do not turn glossary terms, acronyms, document metadata tables, revision tables, or cover information into entities or artifacts.",
-            "Use entities only for real actors, systems, modules, services, components, or data objects in the product domain.",
+            "Use entities only for real actors, systems, modules, services, components, or data objects in the product domain; do not extract requirement titles as entities.",
             "Do not create artifacts for summary, document information, glossary, reference, separator, or final end-marker sections.",
         ],
         DocType.API: [
             "Endpoint paths and methods should become interfaces.",
-            "Request, response, and operation metadata should become api_endpoint artifacts.",
+            "Request, response, and operation metadata should stay on the relevant interface description or artifact details when explicitly useful.",
         ],
         DocType.TEST: [
             "Test cases and reports should become artifacts; ordered execution flows should become processes.",
@@ -182,7 +195,7 @@ async def _extract_chunk(
         return await asyncio.to_thread(
             _extract_once,
             chunk.markdown,
-            StructuredChunk,
+            ExtractedObjectSet,
             context_note=_render_chunk_context(document_ir=document_ir, contract=contract, chunk=chunk),
             prompt_template=prompt_template,
             model_name=model_name,
@@ -218,7 +231,7 @@ async def extract_structure_with_meta(
         raw_data = await asyncio.to_thread(
             _extract_once,
             _render_document_elements(ir),
-            response_model,
+            ExtractedObjectSet,
             context_note=_render_document_context(document_ir=ir, contract=contract),
             prompt_template=prompt_template,
             model_name=model_name,
@@ -270,12 +283,12 @@ async def extract_structure_with_meta(
             failed_chunk_indexes.append(index)
             logger.warning("Chunk extraction failed: %s", result)
             continue
-        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, StructuredChunk):
+        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, ExtractedObjectSet):
             failed_chunk_indexes.append(index)
             logger.warning("Chunk returned no meaningful schema fields at index %s", index)
             continue
         try:
-            validated_chunk = StructuredChunk.model_validate(result)
+            validated_chunk = ExtractedObjectSet.model_validate(result)
         except ValidationError as exc:
             failed_chunk_indexes.append(index)
             logger.warning("Chunk validation failed at index %s: %s", index, exc)
@@ -290,7 +303,7 @@ async def extract_structure_with_meta(
         document_ir=ir,
         contract=contract,
         chunk_results=partial_results,
-        response_model=response_model,
+        response_model=ExtractedObjectSet,
         model_name=model_name,
     )
     reduced_data, evidence_meta = reduce_extraction_results(
@@ -387,7 +400,7 @@ def _render_document_context(
             contract.model_dump_json(indent=2),
             (
                 "The input is the full document rendered with [ELEMENT: ...] markers. "
-                "Use those marker IDs as evidence_element_ids."
+                "Use 1-3 best marker IDs as compact evidence_element_ids anchors for each object."
             ),
         ]
     )
@@ -452,7 +465,8 @@ def _render_chunk_context(
             ),
             (
                 "Return only the five target slots. Use evidence_element_ids from "
-                "allowed_evidence_element_ids. Leave a list empty when the chunk has no object for that slot."
+                "allowed_evidence_element_ids. Use 1-3 compact anchors per object, not every related element. "
+                "Leave a list empty when the chunk has no object for that slot."
             ),
         ]
     )

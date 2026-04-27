@@ -324,9 +324,9 @@ export function DocPreviewPanel({
                   <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
                     原始文档 PDF
                   </p>
-                  {selectedEvidence?.evidenceId && (
+                  {selectedEvidence?.elementId && (
                     <span className="font-mono text-xs text-muted-foreground">
-                      {selectedEvidence.evidenceId}
+                      {selectedEvidence.elementId}
                     </span>
                   )}
                 </div>
@@ -629,10 +629,10 @@ function containsEvidence(
 ): boolean {
   return items.some((item) =>
     item.evidence.some((entry) => {
-      if (entry.evidenceId && evidence.evidenceId) {
-        return entry.evidenceId === evidence.evidenceId;
+      if (entry.elementId || evidence.elementId) {
+        return entry.objectId === evidence.objectId && entry.elementId === evidence.elementId;
       }
-      return entry.objectId === evidence.objectId && entry.elementId === evidence.elementId;
+      return entry.objectId === evidence.objectId && entry.textSpan === evidence.textSpan && entry.page === evidence.page;
     }),
   );
 }

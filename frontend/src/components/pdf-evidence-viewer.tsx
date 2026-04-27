@@ -316,7 +316,7 @@ function PdfPageView({
       >
         <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
           <span>Page {pageNumber}</span>
-          {evidence?.evidenceId && <span className="font-mono">{evidence.evidenceId}</span>}
+          {evidence?.elementId && <span className="font-mono">{evidence.elementId}</span>}
         </div>
         <div
           className="relative overflow-hidden rounded-md bg-white"

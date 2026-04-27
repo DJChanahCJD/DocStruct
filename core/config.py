@@ -40,6 +40,7 @@ class RuntimeSettings:
     parser_backend: str
     docling_enable_ocr: bool
     docling_enable_table_structure: bool
+    docling_force_backend_text: bool
 
 
 @lru_cache(maxsize=1)
@@ -58,4 +59,5 @@ def get_settings() -> RuntimeSettings:
         parser_backend=os.getenv("PARSER_BACKEND", "basic"),
         docling_enable_ocr=_get_bool("DOCLING_ENABLE_OCR", False),
         docling_enable_table_structure=_get_bool("DOCLING_ENABLE_TABLE_STRUCTURE", True),
+        docling_force_backend_text=_get_bool("DOCLING_FORCE_BACKEND_TEXT", True),
     )

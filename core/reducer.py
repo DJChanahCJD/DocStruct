@@ -8,6 +8,7 @@ from schemas.models import DocumentElement, DocumentIR
 
 
 OBJECT_SLOTS = ("entities", "processes", "requirements", "interfaces", "artifacts")
+MAX_EVIDENCE_ANCHORS_PER_OBJECT = 3
 ID_PREFIXES = {
     "entities": "ENT",
     "processes": "PROC",
@@ -32,16 +33,15 @@ def reduce_extraction_results(
         "requirements": [],
         "interfaces": [],
         "artifacts": [],
-        "views": [],
         "evidence": [],
         "extra": {},
     }
 
     for slot in OBJECT_SLOTS:
-        merged_items = _merge_slot_items(slot, _collect_slot_items(slot, chunk_results))
+        slot_items = _collect_slot_items(slot, chunk_results)
+        merged_items = _merge_slot_items(slot, slot_items)
         reduced[slot] = _assign_global_ids(slot, merged_items)
 
-    reduced["views"] = _build_business_views(reduced)
     evidence, evidence_meta = bind_evidence(reduced, document_ir.elements)
     reduced["evidence"] = evidence
     return _clean_empty_values(reduced), evidence_meta
@@ -66,7 +66,7 @@ def bind_evidence(
                 continue
 
             total_objects += 1
-            item_evidence = _evidence_for_item(object_id, item, element_map, elements)
+            item_evidence = _evidence_for_item(object_id, item, element_map)
             if item_evidence:
                 objects_with_evidence += 1
 
@@ -79,7 +79,6 @@ def bind_evidence(
                 if marker in seen:
                     continue
                 seen.add(marker)
-                entry["evidence_id"] = f"EVD-{len(evidence) + 1:03d}"
                 evidence.append(entry)
 
     coverage = objects_with_evidence / total_objects if total_objects else 0.0
@@ -99,7 +98,7 @@ def _collect_slot_items(slot: str, chunk_results: list[dict[str, Any]]) -> list[
             continue
         for item in raw_items:
             if isinstance(item, dict):
-                cleaned = _clean_empty_values(item)
+                cleaned = _clean_empty_values(_normalize_source_id(slot, item))
                 if isinstance(cleaned, dict) and _has_object_content(cleaned):
                     items.append(cleaned)
     return items
@@ -122,72 +121,50 @@ def _assign_global_ids(slot: str, items: list[dict[str, Any]]) -> list[dict[str,
     prefix = ID_PREFIXES[slot]
     assigned: list[dict[str, Any]] = []
     for index, item in enumerate(items, start=1):
-        next_item = dict(item)
+        next_item = _normalize_source_id(slot, item)
         next_item["id"] = f"{prefix}-{index:03d}"
         assigned.append(next_item)
     return assigned
 
 
-def _build_business_views(extracted_data: dict[str, Any]) -> list[dict[str, Any]]:
-    views: list[dict[str, Any]] = []
-    requirement_groups: dict[str, list[str]] = {}
-    for requirement in extracted_data.get("requirements") or []:
-        if not isinstance(requirement, dict):
-            continue
-        category = str(requirement.get("category") or "").strip()
-        object_id = str(requirement.get("id") or "").strip()
-        if category and object_id:
-            requirement_groups.setdefault(category, []).append(object_id)
+def _normalize_source_id(slot: str, item: dict[str, Any]) -> dict[str, Any]:
+    """Preserve source document IDs separately from system-generated object IDs."""
+    normalized = dict(item)
+    raw_id = _compact_text(str(normalized.get("id") or ""))
+    source_id = _compact_text(str(normalized.get("source_id") or ""))
 
-    for category, object_ids in requirement_groups.items():
-        if len(object_ids) < 2:
-            continue
-        views.append(
-            {
-                "view_name": f"{category} requirements",
-                "view_type": "requirement_group",
-                "object_ids": object_ids,
-            }
-        )
-    return views
+    if not source_id and raw_id and not _is_generated_id(slot, raw_id):
+        normalized["source_id"] = raw_id
+
+    return normalized
+
+
+def _is_generated_id(slot: str, value: str) -> bool:
+    """Return whether a value already looks like DocStruct's generated object ID."""
+    prefix = ID_PREFIXES[slot]
+    return bool(re.fullmatch(rf"{re.escape(prefix)}-\d{{3,}}", value.strip(), flags=re.IGNORECASE))
 
 
 def _evidence_for_item(
     object_id: str,
     item: dict[str, Any],
     element_map: dict[str, DocumentElement],
-    elements: list[DocumentElement],
 ) -> list[dict[str, Any]]:
     evidence_entries: list[dict[str, Any]] = []
     evidence_ids = _dedupe_strings(item.get("evidence_element_ids") or [])
+    valid_evidence_ids: list[str] = []
 
     for element_id in evidence_ids:
         element = element_map.get(element_id)
         if not element:
             continue
+        if len(valid_evidence_ids) >= MAX_EVIDENCE_ANCHORS_PER_OBJECT:
+            continue
+        valid_evidence_ids.append(element_id)
         evidence_entries.append(_entry_from_element(object_id, element))
 
-    if evidence_entries:
-        return evidence_entries
-
-    fallback_text = _fallback_text_candidate(item)
-    if not fallback_text:
-        return []
-
-    matched_element = _find_element_by_text(fallback_text, elements)
-    if matched_element:
-        return [_entry_from_element(object_id, matched_element, text_span=fallback_text)]
-
-    return [
-        {
-            "object_id": object_id,
-            "element_id": None,
-            "text_span": _truncate_span(fallback_text),
-            "section_path": [],
-            "page": None,
-            "bbox": None,
-        }
-    ]
+    item["evidence_element_ids"] = valid_evidence_ids
+    return evidence_entries
 
 def _entry_from_element(
     object_id: str,
@@ -199,7 +176,6 @@ def _entry_from_element(
         "object_id": object_id,
         "element_id": element.element_id,
         "text_span": _truncate_span(text_span or element.text or element.markdown or ""),
-        "section_path": list(element.section_path),
         "page": element.page,
         "bbox": element.bbox,
     }
@@ -225,8 +201,11 @@ def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
             return f"process::{process_type}::{name}"
 
     if slot == "requirements":
+        source_id = _norm(item.get("source_id"))
+        if source_id:
+            return f"requirement_source_id::{source_id}"
         raw_id = _norm(item.get("id"))
-        if raw_id and not raw_id.startswith("chunk"):
+        if raw_id and not raw_id.startswith("chunk") and not _is_generated_id(slot, raw_id):
             return f"requirement_id::{raw_id}"
         name = _norm(item.get("name"))
         req_type = _norm(item.get("requirement_type"))
@@ -301,36 +280,11 @@ def _clean_empty_values(data: Any) -> Any:
 
 def _has_object_content(item: dict[str, Any]) -> bool:
     for key, value in item.items():
-        if key in {"id", "evidence_element_ids", "extra"}:
+        if key in {"id", "source_id", "evidence_element_ids", "extra"}:
             continue
         if value not in (None, "", [], {}):
             return True
     return False
-
-
-def _fallback_text_candidate(item: dict[str, Any]) -> str | None:
-    extra = item.get("extra")
-    if isinstance(extra, dict):
-        for key in ("evidence_text", "source_text", "quote"):
-            value = str(extra.get(key) or "").strip()
-            if len(value) >= 8:
-                return value
-    for key in ("description", "name"):
-        value = str(item.get(key) or "").strip()
-        if len(value) >= 8:
-            return value
-    return None
-
-
-def _find_element_by_text(candidate: str, elements: list[DocumentElement]) -> DocumentElement | None:
-    normalized_candidate = _compact_text(candidate)
-    if len(normalized_candidate) < 8:
-        return None
-    for element in elements:
-        haystack = _compact_text(element.text or element.markdown or "")
-        if normalized_candidate and normalized_candidate in haystack:
-            return element
-    return None
 
 
 def _dedupe_strings(values: Any) -> list[str]:

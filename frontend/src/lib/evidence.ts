@@ -9,11 +9,9 @@ export const EXTRACTION_SLOT_CONFIGS = [
 export type ExtractionSlotKey = (typeof EXTRACTION_SLOT_CONFIGS)[number]["key"];
 
 export interface ExtractionEvidence {
-  evidenceId: string | null;
   objectId: string;
   elementId: string | null;
   textSpan: string | null;
-  sectionPath: string[];
   page: number | null;
   bbox: [number, number, number, number] | null;
 }
@@ -128,11 +126,9 @@ function normalizeEvidence(rawEvidence: unknown): ExtractionEvidence | null {
   }
 
   return {
-    evidenceId: stringValue(rawEvidence.evidence_id),
     objectId,
     elementId: stringValue(rawEvidence.element_id),
     textSpan: stringValue(rawEvidence.text_span),
-    sectionPath: normalizeStringArray(rawEvidence.section_path),
     page: numberValue(rawEvidence.page),
     bbox: normalizeBbox(rawEvidence.bbox),
   };
@@ -160,6 +156,13 @@ function getItemTitle(
   item: Record<string, unknown>,
   fallbackId: string,
 ): string {
+  // 统一使用 name 作为第一优先级
+  const name = stringValue(item.name);
+  if (name) {
+    return name;
+  }
+
+  // 对于 interfaces，如果没有 name，再使用 method + path
   if (slot === "interfaces") {
     const method = stringValue(item.method);
     const path = stringValue(item.path);
@@ -169,7 +172,6 @@ function getItemTitle(
   }
 
   return (
-    stringValue(item.name) ||
     stringValue(item.title) ||
     truncateText(stringValue(item.description), 48) ||
     fallbackId
@@ -224,16 +226,6 @@ function numberValue(value: unknown): number | null {
   }
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
-}
-
-/**
- * Normalize unknown values into a string array.
- */
-function normalizeStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.map((item) => String(item).trim()).filter(Boolean);
 }
 
 /**

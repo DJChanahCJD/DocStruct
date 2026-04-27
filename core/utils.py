@@ -1,7 +1,7 @@
 import json
 import ast
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 def clean_and_parse_json(text: str) -> Dict[str, Any]:
     """
@@ -46,7 +46,6 @@ def normalize_extracted_data(value: Any) -> Any:
     递归归一化提取结果：
     - 字符串去首尾空白
     - 容器类型递归处理
-    - extra 字段 null -> {}
     """
     if isinstance(value, str):
         return value.strip()
@@ -57,11 +56,7 @@ def normalize_extracted_data(value: Any) -> Any:
     if isinstance(value, dict):
         result = {}
         for key, val in value.items():
-            normalized_val = normalize_extracted_data(val)
-            # extra 字段如果为 None，转换为空字典
-            if key == "extra" and normalized_val is None:
-                normalized_val = {}
-            result[key] = normalized_val
+            result[key] = normalize_extracted_data(val)
         return result
 
     return value
@@ -175,7 +170,7 @@ def _clean_empty_values(data: Any) -> Any:
     """
     清理空值：
     - ""、仅空白字符串转为 None
-    - 空列表 [] 和 空字典 {} （除了必要的可能要保留，但如果作为 source_ref/extra 的可以删掉，安全起见我们过滤 None, [], {} 和空白字符串）
+    - 空列表 [] 和 空字典 {} 会被删除
     我们只递归清理 dict 和 list，遇到空值直接删除该 key。
     """
     if isinstance(data, dict):
@@ -199,13 +194,13 @@ def _clean_empty_values(data: Any) -> Any:
 
 
 def _deduplicate_requirements(requirements: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    """优先按 id，无 id 时按 title(name) + description + requirement_type 归一"""
+    """优先按 source_id/id，无标识时按 name + description + requirement_type 归一。"""
     seen_ids = set()
     seen_texts = set()
     result = []
     
     for req in requirements:
-        req_id = req.get("id", "")
+        req_id = req.get("source_id") or req.get("id", "")
         if req_id:
             if req_id in seen_ids:
                 continue
@@ -226,20 +221,6 @@ def _deduplicate_requirements(requirements: list[Dict[str, Any]]) -> list[Dict[s
         result.append(req)
         
     return result
-
-
-def _normalize_priority(priority: str) -> Optional[str]:
-    """中文“高/中/低”、“P0/P1/P2”等映射到 high/medium/low"""
-    if not priority:
-        return None
-    p = priority.strip().lower()
-    if p in ("high", "高", "p0", "紧急", "critical", "严重"):
-        return "high"
-    if p in ("medium", "中", "p1", "一般", "normal", "major"):
-        return "medium"
-    if p in ("low", "低", "p2", "p3", "次要", "minor"):
-        return "low"
-    return "medium"  # 无法识别的默认为 medium
 
 
 def _filter_invalid_artifacts(artifacts: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
@@ -267,8 +248,6 @@ def _stabilize_requirement_type(req: Dict[str, Any]) -> str:
     desc = req.get("description", "")
     text = f"{name} {desc}".lower()
     
-    if "验收标准" in text or "uat" in text or "通过条件" in text or "acceptance" in text:
-        return "acceptance"
     if any(k in text for k in ("性能", "可靠性", "安全性", "并发", "响应时间", "performance", "security", "非功能")):
         return "non_functional"
     if any(k in text for k in ("应", "必须", "支持", "能够", "功能", "functional", "shall", "must", "should")):
@@ -291,10 +270,6 @@ def finalize_merged_result(metadata: Dict[str, Any], chunk_results: list[Dict[st
     if "requirements" in cleaned and isinstance(cleaned["requirements"], list):
         reqs = []
         for req in cleaned["requirements"]:
-            # priority
-            if "priority" in req and req["priority"]:
-                req["priority"] = _normalize_priority(req["priority"])
-            # type
             req["requirement_type"] = _stabilize_requirement_type(req)
             reqs.append(req)
             
