@@ -2,8 +2,8 @@
 ORM records and Pydantic models for DocStruct's extraction pipeline.
 
 The output contract is centered on five software-engineering object slots and
-evidence bindings. Source traceability is expressed through `source_id` for
-document-native identifiers and `evidence_element_ids` for source grounding.
+evidence bindings. Source traceability is expressed through `evidence_element_ids`
+for source grounding.
 """
 
 from __future__ import annotations
@@ -176,8 +176,7 @@ class ExtractionContract(BaseModel):
 
 class BaseNode(BaseModel):
     id: Optional[str] = Field(None, description="系统生成 ID；抽取时不要编造")
-    source_id: Optional[str] = Field(None, description="原文显式编号；不要编造")
-    name: str
+    name: str = Field(..., description="对象名称；若原文存在稳定编号，可添加原文编号后缀；不要编造编号或写入系统生成 ID")
     evidence_element_ids: list[str] = Field(
         default_factory=list,
         description="来源元素 ID 锚点；只保留能定位对象的高价值锚点",

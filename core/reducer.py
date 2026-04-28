@@ -97,7 +97,7 @@ def _collect_slot_items(slot: str, chunk_results: list[dict[str, Any]]) -> list[
             continue
         for item in raw_items:
             if isinstance(item, dict):
-                cleaned = _clean_empty_values(_normalize_source_id(slot, item))
+                cleaned = _clean_empty_values(item)
                 if isinstance(cleaned, dict) and _has_object_content(cleaned):
                     items.append(cleaned)
     return items
@@ -120,22 +120,11 @@ def _assign_global_ids(slot: str, items: list[dict[str, Any]]) -> list[dict[str,
     prefix = ID_PREFIXES[slot]
     assigned: list[dict[str, Any]] = []
     for index, item in enumerate(items, start=1):
-        next_item = _normalize_source_id(slot, item)
-        next_item["id"] = f"{prefix}-{index:03d}"
-        assigned.append(next_item)
+        item["id"] = f"{prefix}-{index:03d}"
+        assigned.append(item)
     return assigned
 
 
-def _normalize_source_id(slot: str, item: dict[str, Any]) -> dict[str, Any]:
-    """Preserve source document IDs separately from system-generated object IDs."""
-    normalized = dict(item)
-    raw_id = _compact_text(str(normalized.get("id") or ""))
-    source_id = _compact_text(str(normalized.get("source_id") or ""))
-
-    if not source_id and raw_id and not _is_generated_id(slot, raw_id):
-        normalized["source_id"] = raw_id
-
-    return normalized
 
 
 def _is_generated_id(slot: str, value: str) -> bool:
@@ -199,9 +188,6 @@ def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
             return f"process::{process_type}::{name}"
 
     if slot == "requirements":
-        source_id = _norm(item.get("source_id"))
-        if source_id:
-            return f"requirement_source_id::{source_id}"
         raw_id = _norm(item.get("id"))
         if raw_id and not raw_id.startswith("chunk") and not _is_generated_id(slot, raw_id):
             return f"requirement_id::{raw_id}"
@@ -279,7 +265,7 @@ def _clean_empty_values(data: Any) -> Any:
 
 def _has_object_content(item: dict[str, Any]) -> bool:
     for key, value in item.items():
-        if key in {"id", "source_id", "evidence_element_ids", "extra"}:
+        if key in {"id", "evidence_element_ids"}:
             continue
         if value not in (None, "", [], {}):
             return True

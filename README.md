@@ -77,7 +77,7 @@ class StructuredDocument(BaseExtractedDocument):
 ```
 
 - 主干对象保存事实：实体、流程、需求、接口、文档产物
-- `id` 是系统生成的稳定对象 ID，例如 `REQ-001`；原文编号保存在 `source_id`，例如 `SRS-USER-001`
+- `id` 是系统生成的稳定对象 ID，例如 `REQ-001`；原文编号可作为 `name` 后缀保留，例如 `用户注册（SRS-USER-001）`
 - SRS 的验收标准不作为独立需求输出，局部验收条目写入对应需求的 `criteria`
 - `entities` 只保存产品域或架构中可独立指称的角色、模块、系统、服务、组件、数据对象，不保存需求标题
 - `requirements` 不再包含 `priority`、`category` 等容易诱导模型猜测的低置信字段

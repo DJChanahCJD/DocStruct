@@ -194,13 +194,13 @@ def _clean_empty_values(data: Any) -> Any:
 
 
 def _deduplicate_requirements(requirements: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    """优先按 source_id/id，无标识时按 name + points + criteria + requirement_type 归一。"""
+    """优先按 id，无标识时按 name + points + criteria + requirement_type 归一。"""
     seen_ids = set()
     seen_texts = set()
     result = []
     
     for req in requirements:
-        req_id = req.get("source_id") or req.get("id", "")
+        req_id = req.get("id", "")
         if req_id:
             if req_id in seen_ids:
                 continue

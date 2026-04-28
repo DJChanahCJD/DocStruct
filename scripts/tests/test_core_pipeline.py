@@ -170,7 +170,6 @@ class CorePipelineTests(unittest.TestCase):
         requirement = reduced["requirements"][0]
         self.assertEqual(len(reduced["requirements"]), 1)
         self.assertEqual(requirement["id"], "REQ-001")
-        self.assertEqual(requirement["source_id"], "SRS-USER-001")
         self.assertEqual(requirement["evidence_element_ids"], ["el-0002", "el-0003"])
         self.assertEqual(meta["objects_with_evidence"], 1)
         self.assertEqual([entry["element_id"] for entry in reduced["evidence"]], ["el-0002", "el-0003"])
