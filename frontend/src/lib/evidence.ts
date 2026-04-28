@@ -17,12 +17,11 @@ export interface ExtractionEvidence {
 }
 
 export interface ExtractionItem {
-  slot: ExtractionSlotKey;
-  slotLabel: string;
   id: string;
   title: string;
+  slot: ExtractionSlotKey;
+  slotLabel: string;
   typeLabel: string | null;
-  description: string | null;
   evidence: ExtractionEvidence[];
   raw: Record<string, unknown>;
 }
@@ -61,7 +60,6 @@ export function buildExtractionItems(
         id,
         title: getItemTitle(slotConfig.key, rawItem, id),
         typeLabel: getTypeLabel(slotConfig.key, rawItem),
-        description: getItemDescription(slotConfig.key, rawItem),
         evidence: evidenceByObjectId.get(id) ?? [],
         raw: rawItem,
       });
@@ -178,10 +176,10 @@ function getItemTitle(
   }
 
   if (slot === "interfaces") {
-    const method = stringValue(item.method);
-    const path = stringValue(item.path);
-    if (method || path) {
-      return [method, path].filter(Boolean).join(" ");
+    const httpMethod = stringValue(item.http_method);
+    const endpoint = stringValue(item.endpoint);
+    if (httpMethod || endpoint) {
+      return [httpMethod?.toUpperCase(), endpoint].filter(Boolean).join(" ");
     }
   }
 
@@ -206,60 +204,6 @@ function getTypeLabel(slot: ExtractionSlotKey, item: Record<string, unknown>): s
   return stringValue(item[typeFieldBySlot[slot]]);
 }
 
-/**
- * Pick the best short description for a structured extraction item.
- */
-function getItemDescription(slot: ExtractionSlotKey, item: Record<string, unknown>): string | null {
-  if (slot === "processes") {
-    return truncateText(stepsText(item.steps), 140);
-  }
-  if (slot === "requirements") {
-    return truncateText(listText(item.points) || listText(item.criteria), 140);
-  }
-  if (slot === "interfaces") {
-    return truncateText([item.method, item.path, item.target].map(stringValue).filter(Boolean).join(" -> "), 140);
-  }
-  if (slot === "artifacts") {
-    return truncateText(listText(item.details), 140);
-  }
-  return truncateText(stringValue(item.description) || extraText(item.extra), 140);
-}
-
-/**
- * Join a scalar list into compact display text.
- */
-function listText(value: unknown): string | null {
-  if (!Array.isArray(value) || value.length === 0) {
-    return null;
-  }
-  return value.map((entry) => String(entry).trim()).filter(Boolean).join("；") || null;
-}
-
-/**
- * Join process step names into compact display text.
- */
-function stepsText(value: unknown): string | null {
-  if (!Array.isArray(value) || value.length === 0) {
-    return null;
-  }
-  const steps = value
-    .map((entry) => (isRecord(entry) ? stringValue(entry.name) : stringValue(entry)))
-    .filter(Boolean);
-  return steps.join("；") || null;
-}
-
-/**
- * Build a small display string from extra object attributes.
- */
-function extraText(value: unknown): string | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  return Object.entries(value)
-    .slice(0, 3)
-    .map(([key, entry]) => `${key}: ${String(entry).trim()}`)
-    .join("；") || null;
-}
 
 /**
  * Normalize unknown values into a trimmed string or null.

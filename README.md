@@ -81,8 +81,9 @@ class StructuredDocument(BaseExtractedDocument):
 - SRS 的验收标准不作为独立需求输出，局部验收条目写入对应需求的 `criteria`
 - `entities` 只保存产品域或架构中可独立指称的角色、模块、系统、服务、组件、数据对象，不保存需求标题
 - `requirements` 不再包含 `priority`、`category` 等容易诱导模型猜测的低置信字段
-- `interfaces` 和 `artifacts` 的类型字段使用简洁字符串，不再用过细枚举强制分类
-- `interfaces` 中 `method` 只保存动作，`path` 只保存可定位入口，`target` 只保存目标对象，避免自然语言说明混入结构字段
+- `interfaces` 使用受限字段表达可验证事实：`interface_type`、`http_method`、`endpoint`、`provider`、`consumer`
+- `interfaces.endpoint` 只保存明确入口标识，如 URL path、RPC 方法名、topic/queue、表名、文件路径或页面路由；没有明确值则留空
+- `interfaces.http_method` 只保存明确 HTTP 方法，泛化动作词如“调用”“访问”“请求”不进入结构字段
 - `evidence` 保存对象到 `DocumentElement` 的回溯信息
 - `evidence_element_ids` 是少量定位锚点，不要求覆盖对象的每个字段或明细
 - `evidence` 不包含独立编号或章节路径；定位依赖 `object_id`、`element_id`、`page`、`bbox`、`text_span`

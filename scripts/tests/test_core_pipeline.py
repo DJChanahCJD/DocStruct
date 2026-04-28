@@ -16,6 +16,7 @@ from schemas.models import (
     DocType,
     EntityItem,
     EntityType,
+    HttpMethod,
     InterfaceType,
     InterfaceItem,
     RequirementItem,
@@ -223,6 +224,54 @@ class CorePipelineTests(unittest.TestCase):
         self.assertEqual(meta["evidence_count"], len(valid_ids))
         self.assertEqual([entry["element_id"] for entry in reduced["evidence"]], valid_ids)
 
+    def test_reducer_merges_interfaces_by_explicit_endpoint(self) -> None:
+        """Ensure interfaces merge by type, HTTP method, and explicit endpoint."""
+        markdown = """# API 文档
+
+## 登录接口
+
+POST /api/login
+
+统一身份认证平台提供登录能力。
+"""
+        document_ir = parse_result_to_ir(MarkdownNormalizer().normalize(markdown), doc_type=DocType.API)
+
+        reduced, _ = reduce_extraction_results(
+            doc_type="api",
+            title=document_ir.title,
+            document_ir=document_ir,
+            chunk_results=[
+                {
+                    "interfaces": [
+                        {
+                            "name": "登录接口",
+                            "interface_type": "http",
+                            "http_method": "post",
+                            "endpoint": "/api/login",
+                            "provider": "统一身份认证平台",
+                            "evidence_element_ids": ["el-0002"],
+                        },
+                        {
+                            "name": "用户登录",
+                            "interface_type": "http",
+                            "http_method": "post",
+                            "endpoint": "/api/login",
+                            "consumer": "业务系统",
+                            "evidence_element_ids": ["el-0003"],
+                        },
+                    ]
+                }
+            ],
+        )
+
+        self.assertEqual(len(reduced["interfaces"]), 1)
+        interface = reduced["interfaces"][0]
+        self.assertEqual(interface["id"], "INT-001")
+        self.assertEqual(interface["http_method"], "post")
+        self.assertEqual(interface["endpoint"], "/api/login")
+        self.assertEqual(interface["provider"], "统一身份认证平台")
+        self.assertEqual(interface["consumer"], "业务系统")
+
     def test_extract_structure_uses_whole_document_core_path(self) -> None:
         """Ensure short documents use the mocked whole-document extraction path."""
         markdown = """# 系统需求规格说明书
@@ -373,21 +422,29 @@ class CorePipelineTests(unittest.TestCase):
         self.assertEqual([item.name for item in extracted.requirements], ["用户注册", "用户登录"])
 
     def test_schema_normalizers_use_safe_defaults(self) -> None:
-        """Ensure schema models normalize invalid enum and extra values."""
-        entity = EntityItem(name="用户", entity_type="person", extra="invalid")
-        requirement = RequirementItem(name="审计日志", requirement_type="security", extra=None)
-        interface = InterfaceItem(name="注册接口", interface_type="REST", extra=None)
+        """Ensure schema models normalize invalid enum values."""
+        entity = EntityItem(name="用户", entity_type="person")
+        requirement = RequirementItem(name="审计日志", requirement_type="security")
+        interface = InterfaceItem(
+            name="注册接口",
+            interface_type="REST",
+            http_method="GET",
+            endpoint=" /api/register ",
+            provider=" 统一身份认证平台 ",
+        )
         invalid_interface = InterfaceItem(name="未知接口", interface_type="custom")
+        generic_action_interface = InterfaceItem(name="登录接口", interface_type="http", http_method="调用")
         artifact = ArtifactItem(name="测试用例", artifact_type="test_case")
         invalid_artifact = ArtifactItem(name="自定义产物", artifact_type="custom")
 
         self.assertEqual(entity.entity_type, EntityType.OTHER)
-        self.assertEqual(entity.extra, {})
         self.assertEqual(requirement.requirement_type, RequirementType.OTHER)
-        self.assertEqual(requirement.extra, {})
         self.assertEqual(interface.interface_type, InterfaceType.HTTP)
-        self.assertEqual(interface.extra, {})
+        self.assertEqual(interface.http_method, HttpMethod.GET)
+        self.assertEqual(interface.endpoint, "/api/register")
+        self.assertEqual(interface.provider, "统一身份认证平台")
         self.assertEqual(invalid_interface.interface_type, InterfaceType.OTHER)
+        self.assertIsNone(generic_action_interface.http_method)
         self.assertEqual(artifact.artifact_type, ArtifactType.TEST_CASE)
         self.assertEqual(invalid_artifact.artifact_type, ArtifactType.OTHER)
 

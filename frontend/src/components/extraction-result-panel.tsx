@@ -64,6 +64,16 @@ const TYPE_FIELD_OPTIONS: Record<string, DetailFieldOption[]> = {
     { value: "section", label: "section - 文档章节" },
     { value: "other", label: "other - 其他产物" },
   ],
+  http_method: [
+    { value: "", label: "未指定" },
+    { value: "get", label: "GET - 读取资源" },
+    { value: "post", label: "POST - 创建或提交" },
+    { value: "put", label: "PUT - 整体更新" },
+    { value: "patch", label: "PATCH - 局部更新" },
+    { value: "delete", label: "DELETE - 删除资源" },
+    { value: "head", label: "HEAD - 读取响应头" },
+    { value: "options", label: "OPTIONS - 查询支持方法" },
+  ],
 };
 
 const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
@@ -85,9 +95,10 @@ const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
   interfaces: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "interface_type", label: "接口类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.interface_type },
-    { key: "method", label: "动作", kind: "text", rows: 1 },
-    { key: "path", label: "入口", kind: "text", rows: 2 },
-    { key: "target", label: "目标", kind: "text", rows: 2 },
+    { key: "http_method", label: "HTTP 方法", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.http_method },
+    { key: "endpoint", label: "入口标识", kind: "text", rows: 2 },
+    { key: "provider", label: "提供方", kind: "text", rows: 1 },
+    { key: "consumer", label: "调用方", kind: "text", rows: 1 },
   ],
   artifacts: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
@@ -420,7 +431,7 @@ function FieldEditor({
       <label className="flex flex-col gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <select
-          value={options.some((option) => option.value === value) ? value : "other"}
+          value={normalizeSelectValue(value, options)}
           onChange={(event) => onChange(event.target.value)}
           className="h-8 w-full rounded-lg border border-input bg-background px-2.5 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         >
@@ -481,7 +492,7 @@ function buildDrafts(item: ExtractionItem): Record<string, string> {
   for (const fieldConfig of DETAIL_FIELD_CONFIGS[item.slot]) {
     drafts[fieldConfig.key] = draftValue(item.raw[fieldConfig.key], fieldConfig.kind);
     if (fieldConfig.options && !fieldConfig.options.some((option) => option.value === drafts[fieldConfig.key])) {
-      drafts[fieldConfig.key] = "other";
+      drafts[fieldConfig.key] = defaultSelectValue(fieldConfig.options);
     }
   }
   return drafts;
@@ -523,9 +534,29 @@ function patchValue(value: string, kind: DetailFieldKind): unknown {
     return linesValue(value).map((line) => ({ name: line }));
   }
   if (kind === "select") {
-    return text || "other";
+    return text || null;
   }
   return text || null;
+}
+
+/**
+ * Normalize a select draft to a valid option value.
+ */
+function normalizeSelectValue(value: string, options: DetailFieldOption[]): string {
+  if (options.some((option) => option.value === value)) {
+    return value;
+  }
+  return defaultSelectValue(options);
+}
+
+/**
+ * Return the safe fallback value for a select field.
+ */
+function defaultSelectValue(options: DetailFieldOption[]): string {
+  if (options.some((option) => option.value === "other")) {
+    return "other";
+  }
+  return options[0]?.value ?? "";
 }
 
 /**

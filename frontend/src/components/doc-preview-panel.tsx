@@ -120,11 +120,19 @@ export function DocPreviewPanel({
       return;
     }
 
-    const timerId = window.setTimeout(() => {
-      selectJsonItemRange(jsonTextareaRef.current, jsonDraft, selectedItem);
-    }, 150);
+    let innerFrameId = 0;
+    const frameId = window.requestAnimationFrame(() => {
+      innerFrameId = window.requestAnimationFrame(() => {
+        selectJsonItemRange(jsonTextareaRef.current, jsonDraft, selectedItem);
+      });
+    });
 
-    return () => window.clearTimeout(timerId);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (innerFrameId) {
+        window.cancelAnimationFrame(innerFrameId);
+      }
+    };
   }, [jsonDraft, jsonSheetOpen, selectedItem]);
 
   useEffect(() => {
@@ -500,7 +508,10 @@ export function DocPreviewPanel({
         </TabsContent>
       </Tabs>
       <Sheet open={jsonSheetOpen} onOpenChange={setJsonSheetOpen}>
-        <SheetContent className="w-[min(860px,92vw)] gap-0 p-0 sm:max-w-none">
+        <SheetContent
+          className="gap-0 p-0 sm:max-w-none"
+          style={{ width: "min(1200px, 90vw)", maxWidth: "none" }}
+        >
           <SheetHeader className="border-b pr-12">
             <SheetTitle>结构化 JSON</SheetTitle>
             <SheetDescription>
@@ -750,9 +761,10 @@ function selectJsonItemRange(
 
   textarea.focus();
   textarea.setSelectionRange(range.start, range.end);
-  const line = jsonText.slice(0, range.start).split("\n").length;
-  const lineHeight = 24;
-  textarea.scrollTop = Math.max(0, (line - 4) * lineHeight);
+  const lineIndex = jsonText.slice(0, range.start).split("\n").length - 1;
+  const lineHeight = getTextareaLineHeight(textarea);
+  const centeredTop = lineIndex * lineHeight - (textarea.clientHeight - lineHeight) / 2;
+  textarea.scrollTop = Math.max(0, centeredTop);
 }
 
 /**
@@ -777,7 +789,7 @@ function findJsonItemRange(
     return null;
   }
 
-  const idPattern = `"id": "${escapeJsonString(item.id)}"`;
+  const idPattern = new RegExp(`"id"\\s*:\\s*"${escapeRegExp(item.id)}"`);
   let cursor = arrayStart + 1;
   while (cursor < arrayEnd) {
     const objectStart = findNextJsonObjectStart(jsonText, cursor, arrayEnd);
@@ -790,7 +802,7 @@ function findJsonItemRange(
       return null;
     }
 
-    if (jsonText.slice(objectStart, objectEnd + 1).includes(idPattern)) {
+    if (idPattern.test(jsonText.slice(objectStart, objectEnd + 1))) {
       return { start: objectStart, end: objectEnd + 1 };
     }
 
@@ -872,8 +884,16 @@ function findNextJsonObjectStart(text: string, from: number, maxIndex: number): 
 }
 
 /**
- * Escape a string for matching inside formatted JSON.
+ * Escape special regex characters in a string.
  */
-function escapeJsonString(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Read the rendered line height for textarea scroll positioning.
+ */
+function getTextareaLineHeight(textarea: HTMLTextAreaElement): number {
+  const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight);
+  return Number.isFinite(lineHeight) ? lineHeight : 24;
 }

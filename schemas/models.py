@@ -66,6 +66,16 @@ class InterfaceType(str, Enum):
     OTHER = "other"
 
 
+class HttpMethod(str, Enum):
+    GET = "get"
+    POST = "post"
+    PUT = "put"
+    PATCH = "patch"
+    DELETE = "delete"
+    HEAD = "head"
+    OPTIONS = "options"
+
+
 class ArtifactType(str, Enum):
     TEST_CASE = "test_case"
     DECISION = "decision"
@@ -200,16 +210,6 @@ class BaseNode(BaseModel):
         default_factory=list,
         description="来源元素 ID 锚点；只保留能定位对象的高价值锚点",
     )
-    extra: dict[str, Any] = Field(default_factory=dict, description="少量无法归入声明字段的原文属性")
-
-    @field_validator("extra", mode="before")
-    @classmethod
-    def _normalize_extra(cls, value: Any) -> dict[str, Any]:
-        if value is None:
-            return {}
-        if isinstance(value, dict):
-            return value
-        return {}
 
 
 class StepItem(BaseModel):
@@ -289,17 +289,21 @@ class InterfaceItem(BaseNode):
         default=InterfaceType.OTHER,
         description="接口分类值：优先使用 http、rpc、message、ui、database、file；无法判断用 other；不要填写自然语言描述",
     )
-    method: Optional[str] = Field(
+    http_method: Optional[HttpMethod] = Field(
         None,
-        description="接口操作或动作，如 HTTP 方法、RPC 方法、消息动作、页面操作；没有明确值则留空",
+        description="仅当接口类型为 HTTP 且原文明确出现请求方法时填写；否则留空",
     )
-    path: Optional[str] = Field(
+    endpoint: Optional[str] = Field(
         None,
-        description="接口入口标识，如 URL path、消息 topic/queue、表名、文件路径或页面入口；不要合并说明文字",
+        description="明确入口标识，如 URL path、RPC 方法名、topic/queue、表名、文件路径或页面路由；没有明确值则留空",
     )
-    target: Optional[str] = Field(
+    provider: Optional[str] = Field(
         None,
-        description="接口对端或目标对象，如系统、模块、服务、数据对象或用户角色；没有明确目标则留空",
+        description="接口提供方、被调用方或外部系统；没有明确值则留空",
+    )
+    consumer: Optional[str] = Field(
+        None,
+        description="接口调用方、使用方或发起角色；没有明确值则留空",
     )
 
     @field_validator("interface_type", mode="before")
@@ -312,7 +316,6 @@ class InterfaceItem(BaseNode):
             "api": "http",
             "rest": "http",
             "restful": "http",
-            "endpoint": "http",
             "mq": "message",
             "queue": "message",
             "topic": "message",
@@ -327,9 +330,28 @@ class InterfaceItem(BaseNode):
         except ValueError:
             return InterfaceType.OTHER
 
-    @field_validator("method", mode="before")
+    @field_validator("http_method", mode="before")
     @classmethod
-    def _normalize_method(cls, value: Any) -> Optional[str]:
+    def _normalize_http_method(cls, value: Any) -> Optional[HttpMethod]:
+        """
+        Normalize explicit HTTP methods and reject generic action words.
+        """
+        if value is None:
+            return None
+        text = str(value).strip().lower()
+        if not text:
+            return None
+        try:
+            return HttpMethod(text)
+        except ValueError:
+            return None
+
+    @field_validator("endpoint", "provider", "consumer", mode="before")
+    @classmethod
+    def _normalize_optional_text(cls, value: Any) -> Optional[str]:
+        """
+        Normalize optional interface text fields to trimmed strings or None.
+        """
         if value is None:
             return None
         text = str(value).strip()

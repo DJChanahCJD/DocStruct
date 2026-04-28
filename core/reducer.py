@@ -170,10 +170,16 @@ def _entry_from_element(
 
 def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
     if slot == "interfaces":
-        method = _norm(item.get("method")).upper()
-        path = _norm(item.get("path"))
-        if method and path:
-            return f"method_path::{method}::{path}"
+        interface_type = _norm(item.get("interface_type"))
+        http_method = _norm(item.get("http_method"))
+        endpoint = _norm(item.get("endpoint"))
+        if endpoint:
+            return f"interface_endpoint::{interface_type}::{http_method}::{endpoint}"
+        name = _norm(item.get("name"))
+        provider = _norm(item.get("provider"))
+        consumer = _norm(item.get("consumer"))
+        if name or provider or consumer:
+            return f"interface_name::{interface_type}::{name}::{provider}::{consumer}"
 
     if slot == "entities":
         name = _norm(item.get("name"))
