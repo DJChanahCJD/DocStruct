@@ -14,41 +14,84 @@ import {
 } from "@/lib/evidence";
 import { cn } from "@/lib/utils";
 
-type DetailFieldKind = "text" | "list" | "steps";
+type DetailFieldKind = "text" | "list" | "steps" | "select";
 
 interface DetailFieldConfig {
   key: string;
   label: string;
   kind: DetailFieldKind;
   rows: number;
+  options?: DetailFieldOption[];
 }
+
+interface DetailFieldOption {
+  value: string;
+  label: string;
+}
+
+const TYPE_FIELD_OPTIONS: Record<string, DetailFieldOption[]> = {
+  entity_type: [
+    { value: "actor", label: "actor - 人或角色" },
+    { value: "system", label: "system - 系统或模块" },
+    { value: "data", label: "data - 数据对象" },
+    { value: "other", label: "other - 其他实体" },
+  ],
+  process_type: [
+    { value: "business", label: "business - 业务流程" },
+    { value: "technical", label: "technical - 技术流程" },
+    { value: "test", label: "test - 测试流程" },
+    { value: "other", label: "other - 其他流程" },
+  ],
+  requirement_type: [
+    { value: "functional", label: "functional - 功能需求" },
+    { value: "non_functional", label: "non_functional - 非功能需求" },
+    { value: "other", label: "other - 其他需求" },
+  ],
+  interface_type: [
+    { value: "http", label: "http - HTTP API" },
+    { value: "rpc", label: "rpc - RPC 调用" },
+    { value: "message", label: "message - 消息通道" },
+    { value: "ui", label: "ui - 用户界面入口" },
+    { value: "database", label: "database - 数据库交换" },
+    { value: "file", label: "file - 文件交换" },
+    { value: "other", label: "other - 其他接口" },
+  ],
+  artifact_type: [
+    { value: "test_case", label: "test_case - 测试用例" },
+    { value: "decision", label: "decision - 决策记录" },
+    { value: "table", label: "table - 表格产物" },
+    { value: "issue", label: "issue - 问题记录" },
+    { value: "section", label: "section - 文档章节" },
+    { value: "other", label: "other - 其他产物" },
+  ],
+};
 
 const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
   entities: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "entity_type", label: "实体类型", kind: "text", rows: 1 },
+    { key: "entity_type", label: "实体类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.entity_type },
   ],
   processes: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "process_type", label: "流程类型", kind: "text", rows: 1 },
+    { key: "process_type", label: "流程类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.process_type },
     { key: "steps", label: "步骤", kind: "steps", rows: 5 },
   ],
   requirements: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "requirement_type", label: "需求类型", kind: "text", rows: 1 },
+    { key: "requirement_type", label: "需求类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.requirement_type },
     { key: "points", label: "功能点 / 明细", kind: "list", rows: 4 },
     { key: "criteria", label: "验收标准", kind: "list", rows: 3 },
   ],
   interfaces: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "interface_type", label: "接口类型", kind: "text", rows: 1 },
+    { key: "interface_type", label: "接口类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.interface_type },
     { key: "method", label: "动作", kind: "text", rows: 1 },
     { key: "path", label: "入口", kind: "text", rows: 2 },
     { key: "target", label: "目标", kind: "text", rows: 2 },
   ],
   artifacts: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "artifact_type", label: "产物类型", kind: "text", rows: 1 },
+    { key: "artifact_type", label: "产物类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.artifact_type },
     { key: "details", label: "要点", kind: "list", rows: 5 },
   ],
 };
@@ -305,6 +348,7 @@ function ExtractionDetail({
               label={fieldConfig.label}
               value={drafts[fieldConfig.key] ?? ""}
               onChange={(value) => setDrafts((current) => ({ ...current, [fieldConfig.key]: value }))}
+              options={fieldConfig.options}
               rows={fieldConfig.rows}
             />
           ))}
@@ -361,14 +405,35 @@ function ExtractionDetail({
 function FieldEditor({
   label,
   value,
+  options,
   rows,
   onChange,
 }: {
   label: string;
   value: string;
+  options?: DetailFieldOption[];
   rows: number;
   onChange: (value: string) => void;
 }) {
+  if (options) {
+    return (
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <select
+          value={options.some((option) => option.value === value) ? value : "other"}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-8 w-full rounded-lg border border-input bg-background px-2.5 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
@@ -415,6 +480,9 @@ function buildDrafts(item: ExtractionItem): Record<string, string> {
   const drafts: Record<string, string> = {};
   for (const fieldConfig of DETAIL_FIELD_CONFIGS[item.slot]) {
     drafts[fieldConfig.key] = draftValue(item.raw[fieldConfig.key], fieldConfig.kind);
+    if (fieldConfig.options && !fieldConfig.options.some((option) => option.value === drafts[fieldConfig.key])) {
+      drafts[fieldConfig.key] = "other";
+    }
   }
   return drafts;
 }
@@ -453,6 +521,9 @@ function patchValue(value: string, kind: DetailFieldKind): unknown {
   }
   if (kind === "steps") {
     return linesValue(value).map((line) => ({ name: line }));
+  }
+  if (kind === "select") {
+    return text || "other";
   }
   return text || null;
 }

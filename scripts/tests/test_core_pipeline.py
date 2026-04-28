@@ -10,10 +10,13 @@ from core.parser import DocBlock, MarkdownNormalizer, MarkdownRenderer
 from core.parsers.docling_parser import DoclingParser
 from core.reducer import reduce_extraction_results
 from schemas.models import (
+    ArtifactItem,
+    ArtifactType,
     DesignDocument,
     DocType,
     EntityItem,
     EntityType,
+    InterfaceType,
     InterfaceItem,
     RequirementItem,
     RequirementType,
@@ -374,13 +377,19 @@ class CorePipelineTests(unittest.TestCase):
         entity = EntityItem(name="用户", entity_type="person", extra="invalid")
         requirement = RequirementItem(name="审计日志", requirement_type="security", extra=None)
         interface = InterfaceItem(name="注册接口", interface_type="REST", extra=None)
+        invalid_interface = InterfaceItem(name="未知接口", interface_type="custom")
+        artifact = ArtifactItem(name="测试用例", artifact_type="test_case")
+        invalid_artifact = ArtifactItem(name="自定义产物", artifact_type="custom")
 
         self.assertEqual(entity.entity_type, EntityType.OTHER)
         self.assertEqual(entity.extra, {})
         self.assertEqual(requirement.requirement_type, RequirementType.OTHER)
         self.assertEqual(requirement.extra, {})
-        self.assertEqual(interface.interface_type, "http")
+        self.assertEqual(interface.interface_type, InterfaceType.HTTP)
         self.assertEqual(interface.extra, {})
+        self.assertEqual(invalid_interface.interface_type, InterfaceType.OTHER)
+        self.assertEqual(artifact.artifact_type, ArtifactType.TEST_CASE)
+        self.assertEqual(invalid_artifact.artifact_type, ArtifactType.OTHER)
 
     def test_structured_document_dump_starts_with_document_fields(self) -> None:
         """Ensure extracted document JSON starts with document-level fields."""

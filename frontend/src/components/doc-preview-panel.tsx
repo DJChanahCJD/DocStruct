@@ -120,11 +120,11 @@ export function DocPreviewPanel({
       return;
     }
 
-    const frameId = window.requestAnimationFrame(() => {
+    const timerId = window.setTimeout(() => {
       selectJsonItemRange(jsonTextareaRef.current, jsonDraft, selectedItem);
-    });
+    }, 150);
 
-    return () => window.cancelAnimationFrame(frameId);
+    return () => window.clearTimeout(timerId);
   }, [jsonDraft, jsonSheetOpen, selectedItem]);
 
   useEffect(() => {

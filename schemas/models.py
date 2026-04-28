@@ -56,6 +56,25 @@ class RequirementType(str, Enum):
     OTHER = "other"
 
 
+class InterfaceType(str, Enum):
+    HTTP = "http"
+    RPC = "rpc"
+    MESSAGE = "message"
+    UI = "ui"
+    DATABASE = "database"
+    FILE = "file"
+    OTHER = "other"
+
+
+class ArtifactType(str, Enum):
+    TEST_CASE = "test_case"
+    DECISION = "decision"
+    TABLE = "table"
+    ISSUE = "issue"
+    SECTION = "section"
+    OTHER = "other"
+
+
 class DocumentStatus(str, Enum):
     PENDING = "pending"
     UPLOADED = "uploaded"
@@ -266,8 +285,8 @@ class RequirementItem(BaseNode):
 
 
 class InterfaceItem(BaseNode):
-    interface_type: str = Field(
-        default="other",
+    interface_type: InterfaceType = Field(
+        default=InterfaceType.OTHER,
         description="接口分类值：优先使用 http、rpc、message、ui、database、file；无法判断用 other；不要填写自然语言描述",
     )
     method: Optional[str] = Field(
@@ -285,9 +304,9 @@ class InterfaceItem(BaseNode):
 
     @field_validator("interface_type", mode="before")
     @classmethod
-    def _normalize_interface_type(cls, value: Any) -> str:
+    def _normalize_interface_type(cls, value: Any) -> InterfaceType:
         if value is None:
-            return "other"
+            return InterfaceType.OTHER
         text = str(value).strip().lower()
         aliases = {
             "api": "http",
@@ -303,8 +322,10 @@ class InterfaceItem(BaseNode):
             "screen": "ui",
         }
         normalized = aliases.get(text, text)
-        allowed = {"http", "rpc", "message", "ui", "database", "file", "other"}
-        return normalized if normalized in allowed else "other"
+        try:
+            return InterfaceType(normalized)
+        except ValueError:
+            return InterfaceType.OTHER
 
     @field_validator("method", mode="before")
     @classmethod
@@ -316,16 +337,24 @@ class InterfaceItem(BaseNode):
 
 
 class ArtifactItem(BaseNode):
-    artifact_type: str = Field(default="other", description="产物类型，如 test_case、decision、table、issue、section")
+    artifact_type: ArtifactType = Field(
+        default=ArtifactType.OTHER,
+        description="产物类型：test_case、decision、table、issue、section 或 other",
+    )
     details: list[str] = Field(default_factory=list, description="产物自身的行、决策、说明或要点；不要重复需求内容")
 
     @field_validator("artifact_type", mode="before")
     @classmethod
-    def _normalize_artifact_type(cls, value: Any) -> str:
+    def _normalize_artifact_type(cls, value: Any) -> ArtifactType:
         if value is None:
-            return "other"
+            return ArtifactType.OTHER
         text = str(value).strip().lower()
-        return text or "other"
+        if not text:
+            return ArtifactType.OTHER
+        try:
+            return ArtifactType(text)
+        except ValueError:
+            return ArtifactType.OTHER
 
 
 class ExtractedObjectSet(BaseModel):
