@@ -172,13 +172,11 @@ function getItemTitle(
   item: Record<string, unknown>,
   fallbackId: string,
 ): string {
-  // 统一使用 name 作为第一优先级
   const name = stringValue(item.name);
   if (name) {
     return name;
   }
 
-  // 对于 interfaces，如果没有 name，再使用 method + path
   if (slot === "interfaces") {
     const method = stringValue(item.method);
     const path = stringValue(item.path);
@@ -212,14 +210,55 @@ function getTypeLabel(slot: ExtractionSlotKey, item: Record<string, unknown>): s
  * Pick the best short description for a structured extraction item.
  */
 function getItemDescription(slot: ExtractionSlotKey, item: Record<string, unknown>): string | null {
+  if (slot === "processes") {
+    return truncateText(stepsText(item.steps), 140);
+  }
+  if (slot === "requirements") {
+    return truncateText(listText(item.points) || listText(item.criteria), 140);
+  }
   if (slot === "interfaces") {
-    return stringValue(item.target) || stringValue(item.description);
+    return truncateText([item.method, item.path, item.target].map(stringValue).filter(Boolean).join(" -> "), 140);
   }
-  const details = item.details;
-  if (Array.isArray(details) && details.length > 0) {
-    return truncateText(details.map((entry) => String(entry)).join("；"), 140);
+  if (slot === "artifacts") {
+    return truncateText(listText(item.details), 140);
   }
-  return truncateText(stringValue(item.description), 140);
+  return truncateText(stringValue(item.description) || extraText(item.extra), 140);
+}
+
+/**
+ * Join a scalar list into compact display text.
+ */
+function listText(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+  return value.map((entry) => String(entry).trim()).filter(Boolean).join("；") || null;
+}
+
+/**
+ * Join process step names into compact display text.
+ */
+function stepsText(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+  const steps = value
+    .map((entry) => (isRecord(entry) ? stringValue(entry.name) : stringValue(entry)))
+    .filter(Boolean);
+  return steps.join("；") || null;
+}
+
+/**
+ * Build a small display string from extra object attributes.
+ */
+function extraText(value: unknown): string | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return Object.entries(value)
+    .slice(0, 3)
+    .map(([key, entry]) => `${key}: ${String(entry).trim()}`)
+    .join("；") || null;
 }
 
 /**

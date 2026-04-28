@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ExternalLink,
@@ -8,8 +8,8 @@ import {
   Loader2,
   RotateCcw,
   Save,
+  Braces,
 } from "lucide-react";
-import { diffJson, diffLines } from "diff";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -24,6 +24,13 @@ import { ExtractionResultPanel } from "@/components/extraction-result-panel";
 import { PdfEvidenceViewer } from "@/components/pdf-evidence-viewer";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocument, useDocumentFile, useUpdateDocument } from "@/hooks/use-api";
@@ -33,7 +40,6 @@ import {
   type ExtractionEvidence,
   type ExtractionItem,
 } from "@/lib/evidence";
-import { cn } from "@/lib/utils";
 
 interface DocPreviewPanelProps {
   docId: number | null;
@@ -50,15 +56,17 @@ export function DocPreviewPanel({
   const { data: doc, isLoading } = useDocument(docId);
   const { data: documentFile, isLoading: isFileLoading } = useDocumentFile(docId);
   const [tab, setTab] = useState("evidence");
-  const [resultTab, setResultTab] = useState("items");
   const [rawDraft, setRawDraft] = useState("");
   const [savedRawContent, setSavedRawContent] = useState("");
   const [jsonDraft, setJsonDraft] = useState("");
   const [savedJsonContent, setSavedJsonContent] = useState("");
   const [selectedEvidence, setSelectedEvidence] = useState<ExtractionEvidence | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ExtractionItem | null>(null);
+  const [jsonSheetOpen, setJsonSheetOpen] = useState(false);
   const [sourcePreview, setSourcePreview] = useState<SourcePreviewState>({
     kind: "empty",
   });
+  const jsonTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const updateDocument = useUpdateDocument(docId ?? -1);
 
   const hasRawChanges = useMemo(
@@ -78,8 +86,9 @@ export function DocPreviewPanel({
 
   useEffect(() => {
     setTab("evidence");
-    setResultTab("items");
     setSelectedEvidence(null);
+    setSelectedItem(null);
+    setJsonSheetOpen(false);
   }, [docId]);
 
   useEffect(() => {
@@ -105,6 +114,18 @@ export function DocPreviewPanel({
   useEffect(() => {
     onRawDirtyChange?.(tab === "raw" && hasRawChanges);
   }, [hasRawChanges, onRawDirtyChange, tab]);
+
+  useEffect(() => {
+    if (!jsonSheetOpen) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      selectJsonItemRange(jsonTextareaRef.current, jsonDraft, selectedItem);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [jsonDraft, jsonSheetOpen, selectedItem]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -350,93 +371,34 @@ export function DocPreviewPanel({
               </section>
 
               <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
-                <Tabs value={resultTab} onValueChange={setResultTab} className="flex min-h-0 flex-1 flex-col gap-0">
-                  <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
-                    <div>
-                      <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                        结构化结果
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        点击对象定位对应原文证据
-                      </p>
-                    </div>
-                    <TabsList>
-                      <TabsTrigger value="items">提取项</TabsTrigger>
-                      <TabsTrigger value="json">JSON</TabsTrigger>
-                    </TabsList>
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+                  <div>
+                    <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                      结构化结果
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      点击对象定位原文证据，必要时打开 JSON 校正
+                    </p>
                   </div>
-
-                  <TabsContent value="items" className="m-0 min-h-0 flex-1 overflow-hidden focus-visible:outline-none">
-                    <ExtractionResultPanel
-                      items={extractionItems}
-                      selectedEvidence={selectedEvidence}
-                      onSelectEvidence={setSelectedEvidence}
-                      onPatchItem={handlePatchExtractionItem}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="json" className="m-0 min-h-0 flex-1 overflow-hidden focus-visible:outline-none">
-                    <div className="flex h-full min-h-0 flex-col">
-                      <div className="flex flex-wrap items-center justify-end gap-2 border-b px-4 py-3">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleCopyJson}
-                          disabled={!jsonDraft}
-                        >
-                          <Copy data-icon="inline-start" />
-                          复制
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleDownloadJson}
-                          disabled={!jsonDraft}
-                        >
-                          <Download data-icon="inline-start" />
-                          下载
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={handleResetJson}
-                          disabled={!hasJsonChanges || updateDocument.isPending}
-                        >
-                          <RotateCcw data-icon="inline-start" />
-                          恢复
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSaveJson}
-                          disabled={!hasJsonChanges || updateDocument.isPending}
-                        >
-                          {updateDocument.isPending ? (
-                            <Loader2 data-icon="inline-start" className="animate-spin" />
-                          ) : (
-                            <Save data-icon="inline-start" />
-                          )}
-                          保存 JSON
-                        </Button>
-                      </div>
-                      <div className="grid min-h-0 flex-1 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)]">
-                        <div className="min-h-0">
-                          <Textarea
-                            value={jsonDraft}
-                            onChange={(event) => setJsonDraft(event.target.value)}
-                            placeholder="这里显示结构化提取结果，可直接修正 JSON。"
-                            spellCheck={false}
-                            className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
-                          />
-                        </div>
-                        <JsonDiffPreview
-                          savedJsonContent={savedJsonContent}
-                          jsonDraft={jsonDraft}
-                          hasJsonChanges={hasJsonChanges}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setJsonSheetOpen(true)}
+                    disabled={!jsonDraft}
+                  >
+                    <Braces data-icon="inline-start" />
+                    JSON
+                  </Button>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <ExtractionResultPanel
+                    items={extractionItems}
+                    selectedEvidence={selectedEvidence}
+                    onSelectEvidence={setSelectedEvidence}
+                    onPatchItem={handlePatchExtractionItem}
+                    onSelectedItemChange={setSelectedItem}
+                  />
+                </div>
               </section>
             </div>
           </div>
@@ -537,6 +499,76 @@ export function DocPreviewPanel({
           <ChunkDebugPanel docId={docId} />
         </TabsContent>
       </Tabs>
+      <Sheet open={jsonSheetOpen} onOpenChange={setJsonSheetOpen}>
+        <SheetContent className="w-[min(860px,92vw)] gap-0 p-0 sm:max-w-none">
+          <SheetHeader className="border-b pr-12">
+            <SheetTitle>结构化 JSON</SheetTitle>
+            <SheetDescription>
+              {selectedItem
+                ? `已定位到 ${selectedItem.slotLabel}：${selectedItem.title}`
+                : "可直接校正整份结构化结果"}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+              <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+                {updateDocument.isPending ? "保存中..." : hasJsonChanges ? "未保存修改" : "已同步"}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyJson}
+                  disabled={!jsonDraft}
+                >
+                  <Copy data-icon="inline-start" />
+                  复制
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownloadJson}
+                  disabled={!jsonDraft}
+                >
+                  <Download data-icon="inline-start" />
+                  下载
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleResetJson}
+                  disabled={!hasJsonChanges || updateDocument.isPending}
+                >
+                  <RotateCcw data-icon="inline-start" />
+                  恢复
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveJson}
+                  disabled={!hasJsonChanges || updateDocument.isPending}
+                >
+                  {updateDocument.isPending ? (
+                    <Loader2 data-icon="inline-start" className="animate-spin" />
+                  ) : (
+                    <Save data-icon="inline-start" />
+                  )}
+                  保存 JSON
+                </Button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 p-4">
+              <Textarea
+                ref={jsonTextareaRef}
+                value={jsonDraft}
+                onChange={(event) => setJsonDraft(event.target.value)}
+                placeholder="这里显示结构化提取结果，可直接修正 JSON。"
+                spellCheck={false}
+                className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -548,96 +580,6 @@ type SourcePreviewState =
   | { kind: "markdown"; text: string }
   | { kind: "download"; url: string; fileName: string }
   | { kind: "error" };
-
-interface DiffPart {
-  value: string;
-  added?: boolean;
-  removed?: boolean;
-}
-
-/**
- * Render a compact diff between saved JSON and the current draft.
- */
-function JsonDiffPreview({
-  savedJsonContent,
-  jsonDraft,
-  hasJsonChanges,
-}: {
-  savedJsonContent: string;
-  jsonDraft: string;
-  hasJsonChanges: boolean;
-}) {
-  const diffParts = useMemo(
-    () => buildJsonDiffParts(savedJsonContent, jsonDraft),
-    [jsonDraft, savedJsonContent],
-  );
-
-  return (
-    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/10">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
-        <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-          差异预览
-        </span>
-        <span className="rounded-full border bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
-          {hasJsonChanges ? "未保存" : "已同步"}
-        </span>
-      </div>
-      <ScrollArea className="min-h-0 flex-1">
-        {hasJsonChanges ? (
-          <pre className="whitespace-pre-wrap break-words p-3 font-mono text-xs leading-5">
-            {diffParts.map((part, index) => (
-              <span
-                key={`${index}-${part.value.slice(0, 16)}`}
-                className={cn(
-                  part.added && "bg-emerald-100 text-emerald-900",
-                  part.removed && "bg-rose-100 text-rose-900 line-through decoration-rose-500",
-                  !part.added && !part.removed && "text-muted-foreground",
-                )}
-              >
-                {part.value}
-              </span>
-            ))}
-          </pre>
-        ) : (
-          <div className="flex h-full min-h-[180px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
-            暂无未保存修改
-          </div>
-        )}
-      </ScrollArea>
-    </div>
-  );
-}
-
-/**
- * Build a structured JSON diff when possible, falling back to line diff for invalid drafts.
- */
-function buildJsonDiffParts(savedJsonContent: string, jsonDraft: string): DiffPart[] {
-  if (savedJsonContent === jsonDraft) {
-    return [];
-  }
-
-  try {
-    return diffJson(parseJsonForDiff(savedJsonContent), parseJsonForDiff(jsonDraft));
-  } catch {
-    return diffLines(savedJsonContent, jsonDraft);
-  }
-}
-
-/**
- * Parse a JSON editor value for diffing, treating an empty editor as an empty object.
- */
-function parseJsonForDiff(value: string): string | object {
-  const text = value.trim();
-  if (!text) {
-    return {};
-  }
-
-  const parsed = JSON.parse(text) as unknown;
-  if (typeof parsed === "object" && parsed !== null) {
-    return parsed;
-  }
-  return String(parsed);
-}
 
 /**
  * Render the best available source preview for the original uploaded file.
@@ -787,4 +729,151 @@ function patchExtractionItem(
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Select the JSON object that corresponds to the currently selected extraction item.
+ */
+function selectJsonItemRange(
+  textarea: HTMLTextAreaElement | null,
+  jsonText: string,
+  item: ExtractionItem | null,
+) {
+  if (!textarea || !item) {
+    return;
+  }
+
+  const range = findJsonItemRange(jsonText, item);
+  if (!range) {
+    return;
+  }
+
+  textarea.focus();
+  textarea.setSelectionRange(range.start, range.end);
+  const line = jsonText.slice(0, range.start).split("\n").length;
+  const lineHeight = 24;
+  textarea.scrollTop = Math.max(0, (line - 4) * lineHeight);
+}
+
+/**
+ * Find a selected object's character range in formatted JSON text.
+ */
+function findJsonItemRange(
+  jsonText: string,
+  item: ExtractionItem,
+): { start: number; end: number } | null {
+  const slotKeyIndex = jsonText.indexOf(`"${item.slot}"`);
+  if (slotKeyIndex < 0) {
+    return null;
+  }
+
+  const arrayStart = jsonText.indexOf("[", slotKeyIndex);
+  if (arrayStart < 0) {
+    return null;
+  }
+
+  const arrayEnd = findMatchingJsonToken(jsonText, arrayStart, "[", "]");
+  if (arrayEnd < 0) {
+    return null;
+  }
+
+  const idPattern = `"id": "${escapeJsonString(item.id)}"`;
+  let cursor = arrayStart + 1;
+  while (cursor < arrayEnd) {
+    const objectStart = findNextJsonObjectStart(jsonText, cursor, arrayEnd);
+    if (objectStart < 0) {
+      return null;
+    }
+
+    const objectEnd = findMatchingJsonToken(jsonText, objectStart, "{", "}");
+    if (objectEnd < 0 || objectEnd > arrayEnd) {
+      return null;
+    }
+
+    if (jsonText.slice(objectStart, objectEnd + 1).includes(idPattern)) {
+      return { start: objectStart, end: objectEnd + 1 };
+    }
+
+    cursor = objectEnd + 1;
+  }
+
+  return null;
+}
+
+/**
+ * Find the matching closing token while skipping quoted string content.
+ */
+function findMatchingJsonToken(
+  text: string,
+  start: number,
+  openToken: string,
+  closeToken: string,
+): number {
+  let depth = 0;
+  let inString = false;
+  let escaping = false;
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaping) {
+        escaping = false;
+      } else if (char === "\\") {
+        escaping = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+    } else if (char === openToken) {
+      depth += 1;
+    } else if (char === closeToken) {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Find the next object start outside quoted string content.
+ */
+function findNextJsonObjectStart(text: string, from: number, maxIndex: number): number {
+  let inString = false;
+  let escaping = false;
+
+  for (let index = from; index <= maxIndex; index += 1) {
+    const char = text[index];
+    if (inString) {
+      if (escaping) {
+        escaping = false;
+      } else if (char === "\\") {
+        escaping = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === "\"") {
+      inString = true;
+    } else if (char === "{") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Escape a string for matching inside formatted JSON.
+ */
+function escapeJsonString(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }

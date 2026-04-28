@@ -14,6 +14,7 @@ from schemas.models import (
     DocType,
     EntityItem,
     EntityType,
+    InterfaceItem,
     RequirementItem,
     RequirementType,
     SrsDocument,
@@ -151,14 +152,14 @@ class CorePipelineTests(unittest.TestCase):
                         {
                             "id": "SRS-USER-001",
                             "name": "用户注册",
-                            "description": "系统应支持邮箱注册。",
                             "requirement_type": "functional",
+                            "points": ["系统应支持邮箱注册。"],
                             "evidence_element_ids": ["el-0002", "missing"],
                         },
                         {
                             "id": "SRS-USER-001",
                             "name": "用户注册",
-                            "acceptance_criteria": ["验证码 5 分钟内有效。"],
+                            "criteria": ["验证码 5 分钟内有效。"],
                             "evidence_element_ids": ["el-0003"],
                         },
                     ]
@@ -205,8 +206,8 @@ class CorePipelineTests(unittest.TestCase):
                         {
                             "id": "SRS-USER-001",
                             "name": "用户注册",
-                            "description": "系统应支持邮箱注册。",
                             "requirement_type": "functional",
+                            "points": ["系统应支持邮箱注册。"],
                             "evidence_element_ids": valid_ids + ["missing"],
                         }
                     ]
@@ -236,8 +237,8 @@ class CorePipelineTests(unittest.TestCase):
                 "requirements": [
                     {
                         "name": "用户注册",
-                        "description": "系统应支持邮箱注册。",
                         "requirement_type": "functional",
+                        "points": ["系统应支持邮箱注册。"],
                         "evidence_element_ids": ["el-0002"],
                     }
                 ]
@@ -279,8 +280,8 @@ class CorePipelineTests(unittest.TestCase):
                 "requirements": [
                     {
                         "name": "用户登录",
-                        "description": "系统应支持邮箱登录。",
                         "requirement_type": "functional",
+                        "points": ["系统应支持邮箱登录。"],
                         "evidence_element_ids": [chunk.elements[0].element_id],
                     }
                 ]
@@ -333,14 +334,14 @@ class CorePipelineTests(unittest.TestCase):
                 "requirements": [
                     {
                         "name": "用户注册",
-                        "description": "系统应支持邮箱注册。",
                         "requirement_type": "functional",
+                        "points": ["系统应支持邮箱注册。"],
                         "evidence_element_ids": ["el-0003"],
                     },
                     {
                         "name": "用户登录",
-                        "description": "系统应支持邮箱登录。",
                         "requirement_type": "functional",
+                        "points": ["系统应支持邮箱登录。"],
                         "evidence_element_ids": ["el-0005"],
                     },
                 ]
@@ -373,11 +374,14 @@ class CorePipelineTests(unittest.TestCase):
         """Ensure schema models normalize invalid enum and extra values."""
         entity = EntityItem(name="用户", entity_type="person", extra="invalid")
         requirement = RequirementItem(name="审计日志", requirement_type="security", extra=None)
+        interface = InterfaceItem(name="注册接口", interface_type="REST", extra=None)
 
         self.assertEqual(entity.entity_type, EntityType.OTHER)
         self.assertEqual(entity.extra, {})
         self.assertEqual(requirement.requirement_type, RequirementType.OTHER)
         self.assertEqual(requirement.extra, {})
+        self.assertEqual(interface.interface_type, "http")
+        self.assertEqual(interface.extra, {})
 
     def test_structured_document_dump_starts_with_document_fields(self) -> None:
         """Ensure extracted document JSON starts with document-level fields."""
@@ -385,7 +389,7 @@ class CorePipelineTests(unittest.TestCase):
 
         self.assertEqual(
             list(document.model_dump(mode="json").keys())[:5],
-            ["doc_type", "title", "summary", "version", "extra"],
+            ["doc_type", "title", "version", "extra", "entities"],
         )
 
     def test_docling_parser_infers_heading_level_from_markdown(self) -> None:

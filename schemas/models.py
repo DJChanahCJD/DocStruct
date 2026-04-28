@@ -178,7 +178,6 @@ class BaseNode(BaseModel):
     id: Optional[str] = Field(None, description="系统生成 ID；抽取时不要编造")
     source_id: Optional[str] = Field(None, description="原文显式编号；不要编造")
     name: str
-    summary: Optional[str] = None
     evidence_element_ids: list[str] = Field(
         default_factory=list,
         description="来源元素 ID 锚点；只保留能定位对象的高价值锚点",
@@ -223,7 +222,7 @@ class EntityItem(BaseNode):
 class ProcessItem(BaseNode):
     process_type: ProcessType = Field(
         default=ProcessType.OTHER,
-        description="流程类型：业务流程用 business；系统或技术流程用 technical；测试流程用 test；无法判断用 other",
+        description="流程类型：业务流程用 business；系统或技术流程用 technical；测试流程用 test",
     )
     steps: list[StepItem] = Field(default_factory=list, description="流程内的有序步骤")
 
@@ -243,11 +242,16 @@ class ProcessItem(BaseNode):
 class RequirementItem(BaseNode):
     requirement_type: RequirementType = Field(
         default=RequirementType.OTHER,
-        description="需求类型：功能需求用 functional；性能、安全、可靠性等非功能需求用 non_functional；无法判断用 other",
+        description="需求类型：functional、non_functional 或 other",
     )
-    details: list[str] = Field(default_factory=list, description="同一需求下的功能点、子项、约束或细节")
-    acceptance_criteria: list[str] = Field(default_factory=list, description="该需求的验收条件；不要抽成独立需求")
-    metric: Optional[str] = Field(None, description="量化指标或目标值")
+    points: list[str] = Field(
+        default_factory=list,
+        description="同一需求下的功能点、子项、约束或补充细节",
+    )
+    criteria: list[str] = Field(
+        default_factory=list,
+        description="验收条件、通过标准、预期结果或量化指标；不要抽成独立需求",
+    )
 
     @field_validator("requirement_type", mode="before")
     @classmethod
@@ -263,10 +267,22 @@ class RequirementItem(BaseNode):
 
 
 class InterfaceItem(BaseNode):
-    interface_type: str = Field(default="other", description="接口类型，如 http、rpc、message、ui、database、file")
-    method: Optional[str] = None
-    path: Optional[str] = None
-    target: Optional[str] = None
+    interface_type: str = Field(
+        default="other",
+        description="接口分类值：优先使用 http、rpc、message、ui、database、file；无法判断用 other；不要填写自然语言描述",
+    )
+    method: Optional[str] = Field(
+        None,
+        description="接口操作或动作，如 HTTP 方法、RPC 方法、消息动作、页面操作；没有明确值则留空",
+    )
+    path: Optional[str] = Field(
+        None,
+        description="接口入口标识，如 URL path、消息 topic/queue、表名、文件路径或页面入口；不要合并说明文字",
+    )
+    target: Optional[str] = Field(
+        None,
+        description="接口对端或目标对象，如系统、模块、服务、数据对象或用户角色；没有明确目标则留空",
+    )
 
     @field_validator("interface_type", mode="before")
     @classmethod
@@ -274,7 +290,22 @@ class InterfaceItem(BaseNode):
         if value is None:
             return "other"
         text = str(value).strip().lower()
-        return text or "other"
+        aliases = {
+            "api": "http",
+            "rest": "http",
+            "restful": "http",
+            "endpoint": "http",
+            "mq": "message",
+            "queue": "message",
+            "topic": "message",
+            "db": "database",
+            "sql": "database",
+            "page": "ui",
+            "screen": "ui",
+        }
+        normalized = aliases.get(text, text)
+        allowed = {"http", "rpc", "message", "ui", "database", "file", "other"}
+        return normalized if normalized in allowed else "other"
 
     @field_validator("method", mode="before")
     @classmethod
@@ -299,15 +330,30 @@ class ArtifactItem(BaseNode):
 
 
 class ExtractedObjectSet(BaseModel):
-    entities: list[EntityItem] = Field(default_factory=list)
-    processes: list[ProcessItem] = Field(default_factory=list)
-    requirements: list[RequirementItem] = Field(default_factory=list)
-    interfaces: list[InterfaceItem] = Field(default_factory=list)
-    artifacts: list[ArtifactItem] = Field(default_factory=list)
+    entities: list[EntityItem] = Field(
+        default_factory=list,
+        description="仅保存对需求、流程、接口或系统边界有持续作用的核心角色、系统、模块、服务或数据对象",
+    )
+    processes: list[ProcessItem] = Field(
+        default_factory=list,
+        description="业务、技术或测试流程；包含有明确顺序和目标的一组步骤",
+    )
+    requirements: list[RequirementItem] = Field(
+        default_factory=list,
+        description="功能或非功能需求；验收条件、约束和细节应归入对应需求，不要拆成独立对象",
+    )
+    interfaces: list[InterfaceItem] = Field(
+        default_factory=list,
+        description="系统间、模块间或用户与系统之间的交互入口，如 HTTP、RPC、消息、UI、数据库或文件接口",
+    )
+    artifacts: list[ArtifactItem] = Field(
+        default_factory=list,
+        description="无法归入实体、流程、需求或接口的高价值文档产物，如测试用例、设计决策、问题记录、表格或章节要点",
+    )
 
 
 class Evidence(BaseModel):
-    object_id: str
+    object_id: str  # 对象 ID，如 entity_id、process_id、requirement_id、interface_id、artifact_id
     element_id: Optional[str] = None
     text_span: Optional[str] = None
     page: Optional[int] = None
@@ -324,10 +370,12 @@ class Evidence(BaseModel):
 
 class BaseExtractedDocument(BaseModel):
     doc_type: DocType
-    title: Optional[str] = None
-    summary: Optional[str] = None
+    title: Optional[str] = None     # TODO: 改为直接延用上传文件的文件名
     version: Optional[str] = None
-    extra: dict[str, Any] = Field(default_factory=dict, description="少量无法归入声明字段的文档级原文属性")
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        description="少量高价值文档级元数据；仅保存无法归入声明字段但有检索、展示或追溯价值的原文属性",
+    )
 
 
 class StructuredDocument(ExtractedObjectSet, BaseExtractedDocument):

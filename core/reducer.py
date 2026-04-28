@@ -206,10 +206,11 @@ def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
         if raw_id and not raw_id.startswith("chunk") and not _is_generated_id(slot, raw_id):
             return f"requirement_id::{raw_id}"
         name = _norm(item.get("name"))
-        req_type = _norm(item.get("requirement_type"))
-        description = _norm(item.get("description"))
-        if name or description:
-            return f"requirement::{req_type}::{name}::{description[:120]}"
+        requirement_type = _norm(item.get("requirement_type"))
+        text_parts = _flatten_text_values([item.get("points"), item.get("criteria")])
+        text_key = "::".join(text_parts)
+        if name or text_key:
+            return f"requirement::{requirement_type}::{name}::{text_key[:160]}"
 
     if slot == "artifacts":
         name = _norm(item.get("name"))
@@ -314,3 +315,19 @@ def _truncate_span(value: str, limit: int = 500) -> str | None:
 
 def _norm(value: Any) -> str:
     return _compact_text(str(value or "")).lower()
+
+
+def _flatten_text_values(values: list[Any]) -> list[str]:
+    """Return normalized scalar text from shallow list fields for identity keys."""
+    result: list[str] = []
+    for value in values:
+        if isinstance(value, list):
+            for item in value:
+                text = _norm(item)
+                if text:
+                    result.append(text)
+            continue
+        text = _norm(value)
+        if text:
+            result.append(text)
+    return result

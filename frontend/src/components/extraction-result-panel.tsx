@@ -14,11 +14,51 @@ import {
 } from "@/lib/evidence";
 import { cn } from "@/lib/utils";
 
+type DetailFieldKind = "text" | "list" | "steps";
+
+interface DetailFieldConfig {
+  key: string;
+  label: string;
+  kind: DetailFieldKind;
+  rows: number;
+}
+
+const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
+  entities: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "entity_type", label: "实体类型", kind: "text", rows: 1 },
+  ],
+  processes: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "process_type", label: "流程类型", kind: "text", rows: 1 },
+    { key: "steps", label: "步骤", kind: "steps", rows: 5 },
+  ],
+  requirements: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "requirement_type", label: "需求类型", kind: "text", rows: 1 },
+    { key: "points", label: "功能点 / 明细", kind: "list", rows: 4 },
+    { key: "criteria", label: "验收标准", kind: "list", rows: 3 },
+  ],
+  interfaces: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "interface_type", label: "接口类型", kind: "text", rows: 1 },
+    { key: "method", label: "动作", kind: "text", rows: 1 },
+    { key: "path", label: "入口", kind: "text", rows: 2 },
+    { key: "target", label: "目标", kind: "text", rows: 2 },
+  ],
+  artifacts: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "artifact_type", label: "产物类型", kind: "text", rows: 1 },
+    { key: "details", label: "要点", kind: "list", rows: 5 },
+  ],
+};
+
 interface ExtractionResultPanelProps {
   items: ExtractionItem[];
   selectedEvidence: ExtractionEvidence | null;
   onSelectEvidence: (evidence: ExtractionEvidence) => void;
   onPatchItem: (item: ExtractionItem, patch: Record<string, unknown>) => void;
+  onSelectedItemChange?: (item: ExtractionItem | null) => void;
 }
 
 /**
@@ -29,6 +69,7 @@ export function ExtractionResultPanel({
   selectedEvidence,
   onSelectEvidence,
   onPatchItem,
+  onSelectedItemChange,
 }: ExtractionResultPanelProps) {
   const groupedItems = useMemo(() => groupItemsBySlot(items), [items]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -70,6 +111,10 @@ export function ExtractionResultPanel({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [selectedEvidence, selectedItem]);
+
+  useEffect(() => {
+    onSelectedItemChange?.(selectedItem);
+  }, [onSelectedItemChange, selectedItem]);
 
   if (items.length === 0) {
     return (
@@ -194,17 +239,15 @@ function ExtractionDetail({
   onSelectEvidence,
   onPatchItem,
 }: ExtractionDetailProps) {
-  const [nameDraft, setNameDraft] = useState("");
-  const [descriptionDraft, setDescriptionDraft] = useState("");
-  const [detailsDraft, setDetailsDraft] = useState("");
-  const [acceptanceDraft, setAcceptanceDraft] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const selectedEvidenceRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    setNameDraft(stringValue(item?.raw.name));
-    setDescriptionDraft(stringValue(item?.raw.description));
-    setDetailsDraft(arrayValue(item?.raw.details).join("\n"));
-    setAcceptanceDraft(arrayValue(item?.raw.acceptance_criteria).join("\n"));
+    if (!item) {
+      setDrafts({});
+      return;
+    }
+    setDrafts(buildDrafts(item));
   }, [item]);
 
   useEffect(() => {
@@ -227,14 +270,10 @@ function ExtractionDetail({
   }
 
   const primaryEvidence = getPrimaryEvidence(item);
+  const fieldConfigs = DETAIL_FIELD_CONFIGS[item.slot];
 
   const handleSave = () => {
-    onPatchItem(item, {
-      name: nameDraft || null,
-      description: descriptionDraft || null,
-      details: detailsDraft.split("\n").map((line) => line.trim()).filter(Boolean),
-      acceptance_criteria: acceptanceDraft.split("\n").map((line) => line.trim()).filter(Boolean),
-    });
+    onPatchItem(item, buildPatch(fieldConfigs, drafts));
   };
 
   return (
@@ -260,14 +299,15 @@ function ExtractionDetail({
 
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 p-4">
-          <FieldEditor label="名称" value={nameDraft} onChange={setNameDraft} rows={2} />
-          <FieldEditor label="描述" value={descriptionDraft} onChange={setDescriptionDraft} rows={3} />
-          {item.slot === "requirements" && (
-            <>
-              <FieldEditor label="功能点 / 明细" value={detailsDraft} onChange={setDetailsDraft} rows={4} />
-              <FieldEditor label="验收标准" value={acceptanceDraft} onChange={setAcceptanceDraft} rows={3} />
-            </>
-          )}
+          {fieldConfigs.map((fieldConfig) => (
+            <FieldEditor
+              key={fieldConfig.key}
+              label={fieldConfig.label}
+              value={drafts[fieldConfig.key] ?? ""}
+              onChange={(value) => setDrafts((current) => ({ ...current, [fieldConfig.key]: value }))}
+              rows={fieldConfig.rows}
+            />
+          ))}
 
           <div className="rounded-lg border bg-muted/15">
             <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">证据</div>
@@ -369,6 +409,72 @@ function getPrimaryEvidence(item: ExtractionItem): ExtractionEvidence | null {
 }
 
 /**
+ * Build editable text drafts from the selected object.
+ */
+function buildDrafts(item: ExtractionItem): Record<string, string> {
+  const drafts: Record<string, string> = {};
+  for (const fieldConfig of DETAIL_FIELD_CONFIGS[item.slot]) {
+    drafts[fieldConfig.key] = draftValue(item.raw[fieldConfig.key], fieldConfig.kind);
+  }
+  return drafts;
+}
+
+/**
+ * Convert textarea drafts back into the structured patch payload.
+ */
+function buildPatch(fieldConfigs: DetailFieldConfig[], drafts: Record<string, string>): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const fieldConfig of fieldConfigs) {
+    patch[fieldConfig.key] = patchValue(drafts[fieldConfig.key] ?? "", fieldConfig.kind);
+  }
+  return patch;
+}
+
+/**
+ * Normalize a raw field value into editable textarea text.
+ */
+function draftValue(value: unknown, kind: DetailFieldKind): string {
+  if (kind === "list") {
+    return arrayValue(value).join("\n");
+  }
+  if (kind === "steps") {
+    return stepValue(value).join("\n");
+  }
+  return stringValue(value);
+}
+
+/**
+ * Normalize textarea text into the field shape expected by extracted objects.
+ */
+function patchValue(value: string, kind: DetailFieldKind): unknown {
+  const text = value.trim();
+  if (kind === "list") {
+    return linesValue(value);
+  }
+  if (kind === "steps") {
+    return linesValue(value).map((line) => ({ name: line }));
+  }
+  return text || null;
+}
+
+/**
+ * Normalize process steps into editable step names.
+ */
+function stepValue(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((item) => {
+      if (isRecord(item)) {
+        return stringValue(item.name);
+      }
+      return stringValue(item);
+    })
+    .filter(Boolean);
+}
+
+/**
  * Normalize an unknown value into a string.
  */
 function stringValue(value: unknown): string {
@@ -383,4 +489,18 @@ function arrayValue(value: unknown): string[] {
     return [];
   }
   return value.map((item) => String(item));
+}
+
+/**
+ * Split textarea content into non-empty trimmed lines.
+ */
+function linesValue(value: string): string[] {
+  return value.split("\n").map((line) => line.trim()).filter(Boolean);
+}
+
+/**
+ * Return true when the value is a JSON-like object.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

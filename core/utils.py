@@ -194,7 +194,7 @@ def _clean_empty_values(data: Any) -> Any:
 
 
 def _deduplicate_requirements(requirements: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
-    """优先按 source_id/id，无标识时按 name + description + requirement_type 归一。"""
+    """优先按 source_id/id，无标识时按 name + points + criteria + requirement_type 归一。"""
     seen_ids = set()
     seen_texts = set()
     result = []
@@ -208,13 +208,12 @@ def _deduplicate_requirements(requirements: list[Dict[str, Any]]) -> list[Dict[s
             result.append(req)
             continue
             
-        # 无 id 情况
         name = req.get("name", "")
-        desc = req.get("description", "")
-        req_type = req.get("requirement_type", "other")
+        points = _join_text_list(req.get("points"))
+        criteria = _join_text_list(req.get("criteria"))
+        requirement_type = req.get("requirement_type", "other")
         
-        # 用 name + desc + type 作为去重 key
-        text_key = f"{name}::{desc}::{req_type}"
+        text_key = f"{name}::{points}::{criteria}::{requirement_type}"
         if text_key in seen_texts:
             continue
         seen_texts.add(text_key)
@@ -239,14 +238,15 @@ def _filter_invalid_artifacts(artifacts: list[Dict[str, Any]]) -> list[Dict[str,
 
 
 def _stabilize_requirement_type(req: Dict[str, Any]) -> str:
-    """基于标题、措辞二次修正 requirement_type"""
+    """基于标题、措辞二次修正 requirement_type。"""
     current_type = req.get("requirement_type", "other")
     if current_type != "other":
         return current_type
         
     name = req.get("name", "")
-    desc = req.get("description", "")
-    text = f"{name} {desc}".lower()
+    points = _join_text_list(req.get("points"))
+    criteria = _join_text_list(req.get("criteria"))
+    text = f"{name} {points} {criteria}".lower()
     
     if any(k in text for k in ("性能", "可靠性", "安全性", "并发", "响应时间", "performance", "security", "非功能")):
         return "non_functional"
@@ -254,6 +254,13 @@ def _stabilize_requirement_type(req: Dict[str, Any]) -> str:
         return "functional"
     
     return "other"
+
+
+def _join_text_list(value: Any) -> str:
+    """把列表字段归一为用于去重和类型判断的文本。"""
+    if not isinstance(value, list):
+        return ""
+    return " ".join(str(item or "").strip() for item in value if str(item or "").strip())
 
 
 def finalize_merged_result(metadata: Dict[str, Any], chunk_results: list[Dict[str, Any]]) -> Dict[str, Any]:
