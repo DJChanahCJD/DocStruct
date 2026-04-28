@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from core.parser import DocBlock, MarkdownNormalizer, MarkdownRenderer, ParseResult
+from core.schema_registry import normalize_doc_type
 from schemas.models import DocType, DocumentElement, DocumentIR, DocumentOutline
 
 
@@ -38,7 +39,7 @@ def parse_result_to_ir(
     sections: list[str] = []
     seen_sections: set[str] = set()
     title = parse_result.title
-    normalized_doc_type = _normalize_doc_type_value(doc_type)
+    normalized_doc_type = normalize_doc_type(doc_type)
 
     ordered_blocks = sorted(parse_result.blocks, key=lambda block: block.order)
     for block in ordered_blocks:
@@ -144,16 +145,6 @@ def _normalize_bbox(value: Any) -> list[float] | None:
     except (TypeError, ValueError):
         return None
 
-
-def _normalize_doc_type_value(doc_type: str | DocType | None) -> DocType:
-    if isinstance(doc_type, DocType):
-        return doc_type
-    if doc_type is None or not str(doc_type).strip():
-        return DocType.UNKNOWN
-    try:
-        return DocType(str(doc_type).strip())
-    except ValueError:
-        return DocType.UNKNOWN
 
 
 def _is_srs_field_label_title(value: str) -> bool:

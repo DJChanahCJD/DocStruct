@@ -17,12 +17,12 @@ from docx.table import Table
 from docx.text.paragraph import Paragraph
 
 
-HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+from core.constants import HEADING_MARKDOWN_PATTERN, TABLE_ROW_PATTERN, TABLE_SEPARATOR_PATTERN
+
+HEADING_PATTERN = HEADING_MARKDOWN_PATTERN
 NUMBERED_HEADING_PATTERN = re.compile(r"^\s*(\d+(?:\.\d+)*)(?:\.)?\s+(.+?)\s*$")
 LIST_ITEM_PATTERN = re.compile(r"^\s*((?:[-+*])|(?:\d+\.))\s+(.+?)\s*$")
 CODE_FENCE_PATTERN = re.compile(r"^\s*(```+|~~~+)(.*)$")
-TABLE_ROW_PATTERN = re.compile(r"^\s*\|.*\|\s*$")
-TABLE_SEPARATOR_PATTERN = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 THEMATIC_BREAK_PATTERN = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
 
 

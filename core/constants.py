@@ -1,4 +1,11 @@
+import re
+
 JSON_FORMAT_INSTRUCTION = "只返回合法 JSON。不要 Markdown，不要注释。JSON key 必须使用 schema 中的英文 key。"
+
+# 共享正则模式 —— parser.py 与 docling_parser.py 共用
+HEADING_MARKDOWN_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+TABLE_ROW_PATTERN = re.compile(r"^\s*\|.*\|\s*$")
+TABLE_SEPARATOR_PATTERN = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 
 SYSTEM_PROMPT = """
 你是严谨的软件工程文档结构化抽取专家。

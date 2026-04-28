@@ -13,6 +13,7 @@ from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SY
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
 from core.reducer import OBJECT_SLOTS, reduce_extraction_results
+from core.schema_registry import normalize_doc_type
 from core.utils import clean_and_parse_json, normalize_extracted_data
 from schemas.models import DocType, DocumentChunk, DocumentIR, ExtractedObjectSet, ExtractionContract
 
@@ -48,7 +49,7 @@ Schema:
 
 
 def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContract:
-    normalized = _normalize_doc_type(doc_type)
+    normalized = normalize_doc_type(doc_type)
     common_rules = [
         "只抽取当前输入中明确出现的对象。",
         "evidence_element_ids 只使用 [ELEMENT: ...] 标记中的元素 ID。",
@@ -185,7 +186,7 @@ async def extract_structure_with_meta(
 ) -> tuple[BaseModel, dict[str, object]]:
     logger.info("Extracting structure for %s", response_model.__name__)
     doc_type = _infer_doc_type(response_model) or DocType.UNKNOWN.value
-    normalized_doc_type = _normalize_doc_type(doc_type)
+    normalized_doc_type = normalize_doc_type(doc_type)
 
     ir = _prepare_document_ir(
         markdown_content=markdown_content,
@@ -490,14 +491,3 @@ def _render_chunk_context(
             ),
         ]
     )
-
-
-def _normalize_doc_type(doc_type: str | DocType | None) -> DocType:
-    if isinstance(doc_type, DocType):
-        return doc_type
-    if doc_type is None or not str(doc_type).strip():
-        return DocType.UNKNOWN
-    try:
-        return DocType(str(doc_type).strip())
-    except ValueError:
-        return DocType.UNKNOWN

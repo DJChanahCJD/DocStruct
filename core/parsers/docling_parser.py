@@ -25,9 +25,7 @@ if TYPE_CHECKING:
     from core.parser import BaseParser, DocBlock, ParseResult
 
 
-HEADING_MARKDOWN_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-TABLE_ROW_PATTERN = re.compile(r"^\s*\|.*\|\s*$")
-TABLE_SEPARATOR_PATTERN = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
+from core.constants import HEADING_MARKDOWN_PATTERN, TABLE_ROW_PATTERN, TABLE_SEPARATOR_PATTERN
 
 
 @dataclass
@@ -213,50 +211,6 @@ class DoclingParser:
             bbox=bbox,
             extra=self._extract_extra(item, item_type, document),
         )
-
-    def _convert_text_element(self, text_item, idx: int) -> ParsedElement | None:
-        """
-        转换文本元素（备用方法）。
-
-        Args:
-            text_item: 文本元素
-            idx: 索引
-
-        Returns:
-            ParsedElement 或 None
-        """
-        text = getattr(text_item, "text", None) or str(text_item)
-        if not text or not text.strip():
-            return None
-
-        # 尝试提取位置信息
-        page, bbox = self._extract_position(text_item)
-
-        # 判断是否为标题
-        item_type = self._normalize_item_type(getattr(text_item, "label", None))
-
-        return ParsedElement(
-            id=f"elem_{idx}",
-            type=item_type,
-            text=text.strip(),
-            page=page,
-            bbox=bbox,
-        )
-
-    def _extract_text(self, item) -> str:
-        """提取元素的文本内容。"""
-        # 尝试多种属性获取文本
-        for attr in ["text", "content", "value", "export_to_markdown"]:
-            if hasattr(item, attr):
-                val = getattr(item, attr)
-                if callable(val) and attr == "export_to_markdown":
-                    try:
-                        return val()
-                    except Exception:
-                        continue
-                if isinstance(val, str):
-                    return val
-        return ""
 
     def _extract_position(self, item) -> tuple[int | None, list[float] | None]:
         """

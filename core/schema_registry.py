@@ -16,15 +16,15 @@ TYPE_MODEL_MAP: dict[DocType, type[BaseModel]] = {
 
 
 def normalize_doc_type(doc_type: str | DocType | None) -> DocType:
+    """将字符串或枚举值规范化为 DocType 枚举；None/空/非法值统一回退为 UNKNOWN。"""
     if isinstance(doc_type, DocType):
         return doc_type
     if doc_type is None or not str(doc_type).strip():
-        raise ValueError("doc_type 不能为空")
+        return DocType.UNKNOWN
     try:
         return DocType(str(doc_type).strip())
-    except ValueError as exc:
-        allowed = ", ".join(item.value for item in DocType)
-        raise ValueError(f"非法 doc_type: {doc_type}。仅支持: {allowed}") from exc
+    except ValueError:
+        return DocType.UNKNOWN
 
 
 def get_response_model(doc_type: str | DocType | None) -> type[BaseModel] | None:
