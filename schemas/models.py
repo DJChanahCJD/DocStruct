@@ -382,23 +382,41 @@ class ArtifactItem(BaseNode):
 class ExtractedObjectSet(BaseModel):
     entities: list[EntityItem] = Field(
         default_factory=list,
-        description="仅保存对需求、流程、接口或系统边界有持续作用的核心角色、系统、模块、服务或数据对象",
+        description=(
+            "具备自主行为或持续状态的系统组件——参与者/角色（actor）、系统/服务（system）、"
+            "持久数据存储（data）。判断标准：该对象是否是独立参与者、有明确职责或数据？"
+            "排除：临时数据结构、文档元信息角色、内部分解模块。"
+        ),
     )
     processes: list[ProcessItem] = Field(
         default_factory=list,
-        description="业务、技术或测试流程；包含有明确顺序和目标的一组步骤",
+        description=(
+            "包含多个有序步骤的操作序列。判断标准：原文是否描述了 A→B→C 的步骤顺序？"
+            "单个操作或 API 调用不是流程。"
+        ),
     )
     requirements: list[RequirementItem] = Field(
         default_factory=list,
-        description="功能或非功能需求；验收条件、约束和细节应归入对应需求，不要拆成独立对象",
+        description=(
+            "文档中作为独立规格单元呈现的需求或约束。"
+            "保持原文粒度——同一编号/标题下的多个指标属于一个需求。"
+            "API 端点（属于 interfaces）和测试用例步骤（属于 artifacts/processes）不属于此槽。"
+        ),
     )
     interfaces: list[InterfaceItem] = Field(
         default_factory=list,
-        description="系统间、模块间或用户与系统之间的交互入口，如 HTTP、RPC、消息、UI、数据库或文件接口",
+        description=(
+            "同时具备 (a) 明确交互协议 和 (b) 入口标识的系统边界入口——"
+            "HTTP API、RPC 方法、消息通道、数据库连接、文件交换路径。"
+            "仅有名称无交互细节的不属于此槽。"
+        ),
     )
     artifacts: list[ArtifactItem] = Field(
         default_factory=list,
-        description="无法归入实体、流程、需求或接口的高价值文档产物，如测试用例、设计决策、问题记录、表格或章节要点",
+        description=(
+            "无法归入上述四槽的高价值文档产物——测试用例、设计决策、问题记录、独立表格。"
+            "仅当不满足其他四槽判断标准时才归入此槽。"
+        ),
     )
 
 

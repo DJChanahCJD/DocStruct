@@ -1,0 +1,74 @@
+{
+  "doc_type": "test",
+  "title": "电商平台功能测试用例集",
+  "entities": [
+    {
+      "name": "用户",
+      "entity_type": "actor"
+    },
+    {
+      "name": "电商平台",
+      "entity_type": "system"
+    },
+    {
+      "name": "短信验证码服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "支付宝",
+      "entity_type": "system"
+    }
+  ],
+  "requirements": [
+    {
+      "name": "用户注册功能（TC-USER-001）",
+      "requirement_type": "functional",
+      "points": ["手机号注册", "短信验证码验证", "密码设置8-20位含字母数字"],
+      "criteria": ["注册成功跳转提示页", "发送欢迎短信", "数据库新增已激活用户记录", "可用手机号密码登录"]
+    },
+    {
+      "name": "用户登录功能（TC-USER-002）",
+      "requirement_type": "functional",
+      "points": ["手机号+密码登录"],
+      "criteria": ["跳转首页", "显示用户昵称", "生成有效Token", "记录登录日志"]
+    },
+    {
+      "name": "商品搜索功能（TC-PROD-001）",
+      "requirement_type": "functional",
+      "points": ["关键词搜索商品"],
+      "criteria": ["显示搜索结果列表", "相关度排序", "显示结果总数", "支持分页"]
+    },
+    {
+      "name": "添加商品到购物车（TC-CART-001）",
+      "requirement_type": "functional",
+      "points": ["选择规格", "设置数量", "加入购物车"],
+      "criteria": ["显示成功提示", "购物车图标更新", "商品信息正确", "小计金额正确"]
+    },
+    {
+      "name": "创建订单（TC-ORDER-001）",
+      "requirement_type": "functional",
+      "points": ["购物车结算", "确认收货地址", "选择配送方式", "提交订单"],
+      "criteria": ["生成订单号", "状态待支付", "库存预占", "购物车清除"]
+    },
+    {
+      "name": "订单支付（TC-PAY-001）",
+      "requirement_type": "functional",
+      "points": ["选择支付宝支付", "确认支付"],
+      "criteria": ["支付成功", "订单状态已支付", "生成支付记录", "通知用户和商家"]
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "支付宝支付接口",
+      "interface_type": "http",
+      "provider": "支付宝",
+      "consumer": "电商平台"
+    },
+    {
+      "name": "短信验证码接口",
+      "interface_type": "http",
+      "provider": "短信验证码服务",
+      "consumer": "电商平台"
+    }
+  ]
+}

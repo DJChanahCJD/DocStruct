@@ -25,5 +25,5 @@ def build_chat_completion_kwargs(
         "model": model_name or settings.llm_model,
         "messages": messages,
         "temperature": temperature,
-        "max_tokens": 8192,
+        "max_tokens": settings.llm_max_tokens,
     }

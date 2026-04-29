@@ -1,0 +1,617 @@
+{
+  "generated_at": "2026-04-29T12:28:03.204520",
+  "manifest": "C:\\Users\\DJCHAN\\SE\\1_CourseProject\\DocStruct\\experiments\\manifest.json",
+  "mode": "live",
+  "overall": {
+    "tp": 56,
+    "fp": 62,
+    "fn": 34,
+    "precision": 0.4746,
+    "recall": 0.6222,
+    "f1": 0.5385
+  },
+  "documents": {
+    "experiments/assets/srs_mini.md": {
+      "doc_id": "srs_mini",
+      "doc_path": "experiments/assets/srs_mini.md",
+      "doc_type": "srs",
+      "mode": "live",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 6,
+          "pred_count": 2,
+          "tp": 2,
+          "fp": 0,
+          "fn": 4,
+          "precision": 1.0,
+          "recall": 0.3333,
+          "f1": 0.5,
+          "matched_pairs": [
+            {
+              "pred_name": "用户",
+              "gt_name": "用户",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "智能文档系统",
+              "gt_name": "智能文档系统",
+              "similarity": 0.95
+            }
+          ]
+        },
+        "requirements": {
+          "slot": "requirements",
+          "gt_count": 7,
+          "pred_count": 11,
+          "tp": 5,
+          "fp": 6,
+          "fn": 2,
+          "precision": 0.4545,
+          "recall": 0.7143,
+          "f1": 0.5556,
+          "matched_pairs": [
+            {
+              "pred_name": "SRS-USER-001",
+              "gt_name": "用户注册（SRS-USER-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-USER-002",
+              "gt_name": "用户登录（SRS-USER-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-DOC-001",
+              "gt_name": "文档上传（SRS-DOC-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-DOC-002",
+              "gt_name": "文档解析（SRS-DOC-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-ANALYSIS-001",
+              "gt_name": "文档关联分析（SRS-ANALYSIS-001）",
+              "similarity": 0.95
+            }
+          ]
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 4,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        }
+      },
+      "summary": {
+        "tp": 7,
+        "fp": 6,
+        "fn": 10,
+        "precision": 0.5385,
+        "recall": 0.4118,
+        "f1": 0.4667
+      }
+    },
+    "static/examples/srs_example.md": {
+      "doc_id": "srs_example",
+      "doc_path": "static/examples/srs_example.md",
+      "doc_type": "srs",
+      "mode": "live",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 16,
+          "pred_count": 22,
+          "tp": 14,
+          "fp": 8,
+          "fn": 2,
+          "precision": 0.6364,
+          "recall": 0.875,
+          "f1": 0.7368,
+          "matched_pairs": [
+            {
+              "pred_name": "钉钉",
+              "gt_name": "钉钉",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "智能文档分析系统",
+              "gt_name": "智能文档分析系统",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "系统管理员",
+              "gt_name": "系统管理员",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "项目经理",
+              "gt_name": "项目经理",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "开发人员",
+              "gt_name": "开发人员",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "测试人员",
+              "gt_name": "测试人员",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "产品经理",
+              "gt_name": "产品经理",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "OCR服务提供商",
+              "gt_name": "OCR服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "NLP模型服务",
+              "gt_name": "NLP模型服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "对象存储服务",
+              "gt_name": "对象存储服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "企业微信",
+              "gt_name": "企业微信",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "文档解析服务",
+              "gt_name": "文档解析服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "搜索服务",
+              "gt_name": "Elasticsearch搜索服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "消息队列",
+              "gt_name": "RabbitMQ消息队列",
+              "similarity": 0.95
+            }
+          ]
+        },
+        "requirements": {
+          "slot": "requirements",
+          "gt_count": 9,
+          "pred_count": 40,
+          "tp": 7,
+          "fp": 33,
+          "fn": 2,
+          "precision": 0.175,
+          "recall": 0.7778,
+          "f1": 0.2857,
+          "matched_pairs": [
+            {
+              "pred_name": "用户注册 (SRS-USER-001)",
+              "gt_name": "用户注册（SRS-USER-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "用户登录 (SRS-USER-002)",
+              "gt_name": "用户登录（SRS-USER-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "权限管理 (SRS-USER-003)",
+              "gt_name": "权限管理（SRS-USER-003）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "文档上传 (SRS-DOC-001)",
+              "gt_name": "文档上传（SRS-DOC-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "文档解析 (SRS-DOC-002)",
+              "gt_name": "文档解析（SRS-DOC-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "文档关联分析 (SRS-ANALYSIS-001)",
+              "gt_name": "文档关联分析（SRS-ANALYSIS-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "智能检索 (SRS-ANALYSIS-002)",
+              "gt_name": "智能检索（SRS-ANALYSIS-002）",
+              "similarity": 0.95
+            }
+          ]
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 8,
+          "pred_count": 8,
+          "tp": 5,
+          "fp": 3,
+          "fn": 3,
+          "precision": 0.625,
+          "recall": 0.625,
+          "f1": 0.625,
+          "matched_pairs": [
+            {
+              "pred_name": "GitLab/GitHub API",
+              "gt_name": "GitLab/GitHub API",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "Jira API",
+              "gt_name": "Jira API",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "消息队列",
+              "gt_name": "RabbitMQ消息队列",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "企业微信 API",
+              "gt_name": "企业微信API",
+              "similarity": 0.875
+            },
+            {
+              "pred_name": "钉钉 API",
+              "gt_name": "钉钉API",
+              "similarity": 0.8
+            }
+          ]
+        }
+      },
+      "summary": {
+        "tp": 26,
+        "fp": 44,
+        "fn": 7,
+        "precision": 0.3714,
+        "recall": 0.7879,
+        "f1": 0.5049
+      }
+    },
+    "experiments/assets/api_mini.md": {
+      "doc_id": "api_mini",
+      "doc_path": "experiments/assets/api_mini.md",
+      "doc_type": "api",
+      "mode": "live",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 2,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        },
+        "requirements": {
+          "slot": "requirements",
+          "gt_count": 0,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 3,
+          "pred_count": 3,
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_pairs": [
+            {
+              "pred_name": "上传文档",
+              "gt_name": "上传文档",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "获取文档",
+              "gt_name": "获取文档",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "全文搜索",
+              "gt_name": "全文搜索",
+              "similarity": 0.95
+            }
+          ]
+        }
+      },
+      "summary": {
+        "tp": 3,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75
+      }
+    },
+    "static/examples/api_example.md": {
+      "doc_id": "api_example",
+      "doc_path": "static/examples/api_example.md",
+      "doc_type": "api",
+      "mode": "live",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 3,
+          "pred_count": 3,
+          "tp": 0,
+          "fp": 3,
+          "fn": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        },
+        "requirements": {
+          "slot": "requirements",
+          "gt_count": 0,
+          "pred_count": 1,
+          "tp": 0,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 12,
+          "pred_count": 17,
+          "tp": 12,
+          "fp": 5,
+          "fn": 0,
+          "precision": 0.7059,
+          "recall": 1.0,
+          "f1": 0.8276,
+          "matched_pairs": [
+            {
+              "pred_name": "2.1 获取访问令牌",
+              "gt_name": "获取访问令牌",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "4.1 创建实验项目",
+              "gt_name": "创建实验项目",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "4.2 查询项目列表",
+              "gt_name": "查询项目列表",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "5.1 批量创建样本",
+              "gt_name": "批量创建样本",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "5.2 获取样本详情",
+              "gt_name": "获取样本详情",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "6.1 注册设备",
+              "gt_name": "注册设备",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "6.2 查询设备状态",
+              "gt_name": "查询设备状态",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "7.1 创建实验任务",
+              "gt_name": "创建实验任务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "8.1 上传传感器数据",
+              "gt_name": "上传传感器数据",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "9.1 创建分析任务",
+              "gt_name": "创建分析任务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "10.1 查询审计日志",
+              "gt_name": "查询审计日志",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "11.1 注册 Webhook",
+              "gt_name": "注册Webhook",
+              "similarity": 0.7273
+            }
+          ]
+        }
+      },
+      "summary": {
+        "tp": 12,
+        "fp": 9,
+        "fn": 3,
+        "precision": 0.5714,
+        "recall": 0.8,
+        "f1": 0.6667
+      }
+    },
+    "static/examples/test_case_example.md": {
+      "doc_id": "test_case_example",
+      "doc_path": "static/examples/test_case_example.md",
+      "doc_type": "test",
+      "mode": "live",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 4,
+          "pred_count": 3,
+          "tp": 1,
+          "fp": 2,
+          "fn": 3,
+          "precision": 0.3333,
+          "recall": 0.25,
+          "f1": 0.2857,
+          "matched_pairs": [
+            {
+              "pred_name": "用户",
+              "gt_name": "用户",
+              "similarity": 1.0
+            }
+          ]
+        },
+        "requirements": {
+          "slot": "requirements",
+          "gt_count": 6,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 6,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 2,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        }
+      },
+      "summary": {
+        "tp": 1,
+        "fp": 2,
+        "fn": 11,
+        "precision": 0.3333,
+        "recall": 0.0833,
+        "f1": 0.1333
+      }
+    },
+    "experiments/assets/design_mini.md": {
+      "doc_id": "design_mini",
+      "doc_path": "experiments/assets/design_mini.md",
+      "doc_type": "design",
+      "mode": "live",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 5,
+          "pred_count": 5,
+          "tp": 4,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.8,
+          "recall": 0.8,
+          "f1": 0.8,
+          "matched_pairs": [
+            {
+              "pred_name": "用户",
+              "gt_name": "用户",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档解析服务",
+              "gt_name": "文档解析服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "Web 前端",
+              "gt_name": "Web前端",
+              "similarity": 0.8333
+            },
+            {
+              "pred_name": "API 服务",
+              "gt_name": "API服务",
+              "similarity": 0.8333
+            }
+          ]
+        },
+        "requirements": {
+          "slot": "requirements",
+          "gt_count": 0,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_pairs": []
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 3,
+          "pred_count": 3,
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_pairs": [
+            {
+              "pred_name": "上传文档",
+              "gt_name": "上传文档接口",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "查询文档",
+              "gt_name": "查询文档接口",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "解析文档",
+              "gt_name": "文档解析RPC",
+              "similarity": 0.5714
+            }
+          ]
+        }
+      },
+      "summary": {
+        "tp": 7,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.875,
+        "recall": 0.875,
+        "f1": 0.875
+      }
+    }
+  }
+}

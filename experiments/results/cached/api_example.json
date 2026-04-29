@@ -1,0 +1,518 @@
+{
+  "doc_type": "api",
+  "title": "NebulaLab 实验编排平台 API 文档 v1.8",
+  "extra": {},
+  "entities": [
+    {
+      "id": "ENT-001",
+      "name": "设备 (Device)",
+      "evidence_element_ids": [
+        "el-0059",
+        "el-0062"
+      ],
+      "entity_type": "system"
+    },
+    {
+      "id": "ENT-002",
+      "name": "实验任务 (Experiment Task)",
+      "evidence_element_ids": [
+        "el-0065",
+        "el-0070"
+      ],
+      "entity_type": "data"
+    },
+    {
+      "id": "ENT-003",
+      "name": "分析任务 (Analysis Job)",
+      "evidence_element_ids": [
+        "el-0105",
+        "el-0110"
+      ],
+      "entity_type": "data"
+    }
+  ],
+  "processes": [
+    {
+      "id": "PROC-001",
+      "name": "实验任务协议步骤",
+      "evidence_element_ids": [
+        "el-0065",
+        "el-0068"
+      ],
+      "process_type": "technical",
+      "steps": [
+        {
+          "name": "preheat"
+        },
+        {
+          "name": "ramp_to_target"
+        },
+        {
+          "name": "hold"
+        },
+        {
+          "name": "cooldown"
+        }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "name": "12. 限流规则",
+      "evidence_element_ids": [
+        "el-0134",
+        "el-0136"
+      ],
+      "requirement_type": "non_functional",
+      "points": [
+        "鉴权接口: 30 次 / 分钟",
+        "查询接口: 600 次 / 分钟",
+        "写入接口: 120 次 / 分钟",
+        "数据上传接口: 10,000 points / 分钟",
+        "Webhook 注册: 20 次 / 小时"
+      ],
+      "criteria": [
+        "超过限制返回错误码 RATE_LIMITED，消息 'Too many requests'，retry_after_seconds 为 30"
+      ]
+    }
+  ],
+  "interfaces": [
+    {
+      "id": "INT-001",
+      "name": "2.1 获取访问令牌",
+      "evidence_element_ids": [
+        "el-0010",
+        "el-0011"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/auth/token"
+    },
+    {
+      "id": "INT-002",
+      "name": "4.1 创建实验项目",
+      "evidence_element_ids": [
+        "el-0026",
+        "el-0027"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/projects"
+    },
+    {
+      "id": "INT-003",
+      "name": "4.2 查询项目列表",
+      "evidence_element_ids": [
+        "el-0033",
+        "el-0034"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/projects"
+    },
+    {
+      "id": "INT-004",
+      "name": "5.1 批量创建样本",
+      "evidence_element_ids": [
+        "el-0039",
+        "el-0040"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/projects/{project_id}/samples/batch"
+    },
+    {
+      "id": "INT-005",
+      "name": "5.2 获取样本详情",
+      "evidence_element_ids": [
+        "el-0046",
+        "el-0047"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/samples/{sample_id}"
+    },
+    {
+      "id": "INT-006",
+      "name": "6.1 注册设备",
+      "evidence_element_ids": [
+        "el-0052",
+        "el-0053"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/devices"
+    },
+    {
+      "id": "INT-007",
+      "name": "6.2 查询设备状态",
+      "evidence_element_ids": [
+        "el-0059",
+        "el-0060"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/devices/{device_id}/status"
+    },
+    {
+      "id": "INT-008",
+      "name": "7.1 创建实验任务",
+      "evidence_element_ids": [
+        "el-0065",
+        "el-0066"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments"
+    },
+    {
+      "id": "INT-009",
+      "name": "7.2 启动实验",
+      "evidence_element_ids": [
+        "el-0072",
+        "el-0073"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/start"
+    },
+    {
+      "id": "INT-010",
+      "name": "7.3 暂停实验",
+      "evidence_element_ids": [
+        "el-0077",
+        "el-0078"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/pause"
+    },
+    {
+      "id": "INT-011",
+      "name": "7.4 终止实验",
+      "evidence_element_ids": [
+        "el-0084",
+        "el-0085"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/abort"
+    },
+    {
+      "id": "INT-012",
+      "name": "8.1 上传传感器数据",
+      "evidence_element_ids": [
+        "el-0092",
+        "el-0093"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/data-points"
+    },
+    {
+      "id": "INT-013",
+      "name": "8.2 查询实验数据",
+      "evidence_element_ids": [
+        "el-0099",
+        "el-0100"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/experiments/{experiment_id}/data-points"
+    },
+    {
+      "id": "INT-014",
+      "name": "9.1 创建分析任务",
+      "evidence_element_ids": [
+        "el-0105",
+        "el-0106"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/analysis-jobs"
+    },
+    {
+      "id": "INT-015",
+      "name": "9.2 查询分析结果",
+      "evidence_element_ids": [
+        "el-0113"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/analysis-jobs/{analysis_job_id}"
+    },
+    {
+      "id": "INT-016",
+      "name": "10.1 查询审计日志",
+      "evidence_element_ids": [
+        "el-0119"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/audit-logs?resource_type=experiment&resource_id=exp_01HYC0A91"
+    },
+    {
+      "id": "INT-017",
+      "name": "11.1 注册 Webhook",
+      "evidence_element_ids": [
+        "el-0125"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/webhooks"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "ART-001",
+      "name": "3. 错误格式 - 常见错误码",
+      "evidence_element_ids": [
+        "el-0022",
+        "el-0023"
+      ],
+      "artifact_type": "table",
+      "details": [
+        "400 VALIDATION_ERROR 参数校验失败",
+        "401 UNAUTHORIZED 未认证",
+        "403 FORBIDDEN 权限不足",
+        "404 RESOURCE_NOT_FOUND 资源不存在",
+        "409 CONFLICT 状态冲突",
+        "422 EXPERIMENT_RULE_VIOLATION 实验规则不满足",
+        "429 RATE_LIMITED 请求过于频繁",
+        "500 INTERNAL_ERROR 服务内部错误"
+      ]
+    },
+    {
+      "id": "ART-002",
+      "name": "Webhook 示例",
+      "evidence_element_ids": [
+        "el-0131"
+      ],
+      "artifact_type": "other",
+      "details": []
+    }
+  ],
+  "evidence": [
+    {
+      "object_id": "ENT-001",
+      "element_id": "el-0059",
+      "text_span": "6.2 查询设备状态"
+    },
+    {
+      "object_id": "ENT-001",
+      "element_id": "el-0062",
+      "text_span": "{ \"device_id\": \"dev_01HYB2K91\", \"status\": \"running\", \"current_task_id\": \"tsk_01HYC0A91\", \"metrics\": { \"temperature_c\": 748.6, \"pressure_bar\": 12.4, \"gas_flow_sccm\": 55.2 }, \"updated_at\": \"2026-04-24T11:01:32Z\" }"
+    },
+    {
+      "object_id": "ENT-002",
+      "element_id": "el-0065",
+      "text_span": "7.1 创建实验任务"
+    },
+    {
+      "object_id": "ENT-002",
+      "element_id": "el-0070",
+      "text_span": "{ \"experiment_id\": \"exp_01HYC0A91\", \"status\": \"scheduled\", \"estimated_duration_min\": 430, \"created_at\": \"2026-04-24T11:10:00Z\" }"
+    },
+    {
+      "object_id": "ENT-003",
+      "element_id": "el-0105",
+      "text_span": "9.1 创建分析任务"
+    },
+    {
+      "object_id": "ENT-003",
+      "element_id": "el-0110",
+      "text_span": "{ \"analysis_job_id\": \"ana_01HYE2X90\", \"status\": \"queued\", \"created_at\": \"2026-04-24T13:30:00Z\" }"
+    },
+    {
+      "object_id": "PROC-001",
+      "element_id": "el-0065",
+      "text_span": "7.1 创建实验任务"
+    },
+    {
+      "object_id": "PROC-001",
+      "element_id": "el-0068",
+      "text_span": "{ \"project_id\": \"prj_01HY8ZC6XQ\", \"name\": \"750°C 稳定性测试\", \"sample_ids\": [\"smp_01HYA1A01\", \"smp_01HYA1A02\"], \"device_id\": \"dev_01HYB2K91\", \"protocol\": { \"mode\": \"ramp\", \"steps\": [ { \"step_name\": \"preheat\", \"target_temperature_c\": 200, \"duration_min\": 15, \"pressure_bar\": 1.0 }, { \"step_name\": \"ramp_to_target\", \"start_temperature_c\": 200, \"target_temperature_c\": 750, \"ramp_rate_c_per_min\": 10 }, { \"step_name\": \"hold\", \"target_temperature_c\": 750, \"duration_min\": 360, \"pressure_bar\": 12, \"gas\": { \"ty..."
+    },
+    {
+      "object_id": "REQ-001",
+      "element_id": "el-0134",
+      "text_span": "| 接口类型 | 限制 | | --- | --- | | 鉴权接口 | 30 次 / 分钟 | | 查询接口 | 600 次 / 分钟 | | 写入接口 | 120 次 / 分钟 | | 数据上传接口 | 10,000 points / 分钟 | | Webhook 注册 | 20 次 / 小时 |"
+    },
+    {
+      "object_id": "REQ-001",
+      "element_id": "el-0136",
+      "text_span": "{ \"error\": { \"code\": \"RATE_LIMITED\", \"message\": \"Too many requests\", \"retry_after_seconds\": 30 } }"
+    },
+    {
+      "object_id": "INT-001",
+      "element_id": "el-0010",
+      "text_span": "2.1 获取访问令牌"
+    },
+    {
+      "object_id": "INT-001",
+      "element_id": "el-0011",
+      "text_span": "POST /auth/token"
+    },
+    {
+      "object_id": "INT-002",
+      "element_id": "el-0026",
+      "text_span": "4.1 创建实验项目"
+    },
+    {
+      "object_id": "INT-002",
+      "element_id": "el-0027",
+      "text_span": "POST /projects"
+    },
+    {
+      "object_id": "INT-003",
+      "element_id": "el-0033",
+      "text_span": "4.2 查询项目列表"
+    },
+    {
+      "object_id": "INT-003",
+      "element_id": "el-0034",
+      "text_span": "GET /projects?status=active&tag=catalyst&page=1&page_size=20"
+    },
+    {
+      "object_id": "INT-004",
+      "element_id": "el-0039",
+      "text_span": "5.1 批量创建样本"
+    },
+    {
+      "object_id": "INT-004",
+      "element_id": "el-0040",
+      "text_span": "POST /projects/{project_id}/samples/batch"
+    },
+    {
+      "object_id": "INT-005",
+      "element_id": "el-0046",
+      "text_span": "5.2 获取样本详情"
+    },
+    {
+      "object_id": "INT-005",
+      "element_id": "el-0047",
+      "text_span": "GET /samples/{sample_id}"
+    },
+    {
+      "object_id": "INT-006",
+      "element_id": "el-0052",
+      "text_span": "6.1 注册设备"
+    },
+    {
+      "object_id": "INT-006",
+      "element_id": "el-0053",
+      "text_span": "POST /devices"
+    },
+    {
+      "object_id": "INT-007",
+      "element_id": "el-0059",
+      "text_span": "6.2 查询设备状态"
+    },
+    {
+      "object_id": "INT-007",
+      "element_id": "el-0060",
+      "text_span": "GET /devices/{device_id}/status"
+    },
+    {
+      "object_id": "INT-008",
+      "element_id": "el-0065",
+      "text_span": "7.1 创建实验任务"
+    },
+    {
+      "object_id": "INT-008",
+      "element_id": "el-0066",
+      "text_span": "POST /experiments"
+    },
+    {
+      "object_id": "INT-009",
+      "element_id": "el-0072",
+      "text_span": "7.2 启动实验"
+    },
+    {
+      "object_id": "INT-009",
+      "element_id": "el-0073",
+      "text_span": "POST /experiments/{experiment_id}/start"
+    },
+    {
+      "object_id": "INT-010",
+      "element_id": "el-0077",
+      "text_span": "7.3 暂停实验"
+    },
+    {
+      "object_id": "INT-010",
+      "element_id": "el-0078",
+      "text_span": "POST /experiments/{experiment_id}/pause"
+    },
+    {
+      "object_id": "INT-011",
+      "element_id": "el-0084",
+      "text_span": "7.4 终止实验"
+    },
+    {
+      "object_id": "INT-011",
+      "element_id": "el-0085",
+      "text_span": "POST /experiments/{experiment_id}/abort"
+    },
+    {
+      "object_id": "INT-012",
+      "element_id": "el-0092",
+      "text_span": "8.1 上传传感器数据"
+    },
+    {
+      "object_id": "INT-012",
+      "element_id": "el-0093",
+      "text_span": "POST /experiments/{experiment_id}/data-points"
+    },
+    {
+      "object_id": "INT-013",
+      "element_id": "el-0099",
+      "text_span": "8.2 查询实验数据"
+    },
+    {
+      "object_id": "INT-013",
+      "element_id": "el-0100",
+      "text_span": "GET /experiments/{experiment_id}/data-points?from=2026-04-24T11:00:00Z&to=2026-04-24T12:00:00Z&interval=1m"
+    },
+    {
+      "object_id": "INT-014",
+      "element_id": "el-0105",
+      "text_span": "9.1 创建分析任务"
+    },
+    {
+      "object_id": "INT-014",
+      "element_id": "el-0106",
+      "text_span": "POST /experiments/{experiment_id}/analysis-jobs"
+    },
+    {
+      "object_id": "INT-015",
+      "element_id": "el-0113",
+      "text_span": "GET /analysis-jobs/{analysis_job_id}"
+    },
+    {
+      "object_id": "INT-016",
+      "element_id": "el-0119",
+      "text_span": "GET /audit-logs?resource_type=experiment&resource_id=exp_01HYC0A91"
+    },
+    {
+      "object_id": "INT-017",
+      "element_id": "el-0125",
+      "text_span": "POST /webhooks"
+    },
+    {
+      "object_id": "ART-001",
+      "element_id": "el-0022",
+      "text_span": "常见错误码："
+    },
+    {
+      "object_id": "ART-001",
+      "element_id": "el-0023",
+      "text_span": "| HTTP 状态码 | code | 说明 | | --- | --- | --- | | 400 | VALIDATION_ERROR | 参数校验失败 | | 401 | UNAUTHORIZED | 未认证 | | 403 | FORBIDDEN | 权限不足 | | 404 | RESOURCE_NOT_FOUND | 资源不存在 | | 409 | CONFLICT | 状态冲突 | | 422 | EXPERIMENT_RULE_VIOLATION | 实验规则不满足 | | 429 | RATE_LIMITED | 请求过于频繁 | | 500 | INTERNAL_ERROR | 服务内部错误 |"
+    },
+    {
+      "object_id": "ART-002",
+      "element_id": "el-0131",
+      "text_span": "{ \"event_id\": \"evt_01HZ0001\", \"event_type\": \"experiment.completed\", \"occurred_at\": \"2026-04-24T18:30:00Z\", \"data\": { \"experiment_id\": \"exp_01HYC0A91\", \"project_id\": \"prj_01HY8ZC6XQ\", \"status\": \"completed\" } }"
+    }
+  ]
+}

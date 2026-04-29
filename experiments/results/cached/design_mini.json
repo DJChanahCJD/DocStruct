@@ -1,0 +1,200 @@
+{
+  "doc_type": "design",
+  "title": "智能文档系统概要设计",
+  "extra": {},
+  "entities": [
+    {
+      "id": "ENT-001",
+      "name": "用户",
+      "evidence_element_ids": [
+        "el-0009"
+      ],
+      "entity_type": "actor"
+    },
+    {
+      "id": "ENT-002",
+      "name": "Web 前端",
+      "evidence_element_ids": [
+        "el-0005",
+        "el-0006"
+      ],
+      "entity_type": "system"
+    },
+    {
+      "id": "ENT-003",
+      "name": "API 服务",
+      "evidence_element_ids": [
+        "el-0005",
+        "el-0006"
+      ],
+      "entity_type": "system"
+    },
+    {
+      "id": "ENT-004",
+      "name": "文档解析服务",
+      "evidence_element_ids": [
+        "el-0005",
+        "el-0006"
+      ],
+      "entity_type": "system"
+    },
+    {
+      "id": "ENT-005",
+      "name": "数据库",
+      "evidence_element_ids": [
+        "el-0005",
+        "el-0006"
+      ],
+      "entity_type": "system"
+    }
+  ],
+  "processes": [
+    {
+      "id": "PROC-001",
+      "name": "文档处理流程",
+      "evidence_element_ids": [
+        "el-0009"
+      ],
+      "process_type": "technical",
+      "steps": [
+        {
+          "name": "用户在 Web 前端上传文档。"
+        },
+        {
+          "name": "API 服务保存原始文件并创建文档记录。"
+        },
+        {
+          "name": "文档解析服务生成文档 IR。"
+        },
+        {
+          "name": "抽取模块根据文档类型输出结构化对象。"
+        },
+        {
+          "name": "API 服务更新处理状态并返回结果。"
+        }
+      ]
+    }
+  ],
+  "requirements": [],
+  "interfaces": [
+    {
+      "id": "INT-001",
+      "name": "上传文档",
+      "evidence_element_ids": [
+        "el-0011"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/documents",
+      "provider": "API 服务"
+    },
+    {
+      "id": "INT-002",
+      "name": "查询文档",
+      "evidence_element_ids": [
+        "el-0011"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/documents/{document_id}",
+      "provider": "API 服务"
+    },
+    {
+      "id": "INT-003",
+      "name": "解析文档",
+      "evidence_element_ids": [
+        "el-0011"
+      ],
+      "interface_type": "rpc",
+      "endpoint": "ParseDocument",
+      "provider": "文档解析服务"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "ART-001",
+      "name": "设计决策",
+      "evidence_element_ids": [
+        "el-0013"
+      ],
+      "artifact_type": "decision",
+      "details": [
+        "文档 IR 使用稳定元素 ID 支持证据回溯。",
+        "抽取结果统一映射到实体、流程、需求、接口和产物五类对象。",
+        "解析失败时保留错误信息，避免覆盖原始文档记录。"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "object_id": "ENT-001",
+      "element_id": "el-0009",
+      "text_span": "用户在 Web 前端上传文档。 API 服务保存原始文件并创建文档记录。 文档解析服务生成文档 IR。 抽取模块根据文档类型输出结构化对象。 API 服务更新处理状态并返回结果。"
+    },
+    {
+      "object_id": "ENT-002",
+      "element_id": "el-0005",
+      "text_span": "系统采用前后端分离架构，由 Web 前端、API 服务、文档解析服务和数据库组成。"
+    },
+    {
+      "object_id": "ENT-002",
+      "element_id": "el-0006",
+      "text_span": "| 模块 | 职责 | | --- | --- | | Web 前端 | 提供文档上传、查看和搜索界面 | | API 服务 | 处理认证、文档管理和检索请求 | | 文档解析服务 | 将 PDF、Word、Markdown 转换为结构化文档 IR | | 数据库 | 存储文档记录、解析结果和抽取结果 |"
+    },
+    {
+      "object_id": "ENT-003",
+      "element_id": "el-0005",
+      "text_span": "系统采用前后端分离架构，由 Web 前端、API 服务、文档解析服务和数据库组成。"
+    },
+    {
+      "object_id": "ENT-003",
+      "element_id": "el-0006",
+      "text_span": "| 模块 | 职责 | | --- | --- | | Web 前端 | 提供文档上传、查看和搜索界面 | | API 服务 | 处理认证、文档管理和检索请求 | | 文档解析服务 | 将 PDF、Word、Markdown 转换为结构化文档 IR | | 数据库 | 存储文档记录、解析结果和抽取结果 |"
+    },
+    {
+      "object_id": "ENT-004",
+      "element_id": "el-0005",
+      "text_span": "系统采用前后端分离架构，由 Web 前端、API 服务、文档解析服务和数据库组成。"
+    },
+    {
+      "object_id": "ENT-004",
+      "element_id": "el-0006",
+      "text_span": "| 模块 | 职责 | | --- | --- | | Web 前端 | 提供文档上传、查看和搜索界面 | | API 服务 | 处理认证、文档管理和检索请求 | | 文档解析服务 | 将 PDF、Word、Markdown 转换为结构化文档 IR | | 数据库 | 存储文档记录、解析结果和抽取结果 |"
+    },
+    {
+      "object_id": "ENT-005",
+      "element_id": "el-0005",
+      "text_span": "系统采用前后端分离架构，由 Web 前端、API 服务、文档解析服务和数据库组成。"
+    },
+    {
+      "object_id": "ENT-005",
+      "element_id": "el-0006",
+      "text_span": "| 模块 | 职责 | | --- | --- | | Web 前端 | 提供文档上传、查看和搜索界面 | | API 服务 | 处理认证、文档管理和检索请求 | | 文档解析服务 | 将 PDF、Word、Markdown 转换为结构化文档 IR | | 数据库 | 存储文档记录、解析结果和抽取结果 |"
+    },
+    {
+      "object_id": "PROC-001",
+      "element_id": "el-0009",
+      "text_span": "用户在 Web 前端上传文档。 API 服务保存原始文件并创建文档记录。 文档解析服务生成文档 IR。 抽取模块根据文档类型输出结构化对象。 API 服务更新处理状态并返回结果。"
+    },
+    {
+      "object_id": "INT-001",
+      "element_id": "el-0011",
+      "text_span": "| 接口 | 方法 | 路径 | 目标模块 | | --- | --- | --- | --- | | 上传文档 | POST | /documents | API 服务 | | 查询文档 | GET | /documents/{document_id} | API 服务 | | 解析文档 | RPC | ParseDocument | 文档解析服务 |"
+    },
+    {
+      "object_id": "INT-002",
+      "element_id": "el-0011",
+      "text_span": "| 接口 | 方法 | 路径 | 目标模块 | | --- | --- | --- | --- | | 上传文档 | POST | /documents | API 服务 | | 查询文档 | GET | /documents/{document_id} | API 服务 | | 解析文档 | RPC | ParseDocument | 文档解析服务 |"
+    },
+    {
+      "object_id": "INT-003",
+      "element_id": "el-0011",
+      "text_span": "| 接口 | 方法 | 路径 | 目标模块 | | --- | --- | --- | --- | | 上传文档 | POST | /documents | API 服务 | | 查询文档 | GET | /documents/{document_id} | API 服务 | | 解析文档 | RPC | ParseDocument | 文档解析服务 |"
+    },
+    {
+      "object_id": "ART-001",
+      "element_id": "el-0013",
+      "text_span": "文档 IR 使用稳定元素 ID 支持证据回溯。 抽取结果统一映射到实体、流程、需求、接口和产物五类对象。 解析失败时保留错误信息，避免覆盖原始文档记录。"
+    }
+  ]
+}

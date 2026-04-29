@@ -1,0 +1,52 @@
+{
+  "doc_type": "design",
+  "title": "智能文档系统概要设计",
+  "entities": [
+    {
+      "name": "Web前端",
+      "entity_type": "system"
+    },
+    {
+      "name": "API服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "文档解析服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "数据库",
+      "entity_type": "data"
+    },
+    {
+      "name": "用户",
+      "entity_type": "actor"
+    }
+  ],
+  "requirements": [],
+  "interfaces": [
+    {
+      "name": "上传文档接口",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/documents",
+      "provider": "API服务",
+      "consumer": "Web前端"
+    },
+    {
+      "name": "查询文档接口",
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/documents/{document_id}",
+      "provider": "API服务",
+      "consumer": "Web前端"
+    },
+    {
+      "name": "文档解析RPC",
+      "interface_type": "rpc",
+      "endpoint": "ParseDocument",
+      "provider": "文档解析服务",
+      "consumer": "API服务"
+    }
+  ]
+}

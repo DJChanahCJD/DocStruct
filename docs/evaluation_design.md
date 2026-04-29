@@ -149,11 +149,77 @@ def run_evaluation(data_dir: str, output_dir: str) -> None
 | 结果分析 | 图表 + 案例分析 + 论文撰写 | 2-3 天 |
 | **合计** | | **7-11 天** |
 
-## 七、最小可行方案
+## 七、最小可行方案（推荐执行）
 
-如果时间紧张，可以缩减为：
+### 7.1 数据集：6 篇 + 2 篇备用
 
-- 每种 doc_type **1-2 篇**（共 8-10 篇）
-- 只做**主实验 + 消融 B（LLM 合并对比）**
-- 指标只算 **F1 + 证据覆盖率**
-- 预计 **3-4 天**可完成
+覆盖 3 个最具区分度的 doc_type，每种 2 篇：
+
+| doc_type | 篇数 | 选型理由 | 来源 |
+|---|---|---|---|
+| `srs` | 2 | 需求文档是软工核心，对象密度最高 | 已有 `static/examples/srs_example.md` |
+| `api` | 2 | 结构化程度最高，预期 F1 最高，作上界参照 | 已有 `static/examples/api_example.md` |
+| `test` | 2 | 测试文档含表格和编号用例，抽取难度适中 | 已有 `static/examples/test_case_example.md` |
+
+其余 3 种类型（design/manual/issue）各备 1 篇留作扩展，不纳入首轮实验。
+
+> 已有 `static/examples/` 下多份示例文档可直接作为标注起点，减少收集成本。
+
+### 7.2 标注：只标三个核心槽位
+
+每篇 ground_truth 只标注 `entities`、`requirements`、`interfaces`（舍弃 processes 和 artifacts，它们在 6 篇文档中出现频率低、标注成本高）。
+
+标注条目预估：每篇 5-15 个对象 × 6 篇 = 30-90 条，约 **4-6 小时**完成。
+
+### 7.3 实验：1 个主实验 + 1 个消融
+
+**主实验**：6 篇文档全管线提取，报告 3 个槽位各自的 P / R / F1。
+
+**消融实验**：对其中 > 6000 字的文档（至少 2 篇），对比 chunked vs whole-document 两种模式的 F1。验证分块策略的实际收益。
+
+### 7.4 指标：只算 F1
+
+- **匹配规则**：预测对象与标注对象 `name` Jaccard ≥ 0.7 且 `entity_type`/`requirement_type`/`interface_type` 一致 → TP
+- **输出**：一张按槽位 × 文档的 F1 矩阵表 + 一个消融对比柱状图
+
+### 7.5 实现步骤（3-4 天）
+
+```
+Day 1  标注 6 篇 ground_truth + 编写 evaluate.py 框架
+Day 2  完成 evaluate.py（match + metrics + report）+ 跑主实验
+Day 3  跑消融实验 + 分析 2-3 个错误案例
+Day 4  整理图表 + 写入论文章节
+```
+
+### 7.6 evaluate.py 核心结构
+
+```python
+# scripts/evaluate.py (~120 行)
+
+def load_ground_truth(path: str) -> dict
+    """加载单篇 ground_truth.json"""
+
+def jaccard(a: str, b: str) -> float
+    """字符级 Jaccard 相似度"""
+
+def match_objects(preds: list[dict], gts: list[dict], type_field: str) -> tuple[int, int, int]
+    """匹配预测与标注 → (TP, FP, FN)"""
+
+def evaluate_single(pred: dict, gt: dict) -> dict
+    """单篇评估，按槽位返回 P/R/F1"""
+
+def evaluate_all(data_dir: str) -> dict
+    """批量评估，输出汇总 + 逐文档明细"""
+
+def print_report(results: dict) -> None
+    """打印 Markdown 表格"""
+```
+
+### 7.7 与论文的对应
+
+| 论文章节 | 数据来源 |
+|---|---|
+| 实验设置 | 7.1 数据集描述 |
+| 整体效果 | 7.3 主实验 F1 矩阵 |
+| 消融分析 | 7.3 消融实验对比 |
+| 错误分析 | 7.5 Day 3 案例 |

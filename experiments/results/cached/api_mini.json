@@ -1,0 +1,102 @@
+{
+  "doc_type": "api",
+  "title": "智能文档系统 API",
+  "extra": {},
+  "entities": [],
+  "processes": [],
+  "requirements": [],
+  "interfaces": [
+    {
+      "id": "INT-001",
+      "name": "上传文档",
+      "evidence_element_ids": [
+        "el-0005",
+        "el-0006"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/documents"
+    },
+    {
+      "id": "INT-002",
+      "name": "获取文档",
+      "evidence_element_ids": [
+        "el-0011",
+        "el-0012"
+      ],
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/documents/{document_id}"
+    },
+    {
+      "id": "INT-003",
+      "name": "全文搜索",
+      "evidence_element_ids": [
+        "el-0015",
+        "el-0016"
+      ],
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/search"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "ART-001",
+      "name": "错误码",
+      "evidence_element_ids": [
+        "el-0020",
+        "el-0021"
+      ],
+      "artifact_type": "table",
+      "details": [
+        "400: 参数错误",
+        "401: 未授权",
+        "404: 资源不存在",
+        "500: 服务器错误"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "object_id": "INT-001",
+      "element_id": "el-0005",
+      "text_span": "上传文档"
+    },
+    {
+      "object_id": "INT-001",
+      "element_id": "el-0006",
+      "text_span": "POST /documents Content-Type: multipart/form-data Authorization: Bearer {token}"
+    },
+    {
+      "object_id": "INT-002",
+      "element_id": "el-0011",
+      "text_span": "获取文档"
+    },
+    {
+      "object_id": "INT-002",
+      "element_id": "el-0012",
+      "text_span": "GET /documents/{document_id} Authorization: Bearer {token}"
+    },
+    {
+      "object_id": "INT-003",
+      "element_id": "el-0015",
+      "text_span": "全文搜索"
+    },
+    {
+      "object_id": "INT-003",
+      "element_id": "el-0016",
+      "text_span": "POST /search Authorization: Bearer {token}"
+    },
+    {
+      "object_id": "ART-001",
+      "element_id": "el-0020",
+      "text_span": "错误码"
+    },
+    {
+      "object_id": "ART-001",
+      "element_id": "el-0021",
+      "text_span": "| 码 | 说明 | |--|--| | 400 | 参数错误 | | 401 | 未授权 | | 404 | 资源不存在 | | 500 | 服务器错误 |"
+    }
+  ]
+}

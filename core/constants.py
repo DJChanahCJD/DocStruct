@@ -12,6 +12,7 @@ SYSTEM_PROMPT = """
 请严格遵循用户提供的 JSON Schema 和抽取上下文。
 只返回一个合法 JSON 对象，不要输出 Markdown、注释或解释。
 不要编造原文没有的信息，不要输出 schema 未定义的字段。
+严格遵循输入文档的实际文本内容：不要根据领域知识推断或补充文档未提及的对象、编号、指标或特性。
 """
 
 MAP_USER_PROMPT_TEMPLATE = """
@@ -34,3 +35,4 @@ DEFAULT_EXTRACTION_CHUNK_MAX_CHARS = 5000
 DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS = 200
 DEFAULT_EXTRACTION_MAX_CHARS = 100000
 DEFAULT_EXTRACTION_CONCURRENCY = 3
+DEFAULT_LLM_MAX_TOKENS = 16384

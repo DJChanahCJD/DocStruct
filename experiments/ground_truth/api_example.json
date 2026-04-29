@@ -1,0 +1,105 @@
+{
+  "doc_type": "api",
+  "title": "NebulaLab 实验编排平台 API 文档",
+  "entities": [
+    {
+      "name": "NebulaLab实验编排平台",
+      "entity_type": "system"
+    },
+    {
+      "name": "研究者",
+      "entity_type": "actor"
+    },
+    {
+      "name": "传感器",
+      "entity_type": "data"
+    }
+  ],
+  "requirements": [],
+  "interfaces": [
+    {
+      "name": "获取访问令牌",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/auth/token",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "创建实验项目",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/projects",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "查询项目列表",
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/projects",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "批量创建样本",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/projects/{project_id}/samples/batch",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "获取样本详情",
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/samples/{sample_id}",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "注册设备",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/devices",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "查询设备状态",
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/devices/{device_id}/status",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "创建实验任务",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "上传传感器数据",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/data-points",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "创建分析任务",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/experiments/{experiment_id}/analysis-jobs",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "查询审计日志",
+      "interface_type": "http",
+      "http_method": "get",
+      "endpoint": "/audit-logs",
+      "provider": "NebulaLab"
+    },
+    {
+      "name": "注册Webhook",
+      "interface_type": "http",
+      "http_method": "post",
+      "endpoint": "/webhooks",
+      "provider": "NebulaLab"
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "doc_type": "srs",
+  "title": "智能文档分析系统软件需求规格说明书",
+  "entities": [
+    {
+      "name": "系统管理员",
+      "entity_type": "actor"
+    },
+    {
+      "name": "项目经理",
+      "entity_type": "actor"
+    },
+    {
+      "name": "开发人员",
+      "entity_type": "actor"
+    },
+    {
+      "name": "测试人员",
+      "entity_type": "actor"
+    },
+    {
+      "name": "产品经理",
+      "entity_type": "actor"
+    },
+    {
+      "name": "智能文档分析系统",
+      "entity_type": "system"
+    },
+    {
+      "name": "OCR服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "NLP模型服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "对象存储服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "PostgreSQL数据库",
+      "entity_type": "data"
+    },
+    {
+      "name": "Redis缓存",
+      "entity_type": "data"
+    },
+    {
+      "name": "RabbitMQ消息队列",
+      "entity_type": "system"
+    },
+    {
+      "name": "Elasticsearch搜索服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "文档解析服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "企业微信",
+      "entity_type": "system"
+    },
+    {
+      "name": "钉钉",
+      "entity_type": "system"
+    }
+  ],
+  "requirements": [
+    {
+      "name": "用户注册（SRS-USER-001）",
+      "requirement_type": "functional",
+      "points": ["邮箱或手机号注册", "验证码身份验证", "密码复杂度8-20位大小写字母数字", "自动创建个人空间"],
+      "criteria": ["验证码5分钟内有效", "不可重复注册", "注册成功率>99%"]
+    },
+    {
+      "name": "用户登录（SRS-USER-002）",
+      "requirement_type": "functional",
+      "points": ["邮箱+密码或手机号+密码登录", "企业微信/钉钉扫码登录", "记住我7天免登录", "连续5次错误锁定30分钟"],
+      "criteria": ["登录响应时间<2秒", "Token有效期2小时自动续期"]
+    },
+    {
+      "name": "权限管理（SRS-USER-003）",
+      "requirement_type": "functional",
+      "points": ["RBAC角色预定义", "自定义角色细粒度权限", "文档级访问权限", "权限变更实时生效"],
+      "criteria": ["权限校验<100ms", "最多1000个角色"]
+    },
+    {
+      "name": "文档上传（SRS-DOC-001）",
+      "requirement_type": "functional",
+      "points": ["PDF/Word/Markdown/TXT格式", "批量上传最多50文件", "拖拽和文件夹上传", "进度条显示", "病毒扫描和格式校验"],
+      "criteria": ["单文件最大100MB", "断点续传", "格式校验错误提示"]
+    },
+    {
+      "name": "文档解析（SRS-DOC-002）",
+      "requirement_type": "functional",
+      "points": ["PDF OCR文字识别", "识别文档类型", "提取文档大纲章节", "识别表格图片代码块", "提取元数据"],
+      "criteria": ["OCR准确率>95%", "类型识别准确率>90%", "50页PDF<30秒"]
+    },
+    {
+      "name": "文档关联分析（SRS-ANALYSIS-001）",
+      "requirement_type": "functional",
+      "points": ["识别文档引用关系", "建立需求-设计-测试追溯链", "检测文档不一致性", "生成依赖关系图谱", "变更影响分析"],
+      "criteria": ["关联识别准确率>85%", "图谱渲染<5秒"]
+    },
+    {
+      "name": "智能检索（SRS-ANALYSIS-002）",
+      "requirement_type": "functional",
+      "points": ["全文检索和语义检索", "按类型标签日期筛选", "自然语言查询", "相关度排序", "关键词高亮"],
+      "criteria": ["检索响应<2秒", "语义检索TOP10准确率>80%"]
+    },
+    {
+      "name": "性能需求",
+      "requirement_type": "non_functional",
+      "points": ["首页加载<3秒", "搜索响应<2秒", "上传速度>5MB/s", "并发>1000", "可用性>99.9%", "数据库查询<500ms"]
+    },
+    {
+      "name": "安全需求",
+      "requirement_type": "non_functional",
+      "points": ["JWT+Refresh Token", "bcrypt加密+MFA", "全站HTTPS TLS1.3", "AES-256加密存储", "RBAC权限控制", "审计日志保留180天", "防SQL注入/XSS/CSRF"]
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "企业微信API",
+      "interface_type": "http",
+      "provider": "企业微信",
+      "consumer": "智能文档分析系统"
+    },
+    {
+      "name": "钉钉API",
+      "interface_type": "http",
+      "provider": "钉钉",
+      "consumer": "智能文档分析系统"
+    },
+    {
+      "name": "GitLab/GitHub API",
+      "interface_type": "http",
+      "provider": "GitLab/GitHub",
+      "consumer": "智能文档分析系统"
+    },
+    {
+      "name": "Jira API",
+      "interface_type": "http",
+      "provider": "Jira",
+      "consumer": "智能文档分析系统"
+    },
+    {
+      "name": "文档解析gRPC",
+      "interface_type": "rpc",
+      "provider": "文档解析服务",
+      "consumer": "API服务"
+    },
+    {
+      "name": "Elasticsearch REST API",
+      "interface_type": "http",
+      "endpoint": "/api/v1/",
+      "provider": "Elasticsearch",
+      "consumer": "搜索模块"
+    },
+    {
+      "name": "Redis缓存",
+      "interface_type": "database",
+      "provider": "Redis"
+    },
+    {
+      "name": "RabbitMQ消息队列",
+      "interface_type": "message",
+      "provider": "RabbitMQ"
+    }
+  ]
+}

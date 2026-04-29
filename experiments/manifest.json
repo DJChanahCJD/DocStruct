@@ -1,0 +1,8 @@
+{
+  "experiments/assets/srs_mini.md": "experiments/ground_truth/srs_mini.json",
+  "static/examples/srs_example.md": "experiments/ground_truth/srs_example.json",
+  "experiments/assets/api_mini.md": "experiments/ground_truth/api_mini.json",
+  "static/examples/api_example.md": "experiments/ground_truth/api_example.json",
+  "static/examples/test_case_example.md": "experiments/ground_truth/test_case.json",
+  "experiments/assets/design_mini.md": "experiments/ground_truth/design_mini.json"
+}

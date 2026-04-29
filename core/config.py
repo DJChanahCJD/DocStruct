@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from core.constants import DEFAULT_EXTRACTION_THRESHOLD, DEFAULT_EXTRACTION_CHUNK_MAX_CHARS, DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS, DEFAULT_EXTRACTION_MAX_CHARS, DEFAULT_EXTRACTION_CONCURRENCY
+from core.constants import DEFAULT_EXTRACTION_THRESHOLD, DEFAULT_EXTRACTION_CHUNK_MAX_CHARS, DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS, DEFAULT_EXTRACTION_MAX_CHARS, DEFAULT_EXTRACTION_CONCURRENCY, DEFAULT_LLM_MAX_TOKENS
 
 from dotenv import load_dotenv
 
@@ -38,6 +38,7 @@ class RuntimeSettings:
     extraction_chunk_overlap_chars: int
     extraction_max_chars: int
     extraction_concurrency: int
+    llm_max_tokens: int
     parser_backend: str
     docling_enable_ocr: bool
     docling_enable_table_structure: bool
@@ -57,6 +58,7 @@ def get_settings() -> RuntimeSettings:
         extraction_chunk_overlap_chars=_get_int("EXTRACTION_CHUNK_OVERLAP_CHARS", DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS),
         extraction_max_chars=_get_int("EXTRACTION_MAX_CHARS", DEFAULT_EXTRACTION_MAX_CHARS),
         extraction_concurrency=_get_int("EXTRACTION_CONCURRENCY", DEFAULT_EXTRACTION_CONCURRENCY),
+        llm_max_tokens=_get_int("LLM_MAX_TOKENS", DEFAULT_LLM_MAX_TOKENS),
         parser_backend=os.getenv("PARSER_BACKEND", "basic"),
         docling_enable_ocr=_get_bool("DOCLING_ENABLE_OCR", False),
         docling_enable_table_structure=_get_bool("DOCLING_ENABLE_TABLE_STRUCTURE", True),

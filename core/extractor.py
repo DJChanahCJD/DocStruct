@@ -25,18 +25,39 @@ RESPONSE_PREVIEW_CHARS = 500
 
 
 SLOT_DESCRIPTIONS = {
-    "entities": "产品领域中的参与者、系统、模块、服务、组件或数据对象。",
-    "processes": "业务流程、技术流程、操作流程、工作流或测试流程；应包含明确的有序步骤。",
-    "requirements": "功能需求、非功能需求、业务规则或约束。",
-    "interfaces": "明确的系统边界或调用/交换面，如 API、RPC、消息通道、数据库/文件交换、外部系统或 UI 入口。",
-    "artifacts": "独立文档产物，如测试用例、决策、问题记录、表格或独立章节；不要重复实体、需求或接口。",
+    "entities": (
+        "具备自主行为或持续状态的系统组件。"
+        "包括：参与者/角色（actor）、系统/服务（system）、持久数据存储（data）。"
+        "判断标准：该对象是否在系统中作为独立的参与者或组件被提及、且有明确的职责或数据？"
+        "如果不是独立参与者，而是临时数据结构、文档元信息角色或内部分解模块，则不归入此槽。"
+    ),
+    "processes": (
+        "包含多个有序步骤的操作序列。"
+        "判断标准：原文是否描述了 A→B→C 的步骤顺序关系？"
+        "单个操作或 API 调用不是流程。"
+    ),
+    "requirements": (
+        "文档中作为独立规格单元呈现的功能需求、非功能需求或约束。"
+        "判断标准：原文是否以独立编号、独立段落标题或独立条目将其标识为一个规格单元？"
+        "保持原文的聚合粒度——不要将同一编号或标题下的多个指标拆分为独立需求，也不要把多个独立条目合并。"
+        "API 端点定义属于 interfaces 槽；测试用例步骤属于 artifacts 或 processes 槽。"
+    ),
+    "interfaces": (
+        "有明确交互协议和入口标识的系统边界入口。"
+        "判断标准：原文是否同时给出了 (a) 调用方式/协议 和 (b) 入口标识（URL/方法名/路径/主题/表名）？"
+        "仅有名称或出现在架构图连线中、但缺少交互细节的不属于此槽。"
+    ),
+    "artifacts": (
+        "无法归入上述四槽的高价值文档产物。"
+        "仅当该内容不满足 entities/processes/requirements/interfaces 的区分标准时，才归入此槽。"
+        "如测试用例、设计决策、问题记录、独立表格或章节。不要与其他四槽重复。"
+    ),
 }
 
 FINALIZE_USER_PROMPT_TEMPLATE = """
 请使用给定 JSON Schema，把分块级抽取候选合并成一个最终结构化文档。
 结合文档大纲和证据片段处理去重、合并和父子结构。
-{evidence_element_ids_instruction}
-
+证据片段中使用 [ELEMENT: element_id page=n] 标记了文档元素，只引用这些元素 ID 作为证据。
 
 输入:
 {content}
@@ -51,7 +72,8 @@ Schema:
 def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContract:
     normalized = normalize_doc_type(doc_type)
     common_rules = [
-        "只抽取当前输入中明确出现的对象。",
+        "只抽取当前输入中明确出现的对象。不要编造或推断原文没有的内容。",
+        "保持原文的聚合粒度。不要将同一编号、同一标题或同一表格行下的多个指标拆分为独立对象，也不要把多个独立条目合并为一个。",
         "evidence_element_ids 只使用 [ELEMENT: ...] 标记中的元素 ID。",
         "evidence_element_ids 只保留能直接支撑对象存在、定义或关键约束的高价值元素。",
         "只返回目标对象槽位；未出现的对象槽返回空列表。",
@@ -60,7 +82,7 @@ def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContr
         doc_type=normalized,
         target_slots=list(OBJECT_SLOTS),
         slot_descriptions=dict(SLOT_DESCRIPTIONS),
-        rules=common_rules, # TODO: 可以依据不同的文档类型提供对应增强rules
+        rules=common_rules,
         ignore_sections=["术语表", "术语定义", "参考资料", "参考文献", "附录", "references", "glossary"],
     )
 

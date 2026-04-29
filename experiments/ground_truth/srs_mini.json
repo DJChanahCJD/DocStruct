@@ -1,0 +1,98 @@
+{
+  "doc_type": "srs",
+  "title": "智能文档系统需求规格说明书",
+  "entities": [
+    {
+      "name": "用户",
+      "entity_type": "actor"
+    },
+    {
+      "name": "智能文档系统",
+      "entity_type": "system"
+    },
+    {
+      "name": "文档解析服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "搜索服务",
+      "entity_type": "system"
+    },
+    {
+      "name": "企业微信",
+      "entity_type": "system"
+    },
+    {
+      "name": "GitLab",
+      "entity_type": "system"
+    }
+  ],
+  "requirements": [
+    {
+      "name": "用户注册（SRS-USER-001）",
+      "requirement_type": "functional",
+      "points": ["邮箱注册", "验证码身份验证", "密码复杂度8-20位大小写字母和数字"],
+      "criteria": ["验证码5分钟内有效", "邮箱不可重复注册"]
+    },
+    {
+      "name": "用户登录（SRS-USER-002）",
+      "requirement_type": "functional",
+      "points": ["邮箱+密码登录", "记住我7天免登录", "连续5次密码错误锁定30分钟"],
+      "criteria": ["登录响应时间<2秒", "Token有效期2小时"]
+    },
+    {
+      "name": "文档上传（SRS-DOC-001）",
+      "requirement_type": "functional",
+      "points": ["支持PDF/Word/Markdown", "批量上传最多50文件", "上传进度条"],
+      "criteria": ["单文件最大100MB", "格式校验失败明确错误提示"]
+    },
+    {
+      "name": "文档解析（SRS-DOC-002）",
+      "requirement_type": "functional",
+      "points": ["PDF OCR文字识别", "识别文档类型", "提取文档大纲结构"],
+      "criteria": ["OCR准确率>95%", "类型识别准确率>90%"]
+    },
+    {
+      "name": "文档关联分析（SRS-ANALYSIS-001）",
+      "requirement_type": "functional",
+      "points": ["识别文档引用关系", "建立需求-设计-测试追溯链", "生成文档依赖关系图谱"],
+      "criteria": ["关联识别准确率>85%"]
+    },
+    {
+      "name": "性能需求",
+      "requirement_type": "non_functional",
+      "points": ["首页加载<3秒", "搜索响应<2秒", "并发用户>1000"]
+    },
+    {
+      "name": "安全需求",
+      "requirement_type": "non_functional",
+      "points": ["JWT+Refresh Token认证", "bcrypt密码加密", "全站HTTPS TLS1.3"]
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "企业微信消息推送API",
+      "interface_type": "http",
+      "provider": "企业微信",
+      "consumer": "智能文档系统"
+    },
+    {
+      "name": "GitLab代码仓库API",
+      "interface_type": "http",
+      "provider": "GitLab",
+      "consumer": "智能文档系统"
+    },
+    {
+      "name": "文档解析gRPC接口",
+      "interface_type": "rpc",
+      "provider": "文档解析服务",
+      "consumer": "智能文档系统"
+    },
+    {
+      "name": "搜索服务HTTP接口",
+      "interface_type": "http",
+      "provider": "搜索服务",
+      "consumer": "智能文档系统"
+    }
+  ]
+}
