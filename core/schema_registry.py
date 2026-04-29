@@ -2,10 +2,25 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from schemas.models import ApiDocument, DesignDocument, DocType, IssueDocument, ManualDocument, SrsDocument, TestDocument
+from schemas.models import (
+    ApiDocument,
+    ApiExtractedDocument,
+    DesignDocument,
+    DesignExtractedDocument,
+    DocType,
+    IssueDocument,
+    IssueExtractedDocument,
+    ManualDocument,
+    ManualExtractedDocument,
+    SrsDocument,
+    SrsExtractedDocument,
+    TestDocument,
+    TestExtractedDocument,
+)
 
 
-TYPE_MODEL_MAP: dict[DocType, type[BaseModel]] = {
+# Legacy five-slot models
+LEGACY_MODEL_MAP: dict[DocType, type[BaseModel]] = {
     DocType.SRS: SrsDocument,
     DocType.API: ApiDocument,
     DocType.DESIGN: DesignDocument,
@@ -13,6 +28,25 @@ TYPE_MODEL_MAP: dict[DocType, type[BaseModel]] = {
     DocType.MANUAL: ManualDocument,
     DocType.ISSUE: IssueDocument,
 }
+
+# Doc-type-specific typed models
+TYPED_MODEL_MAP: dict[DocType, type[BaseModel]] = {
+    DocType.SRS: SrsExtractedDocument,
+    DocType.API: ApiExtractedDocument,
+    DocType.DESIGN: DesignExtractedDocument,
+    DocType.TEST: TestExtractedDocument,
+    DocType.MANUAL: ManualExtractedDocument,
+    DocType.ISSUE: IssueExtractedDocument,
+}
+
+# Active model map — switched via feature flag USE_TYPED_SCHEMA
+TYPE_MODEL_MAP = LEGACY_MODEL_MAP
+
+
+def use_typed_schemas(enabled: bool) -> None:
+    """切换文档类型专用 Schema（feature flag）。"""
+    global TYPE_MODEL_MAP
+    TYPE_MODEL_MAP = TYPED_MODEL_MAP if enabled else LEGACY_MODEL_MAP
 
 
 def normalize_doc_type(doc_type: str | DocType | None) -> DocType:

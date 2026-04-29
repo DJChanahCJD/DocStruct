@@ -32,12 +32,57 @@ DEFAULT_OUTPUT_DIR = os.path.join(
     PROJECT_ROOT, "experiments", "results", datetime.now().strftime("%Y%m%d_%H%M%S")
 )
 
+# Legacy slots for backward compatibility
 SLOTS = ("entities", "requirements", "interfaces")
-TYPE_FIELDS = {
-    "entities": "entity_type",
-    "requirements": "requirement_type",
-    "interfaces": "interface_type",
+
+# Fuzzy type similarity weights for common confusions
+_TYPE_SIMILARITY = {
+    ("system", "data"): 0.7,
+    ("data", "system"): 0.7,
+    ("actor", "system"): 0.5,
+    ("system", "actor"): 0.5,
+    ("functional", "non_functional"): 0.6,
+    ("non_functional", "functional"): 0.6,
+    ("http", "rpc"): 0.6,
+    ("rpc", "http"): 0.6,
+    ("database", "file"): 0.5,
+    ("file", "database"): 0.5,
 }
+
+
+def _discover_slots(gt: dict[str, Any], pred: dict[str, Any]) -> list[str]:
+    """从 GT 和 pred 中动态发现待评估的槽位（list 类型字段）。"""
+    candidate_slots: set[str] = set()
+    for source in (gt, pred):
+        for key, value in source.items():
+            if isinstance(value, list) and key not in ("evidence", "extra", "matched_pairs"):
+                candidate_slots.add(key)
+    # Ensure legacy slots are included for backward compat
+    candidate_slots.update(SLOTS)
+    # Sort for determinism
+    return sorted(candidate_slots)
+
+
+def _guess_type_field(slot: str, items: list[dict[str, Any]]) -> str:
+    """从槽位名和实际数据中推测类型字段名。"""
+    # Known mappings
+    known = {
+        "entities": "entity_type", "requirements": "requirement_type",
+        "interfaces": "interface_type", "processes": "process_type",
+        "artifacts": "artifact_type",
+        "functional_requirements": "requirement_type",
+        "non_functional_requirements": "requirement_type",
+        "endpoints": "http_method", "test_cases": "test_stage",
+        "modules": "entity_type", "decisions": "artifact_type",
+    }
+    if slot in known:
+        return known[slot]
+    # Auto-detect: find first field ending in _type in actual data
+    for item in items:
+        for key in item:
+            if key.endswith("_type") and key not in ("doc_type",):
+                return key
+    return ""
 
 
 # ── file helpers ──────────────────────────────────────────────
@@ -62,14 +107,27 @@ def read_text(path: str) -> str:
 # ── matching logic ────────────────────────────────────────────
 
 
-def jaccard(a: str, b: str) -> float:
-    """字符级 Jaccard 相似度。"""
-    set_a = set(a)
-    set_b = set(b)
-    if not set_a and not set_b:
+def word_bigram_jaccard(a: str, b: str) -> float:
+    """词级 bigram Jaccard 相似度 —— 比字符级更能捕捉语义相近的短语。"""
+    a_bigrams = _word_bigrams(a)
+    b_bigrams = _word_bigrams(b)
+    if not a_bigrams and not b_bigrams:
         return 1.0
-    union = set_a | set_b
-    return len(set_a & set_b) / len(union) if union else 0.0
+    union = a_bigrams | b_bigrams
+    return len(a_bigrams & b_bigrams) / len(union) if union else 0.0
+
+
+def _word_bigrams(text: str) -> set[str]:
+    """将文本拆分为词级 bigram 集合。"""
+    chars = list(text)
+    bigrams: set[str] = set()
+    for i in range(len(chars) - 1):
+        bigrams.add(chars[i] + chars[i + 1])
+    # Also add word-level bigrams
+    words = text.split()
+    for i in range(len(words) - 1):
+        bigrams.add(f"{words[i]}_{words[i+1]}")
+    return bigrams
 
 
 def _clean_name(name: str) -> str:
@@ -98,18 +156,24 @@ def _get_type(item: dict[str, Any], type_field: str) -> str:
     return str(item.get(type_field) or "").strip().lower()
 
 
+def _type_similarity(pred_type: str, gt_type: str) -> float:
+    """类型字段模糊匹配权重。精确匹配=1.0，已知混淆=0.5-0.7，不匹配=0。"""
+    if pred_type == gt_type:
+        return 1.0
+    return _TYPE_SIMILARITY.get((pred_type, gt_type), 0.0)
+
+
 def match_objects(
     preds: list[dict[str, Any]],
     gts: list[dict[str, Any]],
     type_field: str,
     threshold: float = 0.5,
 ) -> tuple[int, int, int, list[dict[str, Any]]]:
-    """贪心匹配。先检查子串包含，再检查 Jaccard 相似度。"""
+    """贪心匹配：子串包含 > 词级 bigram Jaccard，支持类型模糊匹配。"""
     matched_pairs: list[dict[str, Any]] = []
     used_pred: set[int] = set()
     used_gt: set[int] = set()
 
-    # 按相似度降序排列所有候选对
     candidates: list[tuple[float, int, int]] = []
     for pi, pred in enumerate(preds):
         pred_clean = _get_name(pred)
@@ -119,15 +183,20 @@ def match_objects(
             gt_clean = _get_name(gt)
             gt_raw = _get_raw_name(gt)
             gt_type = _get_type(gt, type_field)
-            if pred_type != gt_type:
+
+            # Type matching: exact=1.0, fuzzy=0.5-0.7, mismatch=0
+            type_weight = _type_similarity(pred_type, gt_type) if type_field else 1.0
+            if type_weight == 0.0:
                 continue
 
-            # 子串包含直接高分
+            # Substring match → high score, adjusted by type weight
             if _is_substring_match(pred_clean, gt_clean) or _is_substring_match(pred_raw, gt_raw):
-                candidates.append((0.95, pi, gi))
+                candidates.append((0.95 * type_weight, pi, gi))
                 continue
 
-            sim = jaccard(pred_clean, gt_clean)
+            # Word bigram Jaccard
+            sim = word_bigram_jaccard(pred_clean, gt_clean)
+            sim *= type_weight
             if sim >= threshold:
                 candidates.append((sim, pi, gi))
 
@@ -166,7 +235,7 @@ def evaluate_slot(
 ) -> dict[str, Any]:
     pred_items = pred.get(slot) or []
     gt_items = gt.get(slot) or []
-    type_field = TYPE_FIELDS[slot]
+    type_field = _guess_type_field(slot, gt_items or pred_items)
     tp, fp, fn, pairs = match_objects(pred_items, gt_items, type_field)
     metrics = compute_f1(tp, fp, fn)
     return {
@@ -251,9 +320,10 @@ def evaluate_document(
         mode = "live"
         save_json(pred, cache_path)
 
-    # 按槽位评估
+    # 动态发现待评估槽位
+    eval_slots = _discover_slots(gt, pred)
     slot_results = {}
-    for slot in SLOTS:
+    for slot in eval_slots:
         slot_results[slot] = evaluate_slot(pred, gt, slot)
 
     # 汇总
@@ -333,13 +403,21 @@ def print_markdown_report(results: dict[str, Any]) -> None:
         s = doc["summary"]
         print(f"| {doc['doc_id']} | {doc['doc_type']} | {s['precision']:.3f} | {s['recall']:.3f} | {s['f1']:.3f} | {s['tp']}/{s['fp']}/{s['fn']} |")
 
+    # Collect all slot names from results
+    all_slots: set[str] = set()
+    for doc in results["documents"].values():
+        all_slots.update(doc["slots"].keys())
+    report_slots = sorted(all_slots)
+
     print(f"\n## 按槽位\n")
-    for slot in SLOTS:
+    for slot in report_slots:
         print(f"\n### {slot}\n")
         print(f"| 文档 | GT | Pred | TP | FP | FN | P | R | F1 |")
         print(f"|---|---|---|---|---|---|---|---|---|")
         for doc in results["documents"].values():
-            r = doc["slots"][slot]
+            r = doc["slots"].get(slot)
+            if r is None:
+                continue
             print(f"| {doc['doc_id']} | {r['gt_count']} | {r['pred_count']} | {r['tp']} | {r['fp']} | {r['fn']} | {r['precision']:.3f} | {r['recall']:.3f} | {r['f1']:.3f} |")
 
 

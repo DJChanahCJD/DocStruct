@@ -9,13 +9,27 @@ from pydantic import BaseModel, ValidationError
 
 from core.chunker import render_element_marker, split_ir_into_chunks, summarize_chunk
 from core.config import get_settings
-from core.constants import JSON_FORMAT_INSTRUCTION, MAP_USER_PROMPT_TEMPLATE, SYSTEM_PROMPT
+from core.constants import (
+    JSON_FORMAT_INSTRUCTION,
+    MAP_USER_PROMPT_TEMPLATE,
+    PHASE0_SYSTEM_PROMPT,
+    PHASE0_USER_PROMPT_TEMPLATE,
+    SYSTEM_PROMPT,
+    TYPED_EXTRACT_PROMPT_TEMPLATE,
+)
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
-from core.reducer import OBJECT_SLOTS, reduce_extraction_results
+from core.reducer import OBJECT_SLOTS, discover_slots, reduce_extraction_results
 from core.schema_registry import normalize_doc_type
 from core.utils import clean_and_parse_json, normalize_extracted_data
-from schemas.models import DocType, DocumentChunk, DocumentIR, ExtractedObjectSet, ExtractionContract
+from schemas.models import (
+    DocType,
+    DocumentChunk,
+    DocumentIR,
+    ExtractedObjectSet,
+    ExtractionContract,
+    Phase0Result,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -23,36 +37,6 @@ settings = get_settings()
 raw_client = get_openai_client()
 RESPONSE_PREVIEW_CHARS = 500
 
-
-SLOT_DESCRIPTIONS = {
-    "entities": (
-        "具备自主行为或持续状态的系统组件。"
-        "包括：参与者/角色（actor）、系统/服务（system）、持久数据存储（data）。"
-        "判断标准：该对象是否在系统中作为独立的参与者或组件被提及、且有明确的职责或数据？"
-        "如果不是独立参与者，而是临时数据结构、文档元信息角色或内部分解模块，则不归入此槽。"
-    ),
-    "processes": (
-        "包含多个有序步骤的操作序列。"
-        "判断标准：原文是否描述了 A→B→C 的步骤顺序关系？"
-        "单个操作或 API 调用不是流程。"
-    ),
-    "requirements": (
-        "文档中作为独立规格单元呈现的功能需求、非功能需求或约束。"
-        "判断标准：原文是否以独立编号、独立段落标题或独立条目将其标识为一个规格单元？"
-        "保持原文的聚合粒度——不要将同一编号或标题下的多个指标拆分为独立需求，也不要把多个独立条目合并。"
-        "API 端点定义属于 interfaces 槽；测试用例步骤属于 artifacts 或 processes 槽。"
-    ),
-    "interfaces": (
-        "有明确交互协议和入口标识的系统边界入口。"
-        "判断标准：原文是否同时给出了 (a) 调用方式/协议 和 (b) 入口标识（URL/方法名/路径/主题/表名）？"
-        "仅有名称或出现在架构图连线中、但缺少交互细节的不属于此槽。"
-    ),
-    "artifacts": (
-        "无法归入上述四槽的高价值文档产物。"
-        "仅当该内容不满足 entities/processes/requirements/interfaces 的区分标准时，才归入此槽。"
-        "如测试用例、设计决策、问题记录、独立表格或章节。不要与其他四槽重复。"
-    ),
-}
 
 FINALIZE_USER_PROMPT_TEMPLATE = """
 请使用给定 JSON Schema，把分块级抽取候选合并成一个最终结构化文档。
@@ -69,19 +53,67 @@ Schema:
 """
 
 
-def build_extraction_contract(doc_type: str | DocType | None) -> ExtractionContract:
+def run_phase0_prescan(
+    markdown_content: str,
+    *,
+    model_name: str | None = None,
+) -> Phase0Result:
+    """廉价全文预扫描：采样文档头部+中部+尾部，产出文档元信息。"""
+    settings = get_settings()
+    sample_limit = settings.phase0_max_sample_chars
+    content_len = len(markdown_content)
+    if content_len <= sample_limit:
+        sample = markdown_content
+    else:
+        third = sample_limit // 3
+        head = markdown_content[:third]
+        mid_start = (content_len - third) // 2
+        mid = markdown_content[mid_start:mid_start + third]
+        tail = markdown_content[-third:]
+        sample = f"{head}\n\n...\n\n{mid}\n\n...\n\n{tail}"
+
+    prompt = PHASE0_USER_PROMPT_TEMPLATE.format(content=sample)
+    response_text = _create_text_completion(
+        messages=[
+            {"role": "system", "content": PHASE0_SYSTEM_PROMPT.strip()},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        model_name=model_name,
+    )
+    try:
+        data = clean_and_parse_json(response_text)
+    except ValueError as exc:
+        logger.warning("Phase 0 JSON parse failed, returning default")
+        return Phase0Result(doc_type=DocType.UNKNOWN, doc_type_confidence=0.0)
+    try:
+        return Phase0Result.model_validate(data)
+    except ValidationError as exc:
+        logger.warning("Phase 0 validation failed: %s", exc)
+        return Phase0Result(doc_type=DocType.UNKNOWN, doc_type_confidence=0.0)
+
+
+def build_extraction_contract(
+    doc_type: str | DocType | None,
+    response_model: type[BaseModel] | None = None,
+) -> ExtractionContract:
     normalized = normalize_doc_type(doc_type)
     common_rules = [
         "只抽取当前输入中明确出现的对象。不要编造或推断原文没有的内容。",
         "保持原文的聚合粒度。不要将同一编号、同一标题或同一表格行下的多个指标拆分为独立对象，也不要把多个独立条目合并为一个。",
         "evidence_element_ids 只使用 [ELEMENT: ...] 标记中的元素 ID。",
         "evidence_element_ids 只保留能直接支撑对象存在、定义或关键约束的高价值元素。",
+        "每个字段名即为该字段的语义含义，请按字段名自然理解其用途。",
         "只返回目标对象槽位；未出现的对象槽返回空列表。",
     ]
+    if response_model:
+        target_slots = discover_slots(response_model)
+    else:
+        target_slots = list(OBJECT_SLOTS)
     return ExtractionContract(
         doc_type=normalized,
-        target_slots=list(OBJECT_SLOTS),
-        slot_descriptions=dict(SLOT_DESCRIPTIONS),
+        target_slots=target_slots,
+        slot_descriptions={},  # Typed schemas don't need verbose descriptions
         rules=common_rules,
         ignore_sections=["术语表", "术语定义", "参考资料", "参考文献", "附录", "references", "glossary"],
     )
@@ -180,6 +212,8 @@ async def _extract_chunk(
     *,
     document_ir: DocumentIR,
     contract: ExtractionContract,
+    phase0: Phase0Result | None = None,
+    response_model: type[BaseModel] = ExtractedObjectSet,
     prompt_template: str | None = None,
     model_name: str | None = None,
 ) -> dict[str, object]:
@@ -188,8 +222,10 @@ async def _extract_chunk(
             return await asyncio.to_thread(
                 _extract_once,
                 chunk.markdown,
-                ExtractedObjectSet,
-                context_note=_render_chunk_context(document_ir=document_ir, contract=contract, chunk=chunk),
+                response_model,
+                context_note=_render_chunk_context(
+                    document_ir=document_ir, contract=contract, chunk=chunk, phase0=phase0,
+                ),
                 prompt_template=prompt_template,
                 model_name=model_name,
             )
@@ -217,13 +253,11 @@ async def extract_structure_with_meta(
     )
     content_length = sum(len(element.markdown or element.text or "") for element in ir.elements)
     logger.info(
-        "Extraction input prepared: doc_type=%s content_chars=%s element_count=%s section_count=%s threshold=%s max_chars=%s",
+        "Extraction input prepared: doc_type=%s content_chars=%s element_count=%s section_count=%s",
         normalized_doc_type.value,
         content_length,
         len(ir.elements),
         len(ir.outline.sections),
-        settings.extraction_threshold,
-        settings.extraction_max_chars,
     )
     if content_length > settings.extraction_max_chars:
         raise ValueError(
@@ -231,47 +265,39 @@ async def extract_structure_with_meta(
             "当前系统仅面向中短文档。"
         )
 
-    contract = build_extraction_contract(normalized_doc_type)
-    if content_length <= settings.extraction_threshold:
-        raw_data = await asyncio.to_thread(
-            _extract_once,
-            _render_document_elements(ir),
-            ExtractedObjectSet,
-            context_note=_render_document_context(document_ir=ir, contract=contract),
-            prompt_template=prompt_template,
-            model_name=model_name,
-        )
-        reduced_data, evidence_meta = reduce_extraction_results(
-            doc_type=normalized_doc_type.value,
-            title=ir.title,
-            chunk_results=[raw_data],
-            document_ir=ir,
-        )
-        validated = response_model.model_validate(reduced_data)
-        return validated, {
-            "mode": "whole-document",
-            "chunk_count": 1,
-            "failed_chunks": 0,
-            "failed_chunk_indexes": [],
-            "partial": False,
-            "element_count": len(ir.elements),
-            "section_count": len(ir.outline.sections),
-            **evidence_meta,
-        }
+    contract = build_extraction_contract(normalized_doc_type, response_model=response_model)
 
+    # Phase 0: pre-scan for document-wide understanding
+    phase0: Phase0Result | None = None
+    if get_settings().phase0_enabled:
+        phase0 = await asyncio.to_thread(run_phase0_prescan, markdown_content, model_name=model_name)
+        logger.info("Phase 0 result: doc_type=%s confidence=%.2f entities=%s",
+                     phase0.doc_type.value, phase0.doc_type_confidence, phase0.key_entities)
+
+    # Use typed extraction model when feature flag is on
+    if get_settings().use_typed_schema:
+        chunk_model = _typed_extraction_model(response_model)
+    else:
+        chunk_model = ExtractedObjectSet
+
+    # Unified chunk path — small docs = 1 chunk
+    chunk_max = settings.extraction_chunk_max_chars
+    chunk_overlap = settings.extraction_chunk_overlap_chars
     chunks = split_ir_into_chunks(
         ir,
-        max_chars=settings.extraction_chunk_max_chars,
+        max_chars=chunk_max,
         ignore_sections=contract.ignore_sections,
+        overlap_chars=chunk_overlap,
     )
     if not chunks:
         raise ValueError("文档 IR 分块失败，无法继续提取")
 
     chunk_summaries = [summarize_chunk(chunk) for chunk in chunks]
     logger.info(
-        "Extraction chunks prepared: chunk_count=%s chunk_max_chars=%s concurrency=%s chunks=%s",
+        "Extraction chunks prepared: chunk_count=%s chunk_max_chars=%s overlap=%s concurrency=%s chunks=%s",
         len(chunks),
-        settings.extraction_chunk_max_chars,
+        chunk_max,
+        chunk_overlap,
         settings.extraction_concurrency,
         chunk_summaries,
     )
@@ -283,6 +309,8 @@ async def extract_structure_with_meta(
             chunk,
             document_ir=ir,
             contract=contract,
+            phase0=phase0,
+            response_model=chunk_model,
             prompt_template=prompt_template,
             model_name=model_name,
         )
@@ -300,19 +328,19 @@ async def extract_structure_with_meta(
             failed_chunk_details.append({**chunk_summary, "index": index, "error": str(result)})
             logger.warning("Chunk extraction failed: index=%s summary=%s error=%s", index, chunk_summary, result)
             continue
-        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, ExtractedObjectSet):
+        if not isinstance(result, dict) or not _has_meaningful_schema_fields(result, chunk_model):
             failed_chunk_indexes.append(index)
             failed_chunk_details.append({**chunk_summary, "index": index, "error": "no_meaningful_schema_fields"})
             logger.warning("Chunk returned no meaningful schema fields: index=%s summary=%s", index, chunk_summary)
             continue
         try:
-            validated_chunk = ExtractedObjectSet.model_validate(result)
+            chunk_model.model_validate(result)
         except ValidationError as exc:
             failed_chunk_indexes.append(index)
             failed_chunk_details.append({**chunk_summary, "index": index, "error": str(exc)})
             logger.warning("Chunk validation failed: index=%s summary=%s error=%s", index, chunk_summary, exc)
             continue
-        partial_results.append(validated_chunk.model_dump(mode="json", exclude_none=True))
+        partial_results.append(result)
 
     if not partial_results:
         raise RuntimeError(f"分块提取失败，失败块数: {len(failed_chunk_indexes)}/{len(chunks)}")
@@ -324,38 +352,38 @@ async def extract_structure_with_meta(
             document_ir=ir,
             contract=contract,
             chunk_results=partial_results,
-            response_model=ExtractedObjectSet,
+            response_model=chunk_model,
+            phase0=phase0,
             model_name=model_name,
         )
         chunk_results_for_reduce = [finalized_data]
     except Exception as exc:
         finalizer_failed = True
-        candidate_chars = len(json.dumps(partial_results, ensure_ascii=False))
-        evidence_chars = len(_render_document_elements(ir))
         logger.warning(
-            "Finalizer failed, falling back to direct reducer: candidates=%s candidate_chars=%s evidence_chars=%s error=%s",
-            len(partial_results),
-            candidate_chars,
-            evidence_chars,
-            exc,
+            "Finalizer failed, falling back to direct reducer: candidates=%s error=%s",
+            len(partial_results), exc,
         )
         chunk_results_for_reduce = partial_results
+
     reduced_data, evidence_meta = reduce_extraction_results(
         doc_type=normalized_doc_type.value,
         title=ir.title,
         chunk_results=chunk_results_for_reduce,
         document_ir=ir,
+        response_model=response_model,
     )
     validated = response_model.model_validate(reduced_data)
     failed_chunks = len(failed_chunk_indexes)
     return validated, {
-        "mode": "ir-map-ai-finalize",
+        "mode": "unified-pipeline",
         "chunk_count": len(chunks),
         "failed_chunks": failed_chunks,
         "failed_chunk_indexes": failed_chunk_indexes,
         "failed_chunk_details": failed_chunk_details,
         "partial": failed_chunks > 0 or finalizer_failed,
         "finalizer_failed": finalizer_failed,
+        "phase0_enabled": get_settings().phase0_enabled,
+        "typed_schema": get_settings().use_typed_schema,
         "element_count": len(ir.elements),
         "section_count": len(ir.outline.sections),
         **evidence_meta,
@@ -393,6 +421,7 @@ def _finalize_extraction_once(
     contract: ExtractionContract,
     chunk_results: list[dict[str, Any]],
     response_model: type[BaseModel],
+    phase0: Phase0Result | None = None,
     model_name: str | None = None,
 ) -> dict[str, object]:
     """
@@ -403,6 +432,7 @@ def _finalize_extraction_once(
             document_ir=document_ir,
             contract=contract,
             chunk_results=chunk_results,
+            phase0=phase0,
         ),
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
@@ -430,29 +460,38 @@ def _finalize_extraction_once(
     return normalize_extracted_data(data)
 
 
-def _render_document_context(
-    *,
-    document_ir: DocumentIR,
-    contract: ExtractionContract,
-) -> str:
-    """
-    Render document-level extraction context for whole-document extraction.
-    """
-    return "\n\n".join(
-        [
-            "[Document Outline]",
-            document_ir.outline.model_dump_json(indent=2),
-            "[Extraction Contract]",
-            contract.model_dump_json(indent=2),
-            "输入是带 [ELEMENT: ...] 标记的完整文档。",
-        ]
+def _typed_extraction_model(response_model: type[BaseModel]) -> type[BaseModel]:
+    """从文档模型提取对应的抽取容器（去除 evidence/doc_type 等包装字段）。"""
+    from schemas.models import (
+        ApiExtractedDocument, DesignExtractedDocument, IssueExtractedDocument,
+        ManualExtractedDocument, SrsExtractedDocument, TestExtractedDocument,
+        ApiExtraction, DesignExtraction, IssueExtraction,
+        ManualExtraction, SrsExtraction, TestExtraction,
     )
+    mapping: dict[type[BaseModel], type[BaseModel]] = {
+        SrsExtractedDocument: SrsExtraction,
+        ApiExtractedDocument: ApiExtraction,
+        DesignExtractedDocument: DesignExtraction,
+        TestExtractedDocument: TestExtraction,
+        ManualExtractedDocument: ManualExtraction,
+        IssueExtractedDocument: IssueExtraction,
+    }
+    return mapping.get(response_model, ExtractedObjectSet)
+
+
+def _render_phase0_context(phase0: Phase0Result) -> str:
+    """将 Phase 0 结果渲染为注入 chunk 上下文的文本。"""
+    return "\n\n".join([
+        "[Document Pre-Analysis]",
+        f"文档类型: {phase0.doc_type.value}（置信度: {phase0.doc_type_confidence:.2f}）",
+        f"关键实体: {', '.join(phase0.key_entities) if phase0.key_entities else '无'}",
+        f"章节主题: {json.dumps(phase0.section_themes, ensure_ascii=False, indent=2)}",
+        f"提取提示: {'; '.join(phase0.extraction_hints) if phase0.extraction_hints else '无'}",
+    ])
 
 
 def _render_document_elements(document_ir: DocumentIR) -> str:
-    """
-    Render all IR elements with stable evidence markers.
-    """
+    """Render all IR elements with stable evidence markers."""
     return "\n\n".join(
         render_element_marker(element)
         for element in sorted(document_ir.elements, key=lambda item: item.order)
@@ -464,22 +503,24 @@ def _render_finalizer_input(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     chunk_results: list[dict[str, Any]],
+    phase0: Phase0Result | None = None,
 ) -> str:
-    """
-    Render finalizer input with candidates and source evidence snippets.
-    """
-    return "\n\n".join(
-        [
-            "[Document Outline]",
-            document_ir.outline.model_dump_json(indent=2),
-            "[Extraction Contract]",
-            contract.model_dump_json(indent=2),
-            "[Chunk Candidates]",
-            json.dumps(chunk_results, ensure_ascii=False, indent=2),
-            "[Evidence Snippets]",
-            _render_document_elements(document_ir),
-        ]
-    )
+    """Render finalizer input with candidates, evidence snippets, and Phase 0 context."""
+    parts = [
+        "[Document Outline]",
+        document_ir.outline.model_dump_json(indent=2),
+    ]
+    if phase0:
+        parts.append(_render_phase0_context(phase0))
+    parts.extend([
+        "[Extraction Contract]",
+        contract.model_dump_json(indent=2),
+        "[Chunk Candidates]",
+        json.dumps(chunk_results, ensure_ascii=False, indent=2),
+        "[Evidence Snippets]",
+        _render_document_elements(document_ir),
+    ])
+    return "\n\n".join(parts)
 
 
 def _render_chunk_context(
@@ -487,29 +528,33 @@ def _render_chunk_context(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     chunk: DocumentChunk,
+    phase0: Phase0Result | None = None,
 ) -> str:
-    return "\n\n".join(
-        [
-            "[Document Outline]",
-            document_ir.outline.model_dump_json(indent=2),
-            "[Extraction Contract]",
-            contract.model_dump_json(indent=2),
-            "[Chunk Metadata]",
-            json.dumps(
-                {
-                    "chunk_id": chunk.chunk_id,
-                    "section_path": chunk.section_path,
-                    "page_start": chunk.page_start,
-                    "page_end": chunk.page_end,
-                    "allowed_evidence_element_ids": [element.element_id for element in chunk.elements],
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            (
-                "只返回五个目标槽位。evidence_element_ids 必须来自 allowed_evidence_element_ids。"
-                "当前分块可能包含多个章节或多个需求，请逐项抽取为列表对象。"
-                "当前分块没有某类对象时，该槽位返回空列表。"
-            ),
-        ]
-    )
+    parts = [
+        "[Document Outline]",
+        document_ir.outline.model_dump_json(indent=2),
+    ]
+    if phase0:
+        parts.append(_render_phase0_context(phase0))
+    parts.extend([
+        "[Extraction Contract]",
+        contract.model_dump_json(indent=2),
+        "[Chunk Metadata]",
+        json.dumps(
+            {
+                "chunk_id": chunk.chunk_id,
+                "section_path": chunk.section_path,
+                "page_start": chunk.page_start,
+                "page_end": chunk.page_end,
+                "allowed_evidence_element_ids": [element.element_id for element in chunk.elements],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        (
+            "evidence_element_ids 必须来自 allowed_evidence_element_ids。"
+            "每个字段名即为该字段的语义含义，请按字段名自然理解其用途。"
+            "当前分块没有某类对象时，该槽位返回空列表。"
+        ),
+    ])
+    return "\n\n".join(parts)

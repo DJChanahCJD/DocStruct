@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  EXTRACTION_SLOT_CONFIGS,
   evidenceMatches,
   type ExtractionEvidence,
   type ExtractionItem,
@@ -76,7 +75,7 @@ const TYPE_FIELD_OPTIONS: Record<string, DetailFieldOption[]> = {
   ],
 };
 
-const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
+const DETAIL_FIELD_CONFIGS: Record<string, DetailFieldConfig[]> = {
   entities: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "entity_type", label: "实体类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.entity_type },
@@ -92,6 +91,16 @@ const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
     { key: "points", label: "功能点 / 明细", kind: "list", rows: 4 },
     { key: "criteria", label: "验收标准", kind: "list", rows: 3 },
   ],
+  functional_requirements: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "points", label: "功能点", kind: "list", rows: 4 },
+    { key: "criteria", label: "验收标准", kind: "list", rows: 3 },
+  ],
+  non_functional_requirements: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "category", label: "分类", kind: "text", rows: 1 },
+    { key: "description", label: "描述", kind: "text", rows: 3 },
+  ],
   interfaces: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "interface_type", label: "接口类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.interface_type },
@@ -100,12 +109,114 @@ const DETAIL_FIELD_CONFIGS: Record<ExtractionSlotKey, DetailFieldConfig[]> = {
     { key: "provider", label: "提供方", kind: "text", rows: 1 },
     { key: "consumer", label: "调用方", kind: "text", rows: 1 },
   ],
+  endpoints: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "http_method", label: "HTTP 方法", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.http_method },
+    { key: "path", label: "路径", kind: "text", rows: 1 },
+    { key: "summary", label: "功能简述", kind: "text", rows: 2 },
+    { key: "request_schema", label: "请求结构", kind: "text", rows: 2 },
+    { key: "response_schema", label: "响应结构", kind: "text", rows: 2 },
+  ],
+  schemas: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "description", label: "用途说明", kind: "text", rows: 2 },
+    { key: "fields", label: "字段", kind: "list", rows: 5 },
+  ],
+  auth: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "auth_type", label: "认证类型", kind: "text", rows: 1 },
+    { key: "description", label: "说明", kind: "text", rows: 3 },
+  ],
+  modules: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "responsibility", label: "职责", kind: "text", rows: 2 },
+    { key: "sub_modules", label: "子模块", kind: "list", rows: 3 },
+  ],
+  decisions: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "rationale", label: "理由", kind: "text", rows: 3 },
+    { key: "alternatives", label: "替代方案", kind: "list", rows: 3 },
+  ],
+  test_cases: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "precondition", label: "前置条件", kind: "text", rows: 2 },
+    { key: "expected_result", label: "预期结果", kind: "text", rows: 2 },
+  ],
+  test_steps: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "action", label: "操作", kind: "text", rows: 2 },
+    { key: "expected", label: "预期行为", kind: "text", rows: 2 },
+  ],
+  defects: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "severity", label: "严重程度", kind: "text", rows: 1 },
+    { key: "description", label: "描述", kind: "text", rows: 3 },
+  ],
+  procedures: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "steps", label: "步骤", kind: "steps", rows: 5 },
+  ],
+  ui_elements: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "element_type", label: "元素类型", kind: "text", rows: 1 },
+    { key: "location", label: "所在位置", kind: "text", rows: 1 },
+  ],
+  notes: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "content", label: "内容", kind: "text", rows: 4 },
+  ],
+  symptoms: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "description", label: "现象描述", kind: "text", rows: 3 },
+  ],
+  reproduction_steps: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "action", label: "操作", kind: "text", rows: 2 },
+    { key: "expected", label: "预期", kind: "text", rows: 2 },
+    { key: "actual", label: "实际", kind: "text", rows: 2 },
+  ],
+  environment: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "value", label: "值", kind: "text", rows: 1 },
+  ],
   artifacts: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "artifact_type", label: "产物类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.artifact_type },
     { key: "details", label: "要点", kind: "list", rows: 5 },
   ],
 };
+
+/**
+ * Generate default field configs for an unknown slot by inspecting item data.
+ */
+function getFieldConfigs(slot: string, sampleItem: Record<string, unknown> | null): DetailFieldConfig[] {
+  const known = DETAIL_FIELD_CONFIGS[slot];
+  if (known) return known;
+
+  // Auto-generate from item keys (skip id, evidence_element_ids)
+  if (sampleItem) {
+    const configs: DetailFieldConfig[] = [];
+    for (const key of Object.keys(sampleItem)) {
+      if (key === "id" || key === "evidence_element_ids") continue;
+      const value = sampleItem[key];
+      if (Array.isArray(value)) {
+        if (value.length > 0 && typeof value[0] === "object" && value[0] !== null && "name" in value[0]) {
+          configs.push({ key, label: key, kind: "steps", rows: 4 });
+        } else {
+          configs.push({ key, label: key, kind: "list", rows: 4 });
+        }
+      } else {
+        configs.push({ key, label: key, kind: "text", rows: 2 });
+      }
+    }
+    if (configs.length > 0) return configs;
+  }
+
+  // Minimal fallback
+  return [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+  ];
+}
 
 interface ExtractionResultPanelProps {
   items: ExtractionItem[];
@@ -126,6 +237,7 @@ export function ExtractionResultPanel({
   onSelectedItemChange,
 }: ExtractionResultPanelProps) {
   const groupedItems = useMemo(() => groupItemsBySlot(items), [items]);
+  const slotConfigs = useMemo(() => deriveSlotConfigs(items), [items]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const itemRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const selectedItemFromEvidence = selectedEvidence
@@ -186,7 +298,7 @@ export function ExtractionResultPanel({
     <div className="grid h-full min-h-0 grid-cols-[minmax(160px,0.72fr)_minmax(220px,1fr)]">
       <ScrollArea className="min-h-0 border-r">
         <div className="flex flex-col gap-4 p-3">
-          {EXTRACTION_SLOT_CONFIGS.map((slotConfig) => {
+          {slotConfigs.map((slotConfig) => {
             const slotItems = groupedItems[slotConfig.key];
             if (slotItems.length === 0) {
               return null;
@@ -324,7 +436,7 @@ function ExtractionDetail({
   }
 
   const primaryEvidence = getPrimaryEvidence(item);
-  const fieldConfigs = DETAIL_FIELD_CONFIGS[item.slot];
+  const fieldConfigs = getFieldConfigs(item.slot, item.raw);
 
   const handleSave = () => {
     onPatchItem(item, buildPatch(fieldConfigs, drafts));
@@ -459,18 +571,30 @@ function FieldEditor({
 }
 
 /**
+ * Derive slot configs from extraction items in appearance order.
+ */
+function deriveSlotConfigs(items: ExtractionItem[]): { key: string; label: string }[] {
+  const seen = new Set<string>();
+  const configs: { key: string; label: string }[] = [];
+  for (const item of items) {
+    if (!seen.has(item.slot)) {
+      seen.add(item.slot);
+      configs.push({ key: item.slot, label: item.slotLabel });
+    }
+  }
+  return configs;
+}
+
+/**
  * Group extraction items by slot while preserving backend order.
  */
-function groupItemsBySlot(items: ExtractionItem[]): Record<ExtractionSlotKey, ExtractionItem[]> {
-  const grouped: Record<ExtractionSlotKey, ExtractionItem[]> = {
-    entities: [],
-    processes: [],
-    requirements: [],
-    interfaces: [],
-    artifacts: [],
-  };
+function groupItemsBySlot(items: ExtractionItem[]): Record<string, ExtractionItem[]> {
+  const grouped: Record<string, ExtractionItem[]> = {};
 
   for (const item of items) {
+    if (!grouped[item.slot]) {
+      grouped[item.slot] = [];
+    }
     grouped[item.slot].push(item);
   }
 
@@ -489,7 +613,7 @@ function getPrimaryEvidence(item: ExtractionItem): ExtractionEvidence | null {
  */
 function buildDrafts(item: ExtractionItem): Record<string, string> {
   const drafts: Record<string, string> = {};
-  for (const fieldConfig of DETAIL_FIELD_CONFIGS[item.slot]) {
+  for (const fieldConfig of getFieldConfigs(item.slot, item.raw)) {
     drafts[fieldConfig.key] = draftValue(item.raw[fieldConfig.key], fieldConfig.kind);
     if (fieldConfig.options && !fieldConfig.options.some((option) => option.value === drafts[fieldConfig.key])) {
       drafts[fieldConfig.key] = defaultSelectValue(fieldConfig.options);

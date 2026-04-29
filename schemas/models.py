@@ -379,6 +379,11 @@ class ArtifactItem(BaseNode):
             return ArtifactType.OTHER
 
 
+# =========================
+# Legacy Unified Object Slots (kept for backward compatibility)
+# =========================
+
+
 class ExtractedObjectSet(BaseModel):
     entities: list[EntityItem] = Field(
         default_factory=list,
@@ -420,6 +425,181 @@ class ExtractedObjectSet(BaseModel):
     )
 
 
+# =========================
+# Doc-Type-Specific Item Types
+# =========================
+
+
+class FunctionalReqItem(BaseNode):
+    """功能需求：原文以独立编号或标题标识的功能规格单元。"""
+    points: list[str] = Field(default_factory=list, description="功能点或子项")
+    criteria: list[str] = Field(default_factory=list, description="验收条件或通过标准")
+
+
+class NonFunctionalReqItem(BaseNode):
+    """非功能需求：性能、安全、可用性等约束。"""
+    category: str = Field(default="", description="分类：性能/安全/可用性/兼容性/可维护性")
+    description: str = Field(default="", description="约束描述")
+
+
+class EndpointItem(BaseNode):
+    """API 端点。"""
+    http_method: Optional[HttpMethod] = Field(None, description="HTTP 方法")
+    path: str = Field(default="", description="URL 路径")
+    summary: str = Field(default="", description="功能简述")
+    request_schema: str = Field(default="", description="请求体结构名称或描述")
+    response_schema: str = Field(default="", description="响应体结构名称或描述")
+
+    @field_validator("http_method", mode="before")
+    @classmethod
+    def _normalize_http_method(cls, value: Any) -> Optional[HttpMethod]:
+        if value is None:
+            return None
+        text = str(value).strip().lower()
+        if not text:
+            return None
+        try:
+            return HttpMethod(text)
+        except ValueError:
+            return None
+
+
+class SchemaItem(BaseNode):
+    """数据模型/结构定义。"""
+    fields: list[str] = Field(default_factory=list, description="字段名及类型")
+    description: str = Field(default="", description="结构用途说明")
+
+
+class AuthItem(BaseNode):
+    """认证/授权方式。"""
+    auth_type: str = Field(default="", description="认证类型：JWT/OAuth2/API Key/Basic")
+    description: str = Field(default="", description="认证说明")
+
+
+class ModuleItem(BaseNode):
+    """系统模块/组件。"""
+    responsibility: str = Field(default="", description="模块职责")
+    sub_modules: list[str] = Field(default_factory=list, description="子模块名称列表")
+
+
+class DecisionItem(BaseNode):
+    """架构决策记录。"""
+    rationale: str = Field(default="", description="决策理由")
+    alternatives: list[str] = Field(default_factory=list, description="考虑过的替代方案")
+
+
+class TestCaseItem(BaseNode):
+    """测试用例。"""
+    precondition: str = Field(default="", description="前置条件")
+    expected_result: str = Field(default="", description="预期结果")
+
+
+class TestStepItem(BaseNode):
+    """测试步骤。"""
+    action: str = Field(default="", description="操作描述")
+    expected: str = Field(default="", description="预期行为")
+
+
+class DefectItem(BaseNode):
+    """缺陷记录。"""
+    severity: str = Field(default="", description="严重程度")
+    description: str = Field(default="", description="缺陷描述")
+
+
+class ProcedureItem(BaseNode):
+    """操作步骤流程。"""
+    steps: list[StepItem] = Field(default_factory=list, description="有序步骤")
+
+
+class UIElementItem(BaseNode):
+    """界面元素描述。"""
+    element_type: str = Field(default="", description="元素类型：按钮/输入框/菜单/弹窗")
+    location: str = Field(default="", description="所在页面或区域")
+
+
+class NoteItem(BaseNode):
+    """注意事项或提示。"""
+    content: str = Field(default="", description="提示内容")
+
+
+class SymptomItem(BaseNode):
+    """问题现象。"""
+    description: str = Field(default="", description="现象描述")
+
+
+class ReproStepItem(BaseNode):
+    """复现步骤。"""
+    action: str = Field(default="", description="操作")
+    expected: str = Field(default="", description="预期行为")
+    actual: str = Field(default="", description="实际行为")
+
+
+class EnvItem(BaseNode):
+    """环境信息。"""
+    value: str = Field(default="", description="环境配置值")
+
+
+# =========================
+# Doc-Type-Specific Extraction Containers
+# =========================
+
+
+class SrsExtraction(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="系统组件、角色、数据对象")
+    functional_requirements: list[FunctionalReqItem] = Field(default_factory=list, description="功能需求")
+    non_functional_requirements: list[NonFunctionalReqItem] = Field(default_factory=list, description="非功能需求")
+    interfaces: list[InterfaceItem] = Field(default_factory=list, description="系统接口")
+
+
+class ApiExtraction(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="系统组件、角色")
+    endpoints: list[EndpointItem] = Field(default_factory=list, description="API 端点")
+    schemas: list[SchemaItem] = Field(default_factory=list, description="数据模型定义")
+    auth: list[AuthItem] = Field(default_factory=list, description="认证方式")
+
+
+class DesignExtraction(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="系统组件、模块")
+    modules: list[ModuleItem] = Field(default_factory=list, description="系统模块")
+    interfaces: list[InterfaceItem] = Field(default_factory=list, description="模块间接口")
+    decisions: list[DecisionItem] = Field(default_factory=list, description="架构决策")
+
+
+class TestExtraction(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="被测系统、外部依赖")
+    test_cases: list[TestCaseItem] = Field(default_factory=list, description="测试用例")
+    test_steps: list[TestStepItem] = Field(default_factory=list, description="测试步骤")
+    defects: list[DefectItem] = Field(default_factory=list, description="缺陷记录")
+
+
+class ManualExtraction(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="涉及的系统组件")
+    procedures: list[ProcedureItem] = Field(default_factory=list, description="操作步骤")
+    ui_elements: list[UIElementItem] = Field(default_factory=list, description="界面元素")
+    notes: list[NoteItem] = Field(default_factory=list, description="注意事项")
+
+
+class IssueExtraction(BaseModel):
+    entities: list[EntityItem] = Field(default_factory=list, description="涉及的系统组件")
+    symptoms: list[SymptomItem] = Field(default_factory=list, description="问题现象")
+    reproduction_steps: list[ReproStepItem] = Field(default_factory=list, description="复现步骤")
+    environment: list[EnvItem] = Field(default_factory=list, description="环境信息")
+
+
+# =========================
+# Phase 0 Pre-scan Result
+# =========================
+
+
+class Phase0Result(BaseModel):
+    """文档预扫描结果，作为每个 chunk 的提取上下文注入。"""
+    doc_type: DocType = Field(description="确认的文档类型")
+    doc_type_confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="类型置信度")
+    key_entities: list[str] = Field(default_factory=list, description="文档中出现的系统/角色/数据名")
+    section_themes: dict[str, str] = Field(default_factory=dict, description="章节路径 → 主题描述")
+    extraction_hints: list[str] = Field(default_factory=list, description="针对本文档的提取注意事项")
+
+
 class Evidence(BaseModel):
     object_id: str  # 对象 ID，如 entity_id、process_id、requirement_id、interface_id、artifact_id
     element_id: Optional[str] = None
@@ -444,6 +624,11 @@ class BaseExtractedDocument(BaseModel):
         default_factory=dict,
         description="少量高价值文档级元数据；仅保存无法归入声明字段但有检索、展示或追溯价值的原文属性",
     )
+
+
+# =========================
+# Legacy Document Models (5-slot, backward compatible)
+# =========================
 
 
 class StructuredDocument(ExtractedObjectSet, BaseExtractedDocument):
@@ -483,4 +668,51 @@ ExtractedDocument = Union[
     TestDocument,
     ManualDocument,
     IssueDocument,
+]
+
+
+# =========================
+# Typed Document Models (doc-type-specific, new)
+# =========================
+
+
+class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):
+    doc_type: Literal["srs"] = Field(default="srs")
+    evidence: list[Evidence] = Field(default_factory=list, description="证据绑定；抽取时不要编造")
+
+
+class ApiExtractedDocument(ApiExtraction, BaseExtractedDocument):
+    doc_type: Literal["api"] = Field(default="api")
+    base_url: Optional[str] = None
+    evidence: list[Evidence] = Field(default_factory=list, description="证据绑定；抽取时不要编造")
+
+
+class DesignExtractedDocument(DesignExtraction, BaseExtractedDocument):
+    doc_type: Literal["design"] = Field(default="design")
+    evidence: list[Evidence] = Field(default_factory=list, description="证据绑定；抽取时不要编造")
+
+
+class TestExtractedDocument(TestExtraction, BaseExtractedDocument):
+    doc_type: Literal["test"] = Field(default="test")
+    test_stage: Optional[TestStage] = Field(None, description="测试阶段")
+    evidence: list[Evidence] = Field(default_factory=list, description="证据绑定；抽取时不要编造")
+
+
+class ManualExtractedDocument(ManualExtraction, BaseExtractedDocument):
+    doc_type: Literal["manual"] = Field(default="manual")
+    evidence: list[Evidence] = Field(default_factory=list, description="证据绑定；抽取时不要编造")
+
+
+class IssueExtractedDocument(IssueExtraction, BaseExtractedDocument):
+    doc_type: Literal["issue"] = Field(default="issue")
+    evidence: list[Evidence] = Field(default_factory=list, description="证据绑定；抽取时不要编造")
+
+
+TypedExtractedDocument = Union[
+    SrsExtractedDocument,
+    ApiExtractedDocument,
+    DesignExtractedDocument,
+    TestExtractedDocument,
+    ManualExtractedDocument,
+    IssueExtractedDocument,
 ]

@@ -99,11 +99,18 @@ class CorePipelineTests(unittest.TestCase):
 """
         document_ir = parse_result_to_ir(MarkdownNormalizer().normalize(markdown), doc_type=DocType.DESIGN)
 
-        chunks = split_ir_into_chunks(document_ir, max_chars=90)
+        chunks = split_ir_into_chunks(document_ir, max_chars=90, overlap_chars=0)
 
         self.assertGreater(len(chunks), 1)
+        seen_ids: set[str] = set()
+        all_ids: list[str] = []
+        for chunk in chunks:
+            for element in chunk.elements:
+                if element.element_id not in seen_ids:
+                    seen_ids.add(element.element_id)
+                    all_ids.append(element.element_id)
         self.assertEqual(
-            [element.element_id for chunk in chunks for element in chunk.elements],
+            all_ids,
             [element.element_id for element in document_ir.elements],
         )
         self.assertTrue(all("[ELEMENT:" in chunk.markdown for chunk in chunks))
@@ -273,7 +280,7 @@ POST /api/login
         self.assertEqual(interface["consumer"], "业务系统")
 
     def test_extract_structure_uses_whole_document_core_path(self) -> None:
-        """Ensure short documents use the mocked whole-document extraction path."""
+        """Ensure short documents use the unified pipeline (1 chunk + finalizer)."""
         markdown = """# 系统需求规格说明书
 
 #### 2.1.1 用户注册
@@ -282,19 +289,24 @@ POST /api/login
 """
         document_ir = parse_result_to_ir(MarkdownNormalizer().normalize(markdown), doc_type=DocType.SRS)
 
+        chunk_result = {
+            "requirements": [
+                {
+                    "name": "用户注册",
+                    "requirement_type": "functional",
+                    "points": ["系统应支持邮箱注册。"],
+                    "evidence_element_ids": ["el-0002"],
+                }
+            ]
+        }
+
         with patch(
             "core.extractor._extract_once",
-            return_value={
-                "requirements": [
-                    {
-                        "name": "用户注册",
-                        "requirement_type": "functional",
-                        "points": ["系统应支持邮箱注册。"],
-                        "evidence_element_ids": ["el-0002"],
-                    }
-                ]
-            },
-        ) as extract_once:
+            return_value=chunk_result,
+        ) as extract_once, patch(
+            "core.extractor._finalize_extraction_once",
+            return_value=chunk_result,
+        ):
             extracted, meta = asyncio.run(
                 extract_structure_with_meta(
                     markdown,
@@ -303,7 +315,7 @@ POST /api/login
                 )
             )
 
-        self.assertEqual(meta["mode"], "whole-document")
+        self.assertEqual(meta["mode"], "unified-pipeline")
         self.assertEqual(meta["chunk_count"], 1)
         self.assertEqual(extracted.requirements[0].id, "REQ-001")
         self.assertEqual(extracted.requirements[0].evidence_element_ids, ["el-0002"])
@@ -339,10 +351,13 @@ POST /api/login
             }
 
         fake_settings = SimpleNamespace(
-            extraction_threshold=1,
             extraction_chunk_max_chars=80,
+            extraction_chunk_overlap_chars=0,
             extraction_max_chars=100000,
             extraction_concurrency=2,
+            phase0_enabled=False,
+            use_typed_schema=False,
+            phase0_max_sample_chars=6000,
         )
         with patch("core.extractor.settings", fake_settings), patch(
             "core.extractor._extract_chunk",
@@ -399,8 +414,8 @@ POST /api/login
             }
 
         fake_settings = SimpleNamespace(
-            extraction_threshold=1,
             extraction_chunk_max_chars=5000,
+            extraction_chunk_overlap_chars=0,
             extraction_max_chars=100000,
             extraction_concurrency=2,
         )

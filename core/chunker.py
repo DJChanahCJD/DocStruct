@@ -1,5 +1,5 @@
 from schemas.models import DocumentChunk, DocumentElement, DocumentIR
-from core.constants import DEFAULT_EXTRACTION_CHUNK_MAX_CHARS
+from core.constants import DEFAULT_EXTRACTION_CHUNK_MAX_CHARS, DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS
 
 __all__ = ["render_element_marker", "summarize_chunk", "split_ir_into_chunks"]
 
@@ -9,11 +9,13 @@ def split_ir_into_chunks(
     max_chars: int = DEFAULT_EXTRACTION_CHUNK_MAX_CHARS,
     *,
     ignore_sections: list[str] | None = None,
+    overlap_chars: int = DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS,
 ) -> list[DocumentChunk]:
     """
-    基于连续章节单元生成大小受控的抽取分块。
+    基于连续章节单元生成大小受控的抽取分块，支持块间重叠。
     """
     target_size = max_chars or DEFAULT_EXTRACTION_CHUNK_MAX_CHARS
+    overlap = max(0, overlap_chars)
     ignored = [item.strip().lower() for item in (ignore_sections or []) if item.strip()]
     unit_groups = _collect_section_unit_groups(document_ir, ignored)
     chunks: list[DocumentChunk] = []
@@ -45,7 +47,37 @@ def split_ir_into_chunks(
             current_size += unit_size
         flush()
 
+    if overlap > 0 and len(chunks) > 1:
+        chunks = _apply_overlap(chunks, overlap)
+
     return chunks
+
+
+def _apply_overlap(chunks: list[DocumentChunk], overlap_chars: int) -> list[DocumentChunk]:
+    """为相邻块注入重叠上下文元素，重建 markdown 和元数据。"""
+    result: list[DocumentChunk] = [chunks[0]]
+    for i in range(1, len(chunks)):
+        prev_elements = result[-1].elements
+        curr_elements = chunks[i].elements
+        overlap_elements = _pick_tail(prev_elements, overlap_chars)
+        merged = list(overlap_elements) + list(curr_elements)
+        rebuilt = _build_ir_chunk(i, merged)
+        result.append(rebuilt)
+    return result
+
+
+def _pick_tail(elements: list[DocumentElement], max_chars: int) -> list[DocumentElement]:
+    """从元素列表尾部选取不超过 max_chars 的上下文元素。"""
+    picked: list[DocumentElement] = []
+    total = 0
+    for element in reversed(elements):
+        size = len(render_element_marker(element))
+        if total + size > max_chars:
+            break
+        picked.append(element)
+        total += size
+    picked.reverse()
+    return picked
 
 
 def render_element_marker(element: DocumentElement) -> str:

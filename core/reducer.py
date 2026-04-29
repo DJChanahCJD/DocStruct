@@ -4,17 +4,55 @@ import json
 import re
 from typing import Any
 
-from schemas.models import DocumentElement, DocumentIR
+from pydantic import BaseModel
+
+from schemas.models import BaseNode, DocumentElement, DocumentIR
 
 
+# Legacy slots for backward compatibility
 OBJECT_SLOTS = ("entities", "processes", "requirements", "interfaces", "artifacts")
-ID_PREFIXES = {
-    "entities": "ENT",
-    "processes": "PROC",
-    "requirements": "REQ",
-    "interfaces": "INT",
-    "artifacts": "ART",
-}
+
+# Non-slot fields to exclude from dynamic discovery.
+# Keep in sync with frontend/src/lib/evidence.ts discoverSlotConfigs knownKeys.
+_NON_SLOT_FIELDS = {"doc_type", "title", "version", "extra", "evidence", "base_url", "test_stage"}
+
+
+def discover_slots(model: type[BaseModel]) -> list[str]:
+    """从 response_model 动态发现抽取槽位（list[BaseNode子类] 类型的字段）。"""
+    slots: list[str] = []
+    for field_name, field_info in model.model_fields.items():
+        if field_name in _NON_SLOT_FIELDS:
+            continue
+        annotation = field_info.annotation
+        if annotation is None:
+            continue
+        origin = getattr(annotation, "__origin__", None)
+        if origin is not list:
+            continue
+        args = getattr(annotation, "__args__", ())
+        if not args:
+            continue
+        item_type = args[0]
+        if isinstance(item_type, type) and issubclass(item_type, BaseNode):
+            slots.append(field_name)
+    if not slots:
+        return list(OBJECT_SLOTS)  # fallback
+    return slots
+
+
+def _generate_prefix(slot: str) -> str:
+    """从槽位名生成 ID 前缀。"""
+    prefix_map = {
+        "entities": "ENT", "interfaces": "INT",
+        "functional_requirements": "FREQ", "non_functional_requirements": "NFR",
+        "endpoints": "EP", "schemas": "SCH", "auth": "AUTH",
+        "modules": "MOD", "decisions": "DEC",
+        "test_cases": "TC", "test_steps": "TS", "defects": "DEF",
+        "procedures": "PROC", "ui_elements": "UI", "notes": "NOTE",
+        "symptoms": "SYM", "reproduction_steps": "RST", "environment": "ENV",
+        "processes": "PROC", "requirements": "REQ", "artifacts": "ART",
+    }
+    return prefix_map.get(slot, slot[:4].upper())
 
 
 def reduce_extraction_results(
@@ -23,25 +61,25 @@ def reduce_extraction_results(
     title: str | None,
     chunk_results: list[dict[str, Any]],
     document_ir: DocumentIR,
+    response_model: type[BaseModel] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    slots = discover_slots(response_model) if response_model else list(OBJECT_SLOTS)
+
     reduced: dict[str, Any] = {
         "doc_type": doc_type,
         "title": title,
-        "entities": [],
-        "processes": [],
-        "requirements": [],
-        "interfaces": [],
-        "artifacts": [],
         "evidence": [],
         "extra": {},
     }
+    for slot in slots:
+        reduced[slot] = []
 
-    for slot in OBJECT_SLOTS:
+    for slot in slots:
         slot_items = _collect_slot_items(slot, chunk_results)
         merged_items = _merge_slot_items(slot, slot_items)
         reduced[slot] = _assign_global_ids(slot, merged_items)
 
-    evidence, evidence_meta = bind_evidence(reduced, document_ir.elements)
+    evidence, evidence_meta = bind_evidence(reduced, document_ir.elements, slots)
     reduced["evidence"] = evidence
     return _clean_empty_values(reduced), evidence_meta
 
@@ -49,14 +87,17 @@ def reduce_extraction_results(
 def bind_evidence(
     extracted_data: dict[str, Any],
     elements: list[DocumentElement],
+    slots: list[str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if slots is None:
+        slots = list(OBJECT_SLOTS)
     element_map = {element.element_id: element for element in elements}
     evidence: list[dict[str, Any]] = []
     seen: set[tuple[str, str | None, str | None]] = set()
     total_objects = 0
     objects_with_evidence = 0
 
-    for slot in OBJECT_SLOTS:
+    for slot in slots:
         for item in extracted_data.get(slot) or []:
             if not isinstance(item, dict):
                 continue
@@ -117,7 +158,7 @@ def _merge_slot_items(slot: str, items: list[dict[str, Any]]) -> list[dict[str, 
 
 
 def _assign_global_ids(slot: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    prefix = ID_PREFIXES[slot]
+    prefix = _generate_prefix(slot)
     assigned: list[dict[str, Any]] = []
     for index, item in enumerate(items, start=1):
         item["id"] = f"{prefix}-{index:03d}"
@@ -125,11 +166,9 @@ def _assign_global_ids(slot: str, items: list[dict[str, Any]]) -> list[dict[str,
     return assigned
 
 
-
-
 def _is_generated_id(slot: str, value: str) -> bool:
     """Return whether a value already looks like DocStruct's generated object ID."""
-    prefix = ID_PREFIXES[slot]
+    prefix = _generate_prefix(slot)
     return bool(re.fullmatch(rf"{re.escape(prefix)}-\d{{3,}}", value.strip(), flags=re.IGNORECASE))
 
 
@@ -169,6 +208,7 @@ def _entry_from_element(
 
 
 def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
+    # Existing slot-specific logic (legacy + common types)
     if slot == "interfaces":
         interface_type = _norm(item.get("interface_type"))
         http_method = _norm(item.get("http_method"))
@@ -210,10 +250,28 @@ def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
         if name:
             return f"artifact::{artifact_type}::{name}"
 
+    # Generic fallback for doc-type-specific slots
+    name = _norm(item.get("name"))
+    if name:
+        type_field = _find_type_field(item)
+        if type_field:
+            return f"{slot}::{type_field}::{name}"
+        return f"{slot}::name::{name}"
+
     raw_id = _norm(item.get("id"))
     if raw_id:
         return f"id::{raw_id}"
     return f"raw::{json.dumps(item, ensure_ascii=False, sort_keys=True)}"
+
+
+def _find_type_field(item: dict[str, Any]) -> str:
+    """Find the first field ending in '_type' for generic identity."""
+    for key in item:
+        if key.endswith("_type") and key not in ("doc_type",):
+            val = _norm(item.get(key))
+            if val:
+                return val
+    return ""
 
 
 def _merge_dicts(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
