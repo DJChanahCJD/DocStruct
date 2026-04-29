@@ -23,7 +23,24 @@
       "entity_type": "actor"
     }
   ],
-  "requirements": [],
+  "modules": [
+    {
+      "name": "Web前端",
+      "responsibility": ""
+    },
+    {
+      "name": "API服务",
+      "responsibility": ""
+    },
+    {
+      "name": "文档解析服务",
+      "responsibility": ""
+    },
+    {
+      "name": "数据库",
+      "responsibility": ""
+    }
+  ],
   "interfaces": [
     {
       "name": "上传文档接口",
@@ -48,5 +65,25 @@
       "provider": "文档解析服务",
       "consumer": "API服务"
     }
+  ],
+  "decisions": [
+    {
+      "name": "文档 IR 使用稳定元素 ID",
+      "rationale": "支持证据回溯",
+      "alternatives": []
+    },
+    {
+      "name": "抽取结果统一映射到结构化对象",
+      "rationale": "便于跨文档分析与展示",
+      "alternatives": []
+    },
+    {
+      "name": "解析失败保留错误信息",
+      "rationale": "避免覆盖原始文档记录",
+      "alternatives": []
+    }
+  ],
+  "ignored_slots": [
+    "entities"
   ]
 }

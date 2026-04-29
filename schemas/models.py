@@ -1,9 +1,9 @@
 """
 ORM records and Pydantic models for DocStruct's extraction pipeline.
 
-The output contract is centered on five software-engineering object slots and
-evidence bindings. Source traceability is expressed through `evidence_element_ids`
-for source grounding.
+The output contract is centered on doc-type-specific typed schemas and evidence
+bindings. Source traceability is expressed through `evidence_element_ids` for
+source grounding.
 """
 
 from __future__ import annotations
@@ -380,52 +380,6 @@ class ArtifactItem(BaseNode):
 
 
 # =========================
-# Legacy Unified Object Slots (kept for backward compatibility)
-# =========================
-
-
-class ExtractedObjectSet(BaseModel):
-    entities: list[EntityItem] = Field(
-        default_factory=list,
-        description=(
-            "具备自主行为或持续状态的系统组件——参与者/角色（actor）、系统/服务（system）、"
-            "持久数据存储（data）。判断标准：该对象是否是独立参与者、有明确职责或数据？"
-            "排除：临时数据结构、文档元信息角色、内部分解模块。"
-        ),
-    )
-    processes: list[ProcessItem] = Field(
-        default_factory=list,
-        description=(
-            "包含多个有序步骤的操作序列。判断标准：原文是否描述了 A→B→C 的步骤顺序？"
-            "单个操作或 API 调用不是流程。"
-        ),
-    )
-    requirements: list[RequirementItem] = Field(
-        default_factory=list,
-        description=(
-            "文档中作为独立规格单元呈现的需求或约束。"
-            "保持原文粒度——同一编号/标题下的多个指标属于一个需求。"
-            "API 端点（属于 interfaces）和测试用例步骤（属于 artifacts/processes）不属于此槽。"
-        ),
-    )
-    interfaces: list[InterfaceItem] = Field(
-        default_factory=list,
-        description=(
-            "同时具备 (a) 明确交互协议 和 (b) 入口标识的系统边界入口——"
-            "HTTP API、RPC 方法、消息通道、数据库连接、文件交换路径。"
-            "仅有名称无交互细节的不属于此槽。"
-        ),
-    )
-    artifacts: list[ArtifactItem] = Field(
-        default_factory=list,
-        description=(
-            "无法归入上述四槽的高价值文档产物——测试用例、设计决策、问题记录、独立表格。"
-            "仅当不满足其他四槽判断标准时才归入此槽。"
-        ),
-    )
-
-
-# =========================
 # Doc-Type-Specific Item Types
 # =========================
 
@@ -545,28 +499,28 @@ class EnvItem(BaseNode):
 
 
 class SrsExtraction(BaseModel):
-    entities: list[EntityItem] = Field(default_factory=list, description="系统组件、角色、数据对象")
+    entities: list[EntityItem] = Field(
+        default_factory=list,
+        description="系统组件、角色、数据对象。外部系统（如企业微信、GitLab）即使同时作为接口提供方，也应归入此槽而非 interfaces。"
+    )
     functional_requirements: list[FunctionalReqItem] = Field(default_factory=list, description="功能需求")
     non_functional_requirements: list[NonFunctionalReqItem] = Field(default_factory=list, description="非功能需求")
     interfaces: list[InterfaceItem] = Field(default_factory=list, description="系统接口")
 
 
 class ApiExtraction(BaseModel):
-    entities: list[EntityItem] = Field(default_factory=list, description="系统组件、角色")
     endpoints: list[EndpointItem] = Field(default_factory=list, description="API 端点")
     schemas: list[SchemaItem] = Field(default_factory=list, description="数据模型定义")
-    auth: list[AuthItem] = Field(default_factory=list, description="认证方式")
+    auth: list[AuthItem] = Field(default_factory=list, description="API 认证机制类型（如 Bearer Token、OAuth 2.0、API Key），而非获取令牌的具体端点")
 
 
 class DesignExtraction(BaseModel):
-    entities: list[EntityItem] = Field(default_factory=list, description="系统组件、模块")
     modules: list[ModuleItem] = Field(default_factory=list, description="系统模块")
     interfaces: list[InterfaceItem] = Field(default_factory=list, description="模块间接口")
     decisions: list[DecisionItem] = Field(default_factory=list, description="架构决策")
 
 
 class TestExtraction(BaseModel):
-    entities: list[EntityItem] = Field(default_factory=list, description="被测系统、外部依赖")
     test_cases: list[TestCaseItem] = Field(default_factory=list, description="测试用例")
     test_steps: list[TestStepItem] = Field(default_factory=list, description="测试步骤")
     defects: list[DefectItem] = Field(default_factory=list, description="缺陷记录")
@@ -624,56 +578,6 @@ class BaseExtractedDocument(BaseModel):
         default_factory=dict,
         description="少量高价值文档级元数据；仅保存无法归入声明字段但有检索、展示或追溯价值的原文属性",
     )
-
-
-# =========================
-# Legacy Document Models (5-slot, backward compatible)
-# =========================
-
-
-class StructuredDocument(ExtractedObjectSet, BaseExtractedDocument):
-    evidence: list[Evidence] = Field(default_factory=list, description="后端生成的证据绑定；抽取时不要编造")
-
-
-class SrsDocument(StructuredDocument):
-    doc_type: Literal["srs"] = Field(default="srs")
-
-
-class ApiDocument(StructuredDocument):
-    doc_type: Literal["api"] = Field(default="api")
-    base_url: Optional[str] = None
-
-
-class DesignDocument(StructuredDocument):
-    doc_type: Literal["design"] = Field(default="design")
-
-
-class TestDocument(StructuredDocument):
-    doc_type: Literal["test"] = Field(default="test")
-    test_stage: Optional[TestStage] = Field(None, description="测试阶段：测试计划用 plan；测试用例用 case；测试报告用 report")
-
-
-class ManualDocument(StructuredDocument):
-    doc_type: Literal["manual"] = Field(default="manual")
-
-
-class IssueDocument(StructuredDocument):
-    doc_type: Literal["issue"] = Field(default="issue")
-
-
-ExtractedDocument = Union[
-    SrsDocument,
-    ApiDocument,
-    DesignDocument,
-    TestDocument,
-    ManualDocument,
-    IssueDocument,
-]
-
-
-# =========================
-# Typed Document Models (doc-type-specific, new)
-# =========================
 
 
 class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):

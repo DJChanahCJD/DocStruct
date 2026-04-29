@@ -15,18 +15,16 @@ from core.constants import (
     PHASE0_SYSTEM_PROMPT,
     PHASE0_USER_PROMPT_TEMPLATE,
     SYSTEM_PROMPT,
-    TYPED_EXTRACT_PROMPT_TEMPLATE,
 )
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
-from core.reducer import OBJECT_SLOTS, discover_slots, reduce_extraction_results
+from core.reducer import discover_slots, reduce_extraction_results
 from core.schema_registry import normalize_doc_type
 from core.utils import clean_and_parse_json, normalize_extracted_data
 from schemas.models import (
     DocType,
     DocumentChunk,
     DocumentIR,
-    ExtractedObjectSet,
     ExtractionContract,
     Phase0Result,
 )
@@ -95,8 +93,9 @@ def run_phase0_prescan(
 
 def build_extraction_contract(
     doc_type: str | DocType | None,
-    response_model: type[BaseModel] | None = None,
+    response_model: type[BaseModel],
 ) -> ExtractionContract:
+    """根据 typed response model 构造当前文档的抽取契约。"""
     normalized = normalize_doc_type(doc_type)
     common_rules = [
         "只抽取当前输入中明确出现的对象。不要编造或推断原文没有的内容。",
@@ -106,10 +105,7 @@ def build_extraction_contract(
         "每个字段名即为该字段的语义含义，请按字段名自然理解其用途。",
         "只返回目标对象槽位；未出现的对象槽返回空列表。",
     ]
-    if response_model:
-        target_slots = discover_slots(response_model)
-    else:
-        target_slots = list(OBJECT_SLOTS)
+    target_slots = discover_slots(response_model)
     return ExtractionContract(
         doc_type=normalized,
         target_slots=target_slots,
@@ -213,7 +209,7 @@ async def _extract_chunk(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     phase0: Phase0Result | None = None,
-    response_model: type[BaseModel] = ExtractedObjectSet,
+    response_model: type[BaseModel],
     prompt_template: str | None = None,
     model_name: str | None = None,
 ) -> dict[str, object]:
@@ -274,11 +270,7 @@ async def extract_structure_with_meta(
         logger.info("Phase 0 result: doc_type=%s confidence=%.2f entities=%s",
                      phase0.doc_type.value, phase0.doc_type_confidence, phase0.key_entities)
 
-    # Use typed extraction model when feature flag is on
-    if get_settings().use_typed_schema:
-        chunk_model = _typed_extraction_model(response_model)
-    else:
-        chunk_model = ExtractedObjectSet
+    chunk_model = _typed_extraction_model(response_model)
 
     # Unified chunk path — small docs = 1 chunk
     chunk_max = settings.extraction_chunk_max_chars
@@ -383,7 +375,7 @@ async def extract_structure_with_meta(
         "partial": failed_chunks > 0 or finalizer_failed,
         "finalizer_failed": finalizer_failed,
         "phase0_enabled": get_settings().phase0_enabled,
-        "typed_schema": get_settings().use_typed_schema,
+        "typed_schema": True,
         "element_count": len(ir.elements),
         "section_count": len(ir.outline.sections),
         **evidence_meta,
@@ -476,7 +468,9 @@ def _typed_extraction_model(response_model: type[BaseModel]) -> type[BaseModel]:
         ManualExtractedDocument: ManualExtraction,
         IssueExtractedDocument: IssueExtraction,
     }
-    return mapping.get(response_model, ExtractedObjectSet)
+    if response_model not in mapping:
+        raise ValueError(f"不支持的 typed response model: {response_model.__name__}")
+    return mapping[response_model]
 
 
 def _render_phase0_context(phase0: Phase0Result) -> str:

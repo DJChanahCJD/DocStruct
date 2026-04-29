@@ -18,6 +18,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 from datetime import datetime
 from typing import Any
@@ -31,9 +32,6 @@ DEFAULT_CACHE_DIR = os.path.join(PROJECT_ROOT, "experiments", "results", "cached
 DEFAULT_OUTPUT_DIR = os.path.join(
     PROJECT_ROOT, "experiments", "results", datetime.now().strftime("%Y%m%d_%H%M%S")
 )
-
-# Legacy slots for backward compatibility
-SLOTS = ("entities", "requirements", "interfaces")
 
 # Fuzzy type similarity weights for common confusions
 _TYPE_SIMILARITY = {
@@ -55,11 +53,8 @@ def _discover_slots(gt: dict[str, Any], pred: dict[str, Any]) -> list[str]:
     candidate_slots: set[str] = set()
     for source in (gt, pred):
         for key, value in source.items():
-            if isinstance(value, list) and key not in ("evidence", "extra", "matched_pairs"):
+            if isinstance(value, list) and key not in ("evidence", "extra", "matched_pairs", "ignored_slots"):
                 candidate_slots.add(key)
-    # Ensure legacy slots are included for backward compat
-    candidate_slots.update(SLOTS)
-    # Sort for determinism
     return sorted(candidate_slots)
 
 
@@ -130,9 +125,16 @@ def _word_bigrams(text: str) -> set[str]:
     return bigrams
 
 
+def _normalize_text(text: str) -> str:
+    """归一化名称文本，降低空格、括号和大小写差异对匹配的影响。"""
+    normalized = str(text or "").strip().lower()
+    normalized = normalized.replace("（", "(").replace("）", ")")
+    normalized = re.sub(r"\s+", "", normalized)
+    return normalized
+
+
 def _clean_name(name: str) -> str:
     """去除名称尾部的编号后缀，如"用户注册（SRS-USER-001）"→"用户注册"。"""
-    import re
     cleaned = re.sub(r"\s*[（(][A-Za-z0-9\-_]+[）)]\s*$", "", name.strip())
     return cleaned.strip()
 
@@ -156,6 +158,31 @@ def _get_type(item: dict[str, Any], type_field: str) -> str:
     return str(item.get(type_field) or "").strip().lower()
 
 
+def _candidate_texts(item: dict[str, Any], slot: str) -> list[str]:
+    """返回 typed 槽位用于名称相似度匹配的候选文本。"""
+    values: list[str] = []
+    for field in ("name", "summary"):
+        value = item.get(field)
+        if value:
+            values.append(str(value))
+    if slot in ("test_steps", "reproduction_steps"):
+        for field in ("action", "expected", "actual"):
+            value = item.get(field)
+            if value:
+                values.append(str(value))
+    if slot == "non_functional_requirements":
+        for field in ("description", "category"):
+            value = item.get(field)
+            if value:
+                values.append(str(value))
+    if slot == "auth":
+        for field in ("auth_type", "description"):
+            value = item.get(field)
+            if value:
+                values.append(str(value))
+    return values or [_get_raw_name(item)]
+
+
 def _type_similarity(pred_type: str, gt_type: str) -> float:
     """类型字段模糊匹配权重。精确匹配=1.0，已知混淆=0.5-0.7，不匹配=0。"""
     if pred_type == gt_type:
@@ -163,11 +190,67 @@ def _type_similarity(pred_type: str, gt_type: str) -> float:
     return _TYPE_SIMILARITY.get((pred_type, gt_type), 0.0)
 
 
+def _field_exact_score(pred: dict[str, Any], gt: dict[str, Any], fields: tuple[str, ...]) -> float:
+    """按一组字段做严格归一化匹配，全部相等则返回高置信度。"""
+    for field in fields:
+        pred_value = _normalize_text(pred.get(field, ""))
+        gt_value = _normalize_text(gt.get(field, ""))
+        if not pred_value or not gt_value or pred_value != gt_value:
+            return 0.0
+    return 1.0
+
+
+def _name_similarity(pred: dict[str, Any], gt: dict[str, Any], slot: str) -> float:
+    """计算两个对象在当前槽位下的最佳文本相似度。"""
+    best = 0.0
+    for pred_text in _candidate_texts(pred, slot):
+        for gt_text in _candidate_texts(gt, slot):
+            pred_clean = _clean_name(pred_text)
+            gt_clean = _clean_name(gt_text)
+            pred_norm = _normalize_text(pred_clean)
+            gt_norm = _normalize_text(gt_clean)
+            if pred_norm and gt_norm and pred_norm == gt_norm:
+                best = max(best, 1.0)
+                continue
+            if _is_substring_match(pred_norm, gt_norm):
+                best = max(best, 0.95)
+                continue
+            best = max(best, word_bigram_jaccard(pred_clean, gt_clean))
+    return best
+
+
+def _slot_similarity(pred: dict[str, Any], gt: dict[str, Any], slot: str, type_field: str) -> float:
+    """按 typed slot 语义计算对象匹配分数。"""
+    if slot == "endpoints":
+        score = _field_exact_score(pred, gt, ("http_method", "path"))
+        if score:
+            return score
+    if slot == "interfaces":
+        score = _field_exact_score(pred, gt, ("interface_type", "http_method", "endpoint"))
+        if score:
+            return score
+        score = _field_exact_score(pred, gt, ("interface_type", "endpoint"))
+        if score:
+            return score
+    if slot == "auth":
+        score = _field_exact_score(pred, gt, ("auth_type",))
+        if score:
+            return score
+
+    pred_type = _get_type(pred, type_field)
+    gt_type = _get_type(gt, type_field)
+    type_weight = _type_similarity(pred_type, gt_type) if type_field and (pred_type or gt_type) else 1.0
+    if type_weight == 0.0:
+        return 0.0
+    return _name_similarity(pred, gt, slot) * type_weight
+
+
 def match_objects(
     preds: list[dict[str, Any]],
     gts: list[dict[str, Any]],
     type_field: str,
-    threshold: float = 0.5,
+    slot: str = "",
+    threshold: float = 0.3,
 ) -> tuple[int, int, int, list[dict[str, Any]]]:
     """贪心匹配：子串包含 > 词级 bigram Jaccard，支持类型模糊匹配。"""
     matched_pairs: list[dict[str, Any]] = []
@@ -176,27 +259,8 @@ def match_objects(
 
     candidates: list[tuple[float, int, int]] = []
     for pi, pred in enumerate(preds):
-        pred_clean = _get_name(pred)
-        pred_raw = _get_raw_name(pred)
-        pred_type = _get_type(pred, type_field)
         for gi, gt in enumerate(gts):
-            gt_clean = _get_name(gt)
-            gt_raw = _get_raw_name(gt)
-            gt_type = _get_type(gt, type_field)
-
-            # Type matching: exact=1.0, fuzzy=0.5-0.7, mismatch=0
-            type_weight = _type_similarity(pred_type, gt_type) if type_field else 1.0
-            if type_weight == 0.0:
-                continue
-
-            # Substring match → high score, adjusted by type weight
-            if _is_substring_match(pred_clean, gt_clean) or _is_substring_match(pred_raw, gt_raw):
-                candidates.append((0.95 * type_weight, pi, gi))
-                continue
-
-            # Word bigram Jaccard
-            sim = word_bigram_jaccard(pred_clean, gt_clean)
-            sim *= type_weight
+            sim = _slot_similarity(pred, gt, slot, type_field)
             if sim >= threshold:
                 candidates.append((sim, pi, gi))
 
@@ -218,6 +282,32 @@ def match_objects(
     return tp, fp, fn, matched_pairs
 
 
+def _item_label(item: dict[str, Any]) -> str:
+    """生成报告中展示对象的稳定短标签。"""
+    for field in ("name", "summary", "path", "action", "description"):
+        value = item.get(field)
+        if value:
+            return str(value)
+    return json.dumps(item, ensure_ascii=False)[:80]
+
+
+def _diagnose_unmatched(
+    preds: list[dict[str, Any]],
+    gts: list[dict[str, Any]],
+    pairs: list[dict[str, Any]],
+    limit: int = 5,
+) -> dict[str, list[str]]:
+    """列出少量未匹配对象，辅助判断 FP/FN 来源。"""
+    matched_pred = {pair["pred_name"] for pair in pairs}
+    matched_gt = {pair["gt_name"] for pair in pairs}
+    false_positives = [_item_label(item) for item in preds if _get_raw_name(item) not in matched_pred]
+    false_negatives = [_item_label(item) for item in gts if _get_raw_name(item) not in matched_gt]
+    return {
+        "false_positive_examples": false_positives[:limit],
+        "false_negative_examples": false_negatives[:limit],
+    }
+
+
 # ── metrics ───────────────────────────────────────────────────
 
 
@@ -233,11 +323,29 @@ def evaluate_slot(
     gt: dict[str, Any],
     slot: str,
 ) -> dict[str, Any]:
+    """评估单个 typed slot，支持显式忽略未标注槽位。"""
     pred_items = pred.get(slot) or []
     gt_items = gt.get(slot) or []
+    ignored_slots = set(gt.get("ignored_slots") or [])
+    if slot in ignored_slots:
+        return {
+            "slot": slot,
+            "gt_count": len(gt_items),
+            "pred_count": len(pred_items),
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            **compute_f1(0, 0, 0),
+            "ignored": True,
+            "ignore_reason": "marked in ground_truth.ignored_slots",
+            "matched_pairs": [],
+            "false_positive_examples": [],
+            "false_negative_examples": [],
+        }
     type_field = _guess_type_field(slot, gt_items or pred_items)
-    tp, fp, fn, pairs = match_objects(pred_items, gt_items, type_field)
+    tp, fp, fn, pairs = match_objects(pred_items, gt_items, type_field, slot=slot)
     metrics = compute_f1(tp, fp, fn)
+    diagnostics = _diagnose_unmatched(pred_items, gt_items, pairs)
     return {
         "slot": slot,
         "gt_count": len(gt_items),
@@ -246,7 +354,9 @@ def evaluate_slot(
         "fp": fp,
         "fn": fn,
         **metrics,
+        "ignored": False,
         "matched_pairs": pairs,
+        **diagnostics,
     }
 
 
@@ -259,7 +369,7 @@ def _run_extraction(markdown: str, doc_type: Any) -> dict[str, Any]:
 
     response_model = get_response_model(doc_type)
     if response_model is None:
-        return {"doc_type": str(doc_type), "entities": [], "processes": [], "requirements": [], "interfaces": [], "artifacts": []}
+        return {"doc_type": str(doc_type)}
 
     from core.extractor import extract_structure_with_meta
 
@@ -412,13 +522,28 @@ def print_markdown_report(results: dict[str, Any]) -> None:
     print(f"\n## 按槽位\n")
     for slot in report_slots:
         print(f"\n### {slot}\n")
-        print(f"| 文档 | GT | Pred | TP | FP | FN | P | R | F1 |")
-        print(f"|---|---|---|---|---|---|---|---|---|")
+        print(f"| 文档 | GT | Pred | TP | FP | FN | P | R | F1 | 备注 |")
+        print(f"|---|---|---|---|---|---|---|---|---|---|")
         for doc in results["documents"].values():
             r = doc["slots"].get(slot)
             if r is None:
                 continue
-            print(f"| {doc['doc_id']} | {r['gt_count']} | {r['pred_count']} | {r['tp']} | {r['fp']} | {r['fn']} | {r['precision']:.3f} | {r['recall']:.3f} | {r['f1']:.3f} |")
+            note = "ignored" if r.get("ignored") else ""
+            print(f"| {doc['doc_id']} | {r['gt_count']} | {r['pred_count']} | {r['tp']} | {r['fp']} | {r['fn']} | {r['precision']:.3f} | {r['recall']:.3f} | {r['f1']:.3f} | {note} |")
+
+    print(f"\n## 诊断样例\n")
+    for doc in results["documents"].values():
+        print(f"\n### {doc['doc_id']}\n")
+        for slot, r in doc["slots"].items():
+            if r.get("ignored"):
+                print(f"- `{slot}`: ignored ({r['pred_count']} predictions)")
+                continue
+            fp_examples = r.get("false_positive_examples") or []
+            fn_examples = r.get("false_negative_examples") or []
+            if not fp_examples and not fn_examples:
+                continue
+            print(f"- `{slot}` FP: {'；'.join(fp_examples) if fp_examples else '-'}")
+            print(f"- `{slot}` FN: {'；'.join(fn_examples) if fn_examples else '-'}")
 
 
 def save_report(results: dict[str, Any], output_dir: str) -> str:

@@ -19,56 +19,307 @@
       "entity_type": "system"
     }
   ],
-  "requirements": [
+  "test_cases": [
     {
-      "name": "用户注册功能（TC-USER-001）",
-      "requirement_type": "functional",
-      "points": ["手机号注册", "短信验证码验证", "密码设置8-20位含字母数字"],
-      "criteria": ["注册成功跳转提示页", "发送欢迎短信", "数据库新增已激活用户记录", "可用手机号密码登录"]
+      "name": "验证用户使用有效手机号成功注册（TC-USER-001）",
+      "precondition": "用户未注册过账号；测试环境可正常访问；短信验证码服务可用",
+      "expected_result": "页面成功跳转到注册成功提示页；系统自动发送欢迎短信；数据库中新增一条用户记录状态为已激活；用户可使用该手机号和密码正常登录"
     },
     {
-      "name": "用户登录功能（TC-USER-002）",
-      "requirement_type": "functional",
-      "points": ["手机号+密码登录"],
-      "criteria": ["跳转首页", "显示用户昵称", "生成有效Token", "记录登录日志"]
+      "name": "验证已注册用户通过手机号密码登录（TC-USER-002）",
+      "precondition": "用户已注册且账号状态正常；已知正确的手机号和密码",
+      "expected_result": "页面跳转到系统首页；页面右上角显示用户昵称；本地存储生成有效的登录Token；记录登录日志"
     },
     {
-      "name": "商品搜索功能（TC-PROD-001）",
-      "requirement_type": "functional",
-      "points": ["关键词搜索商品"],
-      "criteria": ["显示搜索结果列表", "相关度排序", "显示结果总数", "支持分页"]
+      "name": "验证通过关键词搜索商品返回正确结果（TC-PROD-001）",
+      "precondition": "系统中存在商品数据；存在商品名称为iPhone 15 Pro的商品",
+      "expected_result": "页面显示搜索结果列表；结果中包含iPhone 15 Pro等相关商品；搜索结果按相关度排序；页面显示搜索结果总数；支持分页展示"
     },
     {
-      "name": "添加商品到购物车（TC-CART-001）",
-      "requirement_type": "functional",
-      "points": ["选择规格", "设置数量", "加入购物车"],
-      "criteria": ["显示成功提示", "购物车图标更新", "商品信息正确", "小计金额正确"]
+      "name": "验证用户可将商品加入购物车（TC-CART-001）",
+      "precondition": "用户已登录；目标商品库存充足",
+      "expected_result": "页面显示已成功加入购物车提示；购物车图标右上角数字增加2；购物车页面显示该商品信息；购物车小计金额计算正确"
     },
     {
-      "name": "创建订单（TC-ORDER-001）",
-      "requirement_type": "functional",
-      "points": ["购物车结算", "确认收货地址", "选择配送方式", "提交订单"],
-      "criteria": ["生成订单号", "状态待支付", "库存预占", "购物车清除"]
+      "name": "验证用户可从购物车创建订单（TC-ORDER-001）",
+      "precondition": "用户已登录；购物车中存在商品；用户已设置默认收货地址",
+      "expected_result": "页面跳转到订单确认页；显示订单号；订单状态为待支付；库存相应扣减预占库存；购物车中对应商品被清除"
     },
     {
-      "name": "订单支付（TC-PAY-001）",
-      "requirement_type": "functional",
-      "points": ["选择支付宝支付", "确认支付"],
-      "criteria": ["支付成功", "订单状态已支付", "生成支付记录", "通知用户和商家"]
+      "name": "验证用户可完成订单支付（TC-PAY-001）",
+      "precondition": "存在待支付的订单；用户余额充足或已绑定支付方式",
+      "expected_result": "页面显示支付成功；订单状态更新为已支付；支付记录生成；用户收到支付成功通知；商家端收到新订单提醒"
+    },
+    {
+      "name": "验证连续输入错误密码后账号锁定（TC-USER-003）",
+      "precondition": "用户已注册且账号状态正常；已知正确的手机号",
+      "expected_result": "前5次提示密码错误还剩X次机会；第6次提示账号已锁定请15分钟后重试；账号状态变为临时锁定；15分钟内无法通过正确密码登录；15分钟后自动解锁"
+    },
+    {
+      "name": "验证商品库存不足时的处理（TC-PROD-002）",
+      "precondition": "目标商品库存为1",
+      "expected_result": "用户B进入商品详情页时显示库存紧张；用户B尝试加入购物车时提示库存不足；用户A取消订单后库存释放；库存释放后用户B可正常购买"
+    },
+    {
+      "name": "验证订单可使用符合条件的优惠券（TC-PROMO-001）",
+      "precondition": "用户持有有效的优惠券满100减20；购物车商品总金额>=100元",
+      "expected_result": "优惠券列表显示可用优惠券；选择优惠券后订单金额显示为100元；优惠券状态变为已使用；订单详情显示使用的优惠券信息"
+    },
+    {
+      "name": "验证用户可取消待支付订单（TC-ORDER-002）",
+      "precondition": "存在状态为待支付的订单",
+      "expected_result": "弹出确认对话框；取消成功后订单状态变为已取消；预占的库存被释放；使用的优惠券退回；订单列表显示该订单为已取消状态"
     }
   ],
-  "interfaces": [
+  "test_steps": [
     {
-      "name": "支付宝支付接口",
-      "interface_type": "http",
-      "provider": "支付宝",
-      "consumer": "电商平台"
+      "name": "打开注册页面",
+      "action": "打开注册页面",
+      "expected": ""
     },
     {
-      "name": "短信验证码接口",
-      "interface_type": "http",
-      "provider": "短信验证码服务",
-      "consumer": "电商平台"
+      "name": "输入未注册的手机号",
+      "action": "输入未注册的手机号（如：13800138001）",
+      "expected": ""
+    },
+    {
+      "name": "点击获取验证码按钮",
+      "action": "点击获取验证码按钮",
+      "expected": ""
+    },
+    {
+      "name": "等待接收短信验证码",
+      "action": "等待接收短信验证码",
+      "expected": ""
+    },
+    {
+      "name": "输入正确的6位验证码",
+      "action": "输入正确的6位验证码",
+      "expected": ""
+    },
+    {
+      "name": "设置密码8-20位包含字母和数字",
+      "action": "设置密码（8-20位，包含字母和数字）",
+      "expected": ""
+    },
+    {
+      "name": "勾选用户协议",
+      "action": "勾选用户协议",
+      "expected": ""
+    },
+    {
+      "name": "点击注册按钮",
+      "action": "点击注册按钮",
+      "expected": ""
+    },
+    {
+      "name": "打开登录页面",
+      "action": "打开登录页面",
+      "expected": ""
+    },
+    {
+      "name": "输入已注册的手机号",
+      "action": "输入已注册的手机号",
+      "expected": ""
+    },
+    {
+      "name": "输入正确的密码",
+      "action": "输入正确的密码",
+      "expected": ""
+    },
+    {
+      "name": "点击登录按钮",
+      "action": "点击登录按钮",
+      "expected": ""
+    },
+    {
+      "name": "进入首页",
+      "action": "进入首页",
+      "expected": ""
+    },
+    {
+      "name": "在搜索框中输入iPhone",
+      "action": "在搜索框中输入iPhone",
+      "expected": ""
+    },
+    {
+      "name": "点击搜索按钮或按回车键",
+      "action": "点击搜索按钮或按回车键",
+      "expected": ""
+    },
+    {
+      "name": "浏览商品列表选择一个商品进入详情页",
+      "action": "浏览商品列表，选择一个商品进入详情页",
+      "expected": ""
+    },
+    {
+      "name": "选择商品规格",
+      "action": "选择商品规格（如：颜色-黑色，内存-256GB）",
+      "expected": ""
+    },
+    {
+      "name": "设置购买数量为2",
+      "action": "设置购买数量为 2",
+      "expected": ""
+    },
+    {
+      "name": "点击加入购物车按钮",
+      "action": "点击加入购物车按钮",
+      "expected": ""
+    },
+    {
+      "name": "进入购物车页面",
+      "action": "进入购物车页面",
+      "expected": ""
+    },
+    {
+      "name": "勾选要购买的商品",
+      "action": "勾选要购买的商品",
+      "expected": ""
+    },
+    {
+      "name": "点击去结算按钮",
+      "action": "点击去结算按钮",
+      "expected": ""
+    },
+    {
+      "name": "确认收货地址",
+      "action": "确认收货地址",
+      "expected": ""
+    },
+    {
+      "name": "选择配送方式",
+      "action": "选择配送方式（普通快递）",
+      "expected": ""
+    },
+    {
+      "name": "确认订单金额",
+      "action": "确认订单金额",
+      "expected": ""
+    },
+    {
+      "name": "点击提交订单按钮",
+      "action": "点击提交订单按钮",
+      "expected": ""
+    },
+    {
+      "name": "进入订单详情页或订单列表",
+      "action": "进入订单详情页或订单列表",
+      "expected": ""
+    },
+    {
+      "name": "点击立即支付按钮",
+      "action": "点击立即支付按钮",
+      "expected": ""
+    },
+    {
+      "name": "选择支付方式支付宝",
+      "action": "选择支付方式（支付宝）",
+      "expected": ""
+    },
+    {
+      "name": "点击确认支付",
+      "action": "点击确认支付",
+      "expected": ""
+    },
+    {
+      "name": "在支付页面完成支付操作",
+      "action": "在支付页面完成支付操作",
+      "expected": ""
+    },
+    {
+      "name": "打开登录页面",
+      "action": "打开登录页面",
+      "expected": ""
+    },
+    {
+      "name": "输入正确的手机号",
+      "action": "输入正确的手机号",
+      "expected": ""
+    },
+    {
+      "name": "连续5次输入错误的密码",
+      "action": "连续5次输入错误的密码",
+      "expected": ""
+    },
+    {
+      "name": "第6次输入正确的密码",
+      "action": "第6次输入正确的密码",
+      "expected": ""
+    },
+    {
+      "name": "用户A将商品加入购物车数量1",
+      "action": "用户A将该商品加入购物车（数量1）",
+      "expected": ""
+    },
+    {
+      "name": "用户A提交订单未支付",
+      "action": "用户A提交订单（未支付）",
+      "expected": ""
+    },
+    {
+      "name": "用户B尝试购买该商品",
+      "action": "用户B尝试购买该商品",
+      "expected": ""
+    },
+    {
+      "name": "进入购物车选择商品",
+      "action": "进入购物车，选择商品（金额120元）",
+      "expected": ""
+    },
+    {
+      "name": "点击去结算",
+      "action": "点击去结算",
+      "expected": ""
+    },
+    {
+      "name": "点击选择优惠券",
+      "action": "在优惠券区域点击选择优惠券",
+      "expected": ""
+    },
+    {
+      "name": "选择满100减20优惠券",
+      "action": "选择满100减20的优惠券",
+      "expected": ""
+    },
+    {
+      "name": "查看订单金额变化",
+      "action": "查看订单金额变化",
+      "expected": ""
+    },
+    {
+      "name": "提交订单",
+      "action": "提交订单",
+      "expected": ""
+    },
+    {
+      "name": "进入我的订单页面",
+      "action": "进入我的订单页面",
+      "expected": ""
+    },
+    {
+      "name": "找到待支付的订单",
+      "action": "找到待支付的订单",
+      "expected": ""
+    },
+    {
+      "name": "点击取消订单按钮",
+      "action": "点击取消订单按钮",
+      "expected": ""
+    },
+    {
+      "name": "选择取消原因",
+      "action": "选择取消原因（不想买了）",
+      "expected": ""
+    },
+    {
+      "name": "点击确认取消",
+      "action": "点击确认取消",
+      "expected": ""
     }
+  ],
+  "defects": [],
+  "ignored_slots": [
+    "entities"
   ]
 }

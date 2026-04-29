@@ -3,16 +3,6 @@ interface SlotConfig {
   label: string;
 }
 
-// Legacy five-slot config (backward compatible)
-export const LEGACY_SLOT_CONFIGS: SlotConfig[] = [
-  { key: "entities", label: "实体" },
-  { key: "processes", label: "流程" },
-  { key: "requirements", label: "需求" },
-  { key: "interfaces", label: "接口" },
-  { key: "artifacts", label: "产物" },
-];
-
-// Doc-type-specific slot configs
 const DOC_TYPE_SLOT_CONFIGS: Record<string, SlotConfig[]> = {
   srs: [
     { key: "entities", label: "实体" },
@@ -52,9 +42,6 @@ const DOC_TYPE_SLOT_CONFIGS: Record<string, SlotConfig[]> = {
   ],
 };
 
-// Active config — remains legacy for backward compat
-export const EXTRACTION_SLOT_CONFIGS = LEGACY_SLOT_CONFIGS;
-
 export type ExtractionSlotKey = string;
 
 export interface ExtractionEvidence {
@@ -82,7 +69,7 @@ export function getSlotConfigs(docType: string | null | undefined): SlotConfig[]
   if (docType && DOC_TYPE_SLOT_CONFIGS[docType]) {
     return DOC_TYPE_SLOT_CONFIGS[docType];
   }
-  return LEGACY_SLOT_CONFIGS;
+  return [];
 }
 
 /**
@@ -98,7 +85,7 @@ function discoverSlotConfigs(data: Record<string, unknown>): SlotConfig[] {
       configs.push({ key, label: key });
     }
   }
-  return configs.length > 0 ? configs : LEGACY_SLOT_CONFIGS;
+  return configs;
 }
 
 /**
@@ -115,8 +102,9 @@ export function buildExtractionItems(
   const evidenceByObjectId = buildEvidenceMap(extractedData);
   const items: ExtractionItem[] = [];
 
-  const slotConfigs = docType
-    ? getSlotConfigs(docType)
+  const configuredSlots = getSlotConfigs(docType);
+  const slotConfigs = configuredSlots.length > 0
+    ? configuredSlots
     : discoverSlotConfigs(extractedData);
 
   for (const slotConfig of slotConfigs) {

@@ -11,6 +11,7 @@ from core.chunker import split_ir_into_chunks
 from core.document_service import process_document_record, process_uploaded_file, retry_extraction
 from core.extractor import build_extraction_contract
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
+from core.schema_registry import get_response_model
 from schemas.dto import (
     DocumentChunkDebugDTO,
     DocumentChunksResponse,
@@ -147,7 +148,10 @@ async def get_document_file(doc_id: int) -> FileResponse:
 def build_document_chunks_response(doc: DocumentRecord) -> DocumentChunksResponse:
     """基于文档当前 IR 或 Markdown 即时生成分块调试响应。"""
     document_ir = _prepare_debug_document_ir(doc)
-    contract = build_extraction_contract(doc.doc_type)
+    response_model = get_response_model(doc.doc_type)
+    if response_model is None:
+        raise ValueError(f"不支持的文档类型: {doc.doc_type}")
+    contract = build_extraction_contract(doc.doc_type, response_model)
     chunks = split_ir_into_chunks(
         document_ir,
         max_chars=settings.extraction_chunk_max_chars,

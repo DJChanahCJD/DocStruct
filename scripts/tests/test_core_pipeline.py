@@ -12,7 +12,7 @@ from core.reducer import reduce_extraction_results
 from schemas.models import (
     ArtifactItem,
     ArtifactType,
-    DesignDocument,
+    DesignExtractedDocument,
     DocType,
     EntityItem,
     EntityType,
@@ -21,7 +21,7 @@ from schemas.models import (
     InterfaceItem,
     RequirementItem,
     RequirementType,
-    SrsDocument,
+    SrsExtractedDocument,
 )
 
 
@@ -157,13 +157,13 @@ class CorePipelineTests(unittest.TestCase):
             doc_type="srs",
             title=document_ir.title,
             document_ir=document_ir,
+            response_model=SrsExtractedDocument,
             chunk_results=[
                 {
-                    "requirements": [
+                    "functional_requirements": [
                         {
                             "id": "SRS-USER-001",
                             "name": "用户注册",
-                            "requirement_type": "functional",
                             "points": ["系统应支持邮箱注册。"],
                             "evidence_element_ids": ["el-0002", "missing"],
                         },
@@ -178,9 +178,9 @@ class CorePipelineTests(unittest.TestCase):
             ],
         )
 
-        requirement = reduced["requirements"][0]
-        self.assertEqual(len(reduced["requirements"]), 1)
-        self.assertEqual(requirement["id"], "REQ-001")
+        requirement = reduced["functional_requirements"][0]
+        self.assertEqual(len(reduced["functional_requirements"]), 1)
+        self.assertEqual(requirement["id"], "FREQ-001")
         self.assertEqual(requirement["evidence_element_ids"], ["el-0002", "el-0003"])
         self.assertEqual(meta["objects_with_evidence"], 1)
         self.assertEqual([entry["element_id"] for entry in reduced["evidence"]], ["el-0002", "el-0003"])
@@ -210,13 +210,13 @@ class CorePipelineTests(unittest.TestCase):
             doc_type="srs",
             title=document_ir.title,
             document_ir=document_ir,
+            response_model=SrsExtractedDocument,
             chunk_results=[
                 {
-                    "requirements": [
+                    "functional_requirements": [
                         {
                             "id": "SRS-USER-001",
                             "name": "用户注册",
-                            "requirement_type": "functional",
                             "points": ["系统应支持邮箱注册。"],
                             "evidence_element_ids": valid_ids + ["missing"],
                         }
@@ -225,7 +225,7 @@ class CorePipelineTests(unittest.TestCase):
             ],
         )
 
-        requirement = reduced["requirements"][0]
+        requirement = reduced["functional_requirements"][0]
         self.assertGreater(len(valid_ids), 5)
         self.assertEqual(requirement["evidence_element_ids"], valid_ids)
         self.assertEqual(meta["evidence_count"], len(valid_ids))
@@ -247,6 +247,7 @@ POST /api/login
             doc_type="api",
             title=document_ir.title,
             document_ir=document_ir,
+            response_model=DesignExtractedDocument,
             chunk_results=[
                 {
                     "interfaces": [
@@ -290,10 +291,9 @@ POST /api/login
         document_ir = parse_result_to_ir(MarkdownNormalizer().normalize(markdown), doc_type=DocType.SRS)
 
         chunk_result = {
-            "requirements": [
+            "functional_requirements": [
                 {
                     "name": "用户注册",
-                    "requirement_type": "functional",
                     "points": ["系统应支持邮箱注册。"],
                     "evidence_element_ids": ["el-0002"],
                 }
@@ -310,15 +310,15 @@ POST /api/login
             extracted, meta = asyncio.run(
                 extract_structure_with_meta(
                     markdown,
-                    SrsDocument,
+                    SrsExtractedDocument,
                     document_ir=document_ir,
                 )
             )
 
         self.assertEqual(meta["mode"], "unified-pipeline")
         self.assertEqual(meta["chunk_count"], 1)
-        self.assertEqual(extracted.requirements[0].id, "REQ-001")
-        self.assertEqual(extracted.requirements[0].evidence_element_ids, ["el-0002"])
+        self.assertEqual(extracted.functional_requirements[0].id, "FREQ-001")
+        self.assertEqual(extracted.functional_requirements[0].evidence_element_ids, ["el-0002"])
         extract_once.assert_called_once()
 
     def test_chunk_extraction_keeps_partial_result_when_one_chunk_fails(self) -> None:
@@ -340,10 +340,9 @@ POST /api/login
             if chunk.chunk_id == "chunk-0001":
                 raise ValueError("bad json")
             return {
-                "requirements": [
+                "functional_requirements": [
                     {
                         "name": "用户登录",
-                        "requirement_type": "functional",
                         "points": ["系统应支持邮箱登录。"],
                         "evidence_element_ids": [chunk.elements[0].element_id],
                     }
@@ -356,7 +355,6 @@ POST /api/login
             extraction_max_chars=100000,
             extraction_concurrency=2,
             phase0_enabled=False,
-            use_typed_schema=False,
             phase0_max_sample_chars=6000,
         )
         with patch("core.extractor.settings", fake_settings), patch(
@@ -369,7 +367,7 @@ POST /api/login
             extracted, meta = asyncio.run(
                 extract_structure_with_meta(
                     markdown,
-                    SrsDocument,
+                    SrsExtractedDocument,
                     document_ir=document_ir,
                 )
             )
@@ -378,7 +376,7 @@ POST /api/login
         self.assertEqual(meta["failed_chunks"], 1)
         self.assertEqual(meta["failed_chunk_indexes"], [0])
         self.assertEqual(meta["failed_chunk_details"][0]["chunk_id"], "chunk-0001")
-        self.assertEqual(extracted.requirements[0].name, "用户登录")
+        self.assertEqual(extracted.functional_requirements[0].name, "用户登录")
 
     def test_chunk_extraction_falls_back_when_finalizer_fails(self) -> None:
         """Ensure valid chunk results survive a finalizer JSON failure."""
@@ -397,16 +395,14 @@ POST /api/login
         async def fake_extract_chunk(semaphore, chunk, **kwargs):
             """Return multiple requirements from one chunk."""
             return {
-                "requirements": [
+                "functional_requirements": [
                     {
                         "name": "用户注册",
-                        "requirement_type": "functional",
                         "points": ["系统应支持邮箱注册。"],
                         "evidence_element_ids": ["el-0003"],
                     },
                     {
                         "name": "用户登录",
-                        "requirement_type": "functional",
                         "points": ["系统应支持邮箱登录。"],
                         "evidence_element_ids": ["el-0005"],
                     },
@@ -426,7 +422,7 @@ POST /api/login
             extracted, meta = asyncio.run(
                 extract_structure_with_meta(
                     markdown,
-                    SrsDocument,
+                    SrsExtractedDocument,
                     document_ir=document_ir,
                 )
             )
@@ -434,7 +430,7 @@ POST /api/login
         self.assertTrue(meta["partial"])
         self.assertTrue(meta["finalizer_failed"])
         self.assertEqual(meta["failed_chunks"], 0)
-        self.assertEqual([item.name for item in extracted.requirements], ["用户注册", "用户登录"])
+        self.assertEqual([item.name for item in extracted.functional_requirements], ["用户注册", "用户登录"])
 
     def test_schema_normalizers_use_safe_defaults(self) -> None:
         """Ensure schema models normalize invalid enum values."""
@@ -465,7 +461,7 @@ POST /api/login
 
     def test_structured_document_dump_starts_with_document_fields(self) -> None:
         """Ensure extracted document JSON starts with document-level fields."""
-        document = DesignDocument(title="智能文档系统概要设计")
+        document = DesignExtractedDocument(title="智能文档系统概要设计")
 
         self.assertEqual(
             list(document.model_dump(mode="json").keys())[:5],

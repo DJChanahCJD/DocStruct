@@ -64,23 +64,22 @@ Final JSON
 | 问题单 / 缺陷单 | `issue` | 问题描述、复现流程、期望结果 |
 | 未知类型 | `unknown` | 仅保留基础元信息、原文和 IR |
 
-## 统一输出结构
+## Typed 输出结构
 
 ```python
-class StructuredDocument(BaseExtractedDocument):
+class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):
+    doc_type: Literal["srs"] = Field(default="srs")
     entities: list[EntityItem] = Field(default_factory=list)
-    processes: list[ProcessItem] = Field(default_factory=list)
-    requirements: list[RequirementItem] = Field(default_factory=list)
+    functional_requirements: list[FunctionalReqItem] = Field(default_factory=list)
+    non_functional_requirements: list[NonFunctionalReqItem] = Field(default_factory=list)
     interfaces: list[InterfaceItem] = Field(default_factory=list)
-    artifacts: list[ArtifactItem] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
 ```
 
-- 主干对象保存事实：实体、流程、需求、接口、文档产物
-- `id` 是系统生成的稳定对象 ID，例如 `REQ-001`；原文编号可作为 `name` 后缀保留，例如 `用户注册（SRS-USER-001）`
-- SRS 的验收标准不作为独立需求输出，局部验收条目写入对应需求的 `criteria`
+- 每类文档使用独立 typed schema，例如 SRS 使用 `functional_requirements` / `non_functional_requirements`，API 使用 `endpoints` / `schemas` / `auth`
+- `id` 是系统生成的稳定对象 ID，例如 `FREQ-001`；原文编号可作为 `name` 后缀保留，例如 `用户注册（SRS-USER-001）`
+- SRS 的验收标准不作为独立需求输出，局部验收条目写入对应功能需求的 `criteria`
 - `entities` 只保存产品域或架构中可独立指称的角色、模块、系统、服务、组件、数据对象，不保存需求标题
-- `requirements` 不再包含 `priority`、`category` 等容易诱导模型猜测的低置信字段
 - `interfaces` 使用受限字段表达可验证事实：`interface_type`、`http_method`、`endpoint`、`provider`、`consumer`
 - `interfaces.endpoint` 只保存明确入口标识，如 URL path、RPC 方法名、topic/queue、表名、文件路径或页面路由；没有明确值则留空
 - `interfaces.http_method` 只保存明确 HTTP 方法，泛化动作词如“调用”“访问”“请求”不进入结构字段

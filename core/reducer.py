@@ -8,10 +8,6 @@ from pydantic import BaseModel
 
 from schemas.models import BaseNode, DocumentElement, DocumentIR
 
-
-# Legacy slots for backward compatibility
-OBJECT_SLOTS = ("entities", "processes", "requirements", "interfaces", "artifacts")
-
 # Non-slot fields to exclude from dynamic discovery.
 # Keep in sync with frontend/src/lib/evidence.ts discoverSlotConfigs knownKeys.
 _NON_SLOT_FIELDS = {"doc_type", "title", "version", "extra", "evidence", "base_url", "test_stage"}
@@ -36,7 +32,7 @@ def discover_slots(model: type[BaseModel]) -> list[str]:
         if isinstance(item_type, type) and issubclass(item_type, BaseNode):
             slots.append(field_name)
     if not slots:
-        return list(OBJECT_SLOTS)  # fallback
+        raise ValueError(f"未从 response model 发现可抽取槽位: {model.__name__}")
     return slots
 
 
@@ -61,9 +57,10 @@ def reduce_extraction_results(
     title: str | None,
     chunk_results: list[dict[str, Any]],
     document_ir: DocumentIR,
-    response_model: type[BaseModel] | None = None,
+    response_model: type[BaseModel],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    slots = discover_slots(response_model) if response_model else list(OBJECT_SLOTS)
+    """合并分块抽取结果，并按 typed response model 绑定证据。"""
+    slots = discover_slots(response_model)
 
     reduced: dict[str, Any] = {
         "doc_type": doc_type,
@@ -87,10 +84,9 @@ def reduce_extraction_results(
 def bind_evidence(
     extracted_data: dict[str, Any],
     elements: list[DocumentElement],
-    slots: list[str] | None = None,
+    slots: list[str],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    if slots is None:
-        slots = list(OBJECT_SLOTS)
+    """按调用方传入的 typed slots 生成证据记录。"""
     element_map = {element.element_id: element for element in elements}
     evidence: list[dict[str, Any]] = []
     seen: set[tuple[str, str | None, str | None]] = set()

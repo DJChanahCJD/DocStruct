@@ -9,7 +9,6 @@ import {
   evidenceMatches,
   type ExtractionEvidence,
   type ExtractionItem,
-  type ExtractionSlotKey,
 } from "@/lib/evidence";
 import { cn } from "@/lib/utils";
 

@@ -1,6 +1,10 @@
 {
   "doc_type": "api",
   "title": "智能文档系统 API",
+  "ignored_slots": [
+    "entities",
+    "schemas"
+  ],
   "entities": [
     {
       "name": "智能文档系统",
@@ -11,28 +15,32 @@
       "entity_type": "actor"
     }
   ],
-  "requirements": [],
-  "interfaces": [
+  "endpoints": [
     {
       "name": "上传文档",
-      "interface_type": "http",
       "http_method": "post",
-      "endpoint": "/documents",
-      "provider": "智能文档系统"
+      "path": "/documents",
+      "summary": "上传文档"
     },
     {
       "name": "获取文档",
-      "interface_type": "http",
       "http_method": "get",
-      "endpoint": "/documents/{document_id}",
-      "provider": "智能文档系统"
+      "path": "/documents/{document_id}",
+      "summary": "获取文档"
     },
     {
       "name": "全文搜索",
-      "interface_type": "http",
       "http_method": "post",
-      "endpoint": "/search",
-      "provider": "智能文档系统"
+      "path": "/search",
+      "summary": "全文搜索"
+    }
+  ],
+  "schemas": [],
+  "auth": [
+    {
+      "name": "Bearer Token",
+      "auth_type": "Bearer",
+      "description": "通过 Authorization: Bearer token 请求头认证"
     }
   ]
 }

@@ -67,58 +67,336 @@
       "entity_type": "system"
     }
   ],
-  "requirements": [
+  "functional_requirements": [
     {
       "name": "用户注册（SRS-USER-001）",
-      "requirement_type": "functional",
-      "points": ["邮箱或手机号注册", "验证码身份验证", "密码复杂度8-20位大小写字母数字", "自动创建个人空间"],
-      "criteria": ["验证码5分钟内有效", "不可重复注册", "注册成功率>99%"]
+      "points": [
+        "邮箱或手机号注册",
+        "验证码身份验证",
+        "密码复杂度8-20位大小写字母数字",
+        "自动创建个人空间"
+      ],
+      "criteria": [
+        "验证码5分钟内有效",
+        "不可重复注册",
+        "注册成功率>99%"
+      ]
     },
     {
       "name": "用户登录（SRS-USER-002）",
-      "requirement_type": "functional",
-      "points": ["邮箱+密码或手机号+密码登录", "企业微信/钉钉扫码登录", "记住我7天免登录", "连续5次错误锁定30分钟"],
-      "criteria": ["登录响应时间<2秒", "Token有效期2小时自动续期"]
+      "points": [
+        "邮箱+密码或手机号+密码登录",
+        "企业微信/钉钉扫码登录",
+        "记住我7天免登录",
+        "连续5次错误锁定30分钟"
+      ],
+      "criteria": [
+        "登录响应时间<2秒",
+        "Token有效期2小时自动续期"
+      ]
     },
     {
       "name": "权限管理（SRS-USER-003）",
-      "requirement_type": "functional",
-      "points": ["RBAC角色预定义", "自定义角色细粒度权限", "文档级访问权限", "权限变更实时生效"],
-      "criteria": ["权限校验<100ms", "最多1000个角色"]
+      "points": [
+        "RBAC角色预定义",
+        "自定义角色细粒度权限",
+        "文档级访问权限",
+        "权限变更实时生效"
+      ],
+      "criteria": [
+        "权限校验<100ms",
+        "最多1000个角色"
+      ]
     },
     {
       "name": "文档上传（SRS-DOC-001）",
-      "requirement_type": "functional",
-      "points": ["PDF/Word/Markdown/TXT格式", "批量上传最多50文件", "拖拽和文件夹上传", "进度条显示", "病毒扫描和格式校验"],
-      "criteria": ["单文件最大100MB", "断点续传", "格式校验错误提示"]
+      "points": [
+        "PDF/Word/Markdown/TXT格式",
+        "批量上传最多50文件",
+        "拖拽和文件夹上传",
+        "进度条显示",
+        "病毒扫描和格式校验"
+      ],
+      "criteria": [
+        "单文件最大100MB",
+        "断点续传",
+        "格式校验错误提示"
+      ]
     },
     {
       "name": "文档解析（SRS-DOC-002）",
-      "requirement_type": "functional",
-      "points": ["PDF OCR文字识别", "识别文档类型", "提取文档大纲章节", "识别表格图片代码块", "提取元数据"],
-      "criteria": ["OCR准确率>95%", "类型识别准确率>90%", "50页PDF<30秒"]
+      "points": [
+        "PDF OCR文字识别",
+        "识别文档类型",
+        "提取文档大纲章节",
+        "识别表格图片代码块",
+        "提取元数据"
+      ],
+      "criteria": [
+        "OCR准确率>95%",
+        "类型识别准确率>90%",
+        "50页PDF<30秒"
+      ]
     },
     {
       "name": "文档关联分析（SRS-ANALYSIS-001）",
-      "requirement_type": "functional",
-      "points": ["识别文档引用关系", "建立需求-设计-测试追溯链", "检测文档不一致性", "生成依赖关系图谱", "变更影响分析"],
-      "criteria": ["关联识别准确率>85%", "图谱渲染<5秒"]
+      "points": [
+        "识别文档引用关系",
+        "建立需求-设计-测试追溯链",
+        "检测文档不一致性",
+        "生成依赖关系图谱",
+        "变更影响分析"
+      ],
+      "criteria": [
+        "关联识别准确率>85%",
+        "图谱渲染<5秒"
+      ]
     },
     {
       "name": "智能检索（SRS-ANALYSIS-002）",
-      "requirement_type": "functional",
-      "points": ["全文检索和语义检索", "按类型标签日期筛选", "自然语言查询", "相关度排序", "关键词高亮"],
-      "criteria": ["检索响应<2秒", "语义检索TOP10准确率>80%"]
+      "points": [
+        "全文检索和语义检索",
+        "按类型标签日期筛选",
+        "自然语言查询",
+        "相关度排序",
+        "关键词高亮"
+      ],
+      "criteria": [
+        "检索响应<2秒",
+        "语义检索TOP10准确率>80%"
+      ]
     },
     {
-      "name": "性能需求",
-      "requirement_type": "non_functional",
-      "points": ["首页加载<3秒", "搜索响应<2秒", "上传速度>5MB/s", "并发>1000", "可用性>99.9%", "数据库查询<500ms"]
+      "name": "文档版本控制（SRS-DOC-003）",
+      "points": [
+        "每次编辑自动保存为新版本",
+        "查看历史版本列表",
+        "版本对比高亮差异",
+        "回滚到任意历史版本",
+        "版本标签"
+      ],
+      "criteria": [
+        "保留最近100个历史版本",
+        "版本对比响应时间<3秒"
+      ]
     },
     {
-      "name": "安全需求",
-      "requirement_type": "non_functional",
-      "points": ["JWT+Refresh Token", "bcrypt加密+MFA", "全站HTTPS TLS1.3", "AES-256加密存储", "RBAC权限控制", "审计日志保留180天", "防SQL注入/XSS/CSRF"]
+      "name": "质量评估（SRS-ANALYSIS-003）",
+      "points": [
+        "检测文档完整性",
+        "检测文档规范性",
+        "评估文档可读性",
+        "生成质量评分和改进建议",
+        "生成质量趋势报告"
+      ],
+      "criteria": [
+        "质量评估时间<10秒/文档",
+        "评估维度不少于10个"
+      ]
+    },
+    {
+      "name": "在线评审（SRS-COLLAB-001）",
+      "points": [
+        "发起评审流程指定评审人",
+        "行级批注和评论",
+        "@提及相关人员",
+        "评审意见分类",
+        "评审状态跟踪"
+      ],
+      "criteria": [
+        "支持最多20人同时评审",
+        "批注实时同步延迟<1秒"
+      ]
+    },
+    {
+      "name": "变更通知（SRS-COLLAB-002）",
+      "points": [
+        "文档修改时通知相关人员",
+        "站内信/邮件/企业微信通知",
+        "自定义通知规则",
+        "订阅特定文档或文件夹",
+        "通知历史查询"
+      ],
+      "criteria": [
+        "通知发送延迟<5分钟",
+        "通知送达率>99%"
+      ]
+    },
+    {
+      "name": "文档统计（SRS-REPORT-001）",
+      "points": [
+        "按项目/类型/时间统计文档数量",
+        "文档质量评分分布统计",
+        "文档作者活跃度排行",
+        "文档变更频率分析",
+        "导出Excel/PDF报表"
+      ],
+      "criteria": [
+        "统计数据刷新延迟<1小时",
+        "支持最多1年数据回溯"
+      ]
+    }
+  ],
+  "non_functional_requirements": [
+    {
+      "name": "合规性约束",
+      "category": "合规",
+      "description": "需符合《网络安全法》和《数据安全法》要求，敏感数据必须加密存储"
+    },
+    {
+      "name": "兼容性约束",
+      "category": "兼容性",
+      "description": "需支持 IE11 及以上版本的浏览器基本功能访问"
+    },
+    {
+      "name": "性能约束",
+      "category": "性能",
+      "description": "单文档解析时间不超过 30 秒（100页以内 PDF）"
+    },
+    {
+      "name": "存储约束",
+      "category": "存储",
+      "description": "单文件大小限制 100MB，总存储容量可水平扩展"
+    },
+    {
+      "name": "安全约束",
+      "category": "安全",
+      "description": "用户密码必须符合复杂度要求，会话超时 30 分钟"
+    },
+    {
+      "name": "首页加载时间（SRS-PERF-001）",
+      "category": "性能",
+      "description": "首页加载时间 < 3 秒"
+    },
+    {
+      "name": "文档搜索响应时间（SRS-PERF-002）",
+      "category": "性能",
+      "description": "文档搜索响应时间 < 2 秒"
+    },
+    {
+      "name": "文档上传速度（SRS-PERF-003）",
+      "category": "性能",
+      "description": "文档上传速度 > 5MB/s"
+    },
+    {
+      "name": "并发用户数支持（SRS-PERF-004）",
+      "category": "性能",
+      "description": "并发用户数支持 > 1000"
+    },
+    {
+      "name": "系统可用性（SRS-PERF-005）",
+      "category": "性能",
+      "description": "系统可用性 > 99.9%"
+    },
+    {
+      "name": "数据库查询响应时间（SRS-PERF-006）",
+      "category": "性能",
+      "description": "数据库查询响应时间 < 500ms (95th)"
+    },
+    {
+      "name": "用户认证（SRS-SEC-001）",
+      "category": "安全",
+      "description": "采用 JWT + Refresh Token 机制"
+    },
+    {
+      "name": "密码安全（SRS-SEC-002）",
+      "category": "安全",
+      "description": "密码 bcrypt 加密存储，支持 MFA"
+    },
+    {
+      "name": "传输安全（SRS-SEC-003）",
+      "category": "安全",
+      "description": "全站 HTTPS，TLS 1.3"
+    },
+    {
+      "name": "数据加密（SRS-SEC-004）",
+      "category": "安全",
+      "description": "敏感数据 AES-256 加密存储"
+    },
+    {
+      "name": "访问控制（SRS-SEC-005）",
+      "category": "安全",
+      "description": "基于 RBAC 的细粒度权限控制"
+    },
+    {
+      "name": "审计日志（SRS-SEC-006）",
+      "category": "安全",
+      "description": "记录所有敏感操作，保留 180 天"
+    },
+    {
+      "name": "防攻击（SRS-SEC-007）",
+      "category": "安全",
+      "description": "防 SQL 注入、XSS、CSRF、暴力破解"
+    },
+    {
+      "name": "界面语言（SRS-AVA-001）",
+      "category": "可用性",
+      "description": "支持中文简体、中文繁体、英文"
+    },
+    {
+      "name": "浏览器兼容（SRS-AVA-002）",
+      "category": "可用性",
+      "description": "支持 Chrome/Firefox/Edge/Safari 最新 2 个版本"
+    },
+    {
+      "name": "响应式设计（SRS-AVA-003）",
+      "category": "可用性",
+      "description": "支持 1366×768 及以上分辨率"
+    },
+    {
+      "name": "辅助功能（SRS-AVA-004）",
+      "category": "可用性",
+      "description": "支持键盘导航，符合 WCAG 2.1 AA 标准"
+    },
+    {
+      "name": "容错性（SRS-AVA-005）",
+      "category": "可用性",
+      "description": "关键操作二次确认，误操作可撤销"
+    },
+    {
+      "name": "日志规范（SRS-MAINT-001）",
+      "category": "可维护性",
+      "description": "统一日志格式，支持结构化日志"
+    },
+    {
+      "name": "监控告警（SRS-MAINT-002）",
+      "category": "可维护性",
+      "description": "关键指标实时监控，异常自动告警"
+    },
+    {
+      "name": "备份恢复（SRS-MAINT-003）",
+      "category": "可维护性",
+      "description": "每日全量备份，RPO < 24h，RTO < 4h"
+    },
+    {
+      "name": "文档完善（SRS-MAINT-004）",
+      "category": "可维护性",
+      "description": "提供部署文档、API 文档、运维手册"
+    },
+    {
+      "name": "热更新（SRS-MAINT-005）",
+      "category": "可维护性",
+      "description": "支持配置热更新，无需重启服务"
+    },
+    {
+      "name": "水平扩展（SRS-SCAL-001）",
+      "category": "可扩展性",
+      "description": "支持无状态服务水平扩容"
+    },
+    {
+      "name": "存储扩展（SRS-SCAL-002）",
+      "category": "可扩展性",
+      "description": "支持分布式存储，容量可线性扩展"
+    },
+    {
+      "name": "插件机制（SRS-SCAL-003）",
+      "category": "可扩展性",
+      "description": "支持文档解析器插件化扩展"
+    },
+    {
+      "name": "API扩展（SRS-SCAL-004）",
+      "category": "可扩展性",
+      "description": "RESTful API 设计，支持版本控制"
     }
   ],
   "interfaces": [

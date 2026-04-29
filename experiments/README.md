@@ -2,6 +2,28 @@
 
 ## 实验设计
 
+### 评测口径
+
+当前评测使用 typed schema，不再使用旧的五槽位结构。
+
+```bash
+uv run python scripts/evaluate.py
+```
+
+默认读取：
+
+```text
+experiments/manifest.json
+experiments/ground_truth/*.json
+experiments/results/cached/*.json
+```
+
+说明：
+
+- `experiments/ground_truth` 按文档类型使用不同槽位，例如 `srs` 使用 `functional_requirements` / `non_functional_requirements`，`api` 使用 `endpoints` / `schemas` / `auth`。
+- `experiments/results/cached` 保存 typed schema 的缓存抽取结果；重建缓存时运行 `uv run python scripts/evaluate.py --live`。
+- 旧的 `experiments/results/20260428_*` 报告属于历史五槽位口径，不能和 typed schema 结果直接横向比较。
+
 ### 实验0：最小验证实验，单文档快速验证系统核心功能
 
 实验0是开发期快速测试脚本，用于验证单个 PDF 从解析到结构化抽取的核心链路是否可用。
@@ -67,4 +89,4 @@ experiments/
 
 ## TODO
 
-- [] 移除当前的旧实验框架，等系统稳定后再做实验,当前可以搭一个简易前端做轻量测试
+- [ ] 等系统稳定后再补充正式实验；当前保留 typed schema 的轻量 ground truth 评测。

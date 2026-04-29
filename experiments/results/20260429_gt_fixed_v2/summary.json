@@ -1,0 +1,1338 @@
+{
+  "generated_at": "2026-04-29T19:18:11.933157",
+  "manifest": "C:\\Users\\DJCHAN\\SE\\1_CourseProject\\DocStruct\\experiments\\manifest.json",
+  "mode": "cached",
+  "overall": {
+    "tp": 154,
+    "fp": 34,
+    "fn": 40,
+    "precision": 0.8191,
+    "recall": 0.7938,
+    "f1": 0.8063
+  },
+  "documents": {
+    "experiments/assets/srs_mini.md": {
+      "doc_id": "srs_mini",
+      "doc_path": "experiments/assets/srs_mini.md",
+      "doc_type": "srs",
+      "mode": "cached",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 6,
+          "pred_count": 1,
+          "tp": 1,
+          "fp": 0,
+          "fn": 5,
+          "precision": 1.0,
+          "recall": 0.1667,
+          "f1": 0.2857,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "智能文档系统",
+              "gt_name": "智能文档系统",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": [
+            "用户",
+            "文档解析服务",
+            "搜索服务",
+            "企业微信",
+            "GitLab"
+          ]
+        },
+        "functional_requirements": {
+          "slot": "functional_requirements",
+          "gt_count": 5,
+          "pred_count": 5,
+          "tp": 5,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "用户注册",
+              "gt_name": "用户注册（SRS-USER-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "用户登录",
+              "gt_name": "用户登录（SRS-USER-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档上传",
+              "gt_name": "文档上传（SRS-DOC-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档解析",
+              "gt_name": "文档解析（SRS-DOC-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档关联分析",
+              "gt_name": "文档关联分析（SRS-ANALYSIS-001）",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 4,
+          "pred_count": 4,
+          "tp": 1,
+          "fp": 3,
+          "fn": 3,
+          "precision": 0.25,
+          "recall": 0.25,
+          "f1": 0.25,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "搜索服务",
+              "gt_name": "搜索服务HTTP接口",
+              "similarity": 0.95
+            }
+          ],
+          "false_positive_examples": [
+            "企业微信 API",
+            "GitLab API",
+            "文档解析服务"
+          ],
+          "false_negative_examples": [
+            "企业微信消息推送API",
+            "GitLab代码仓库API",
+            "文档解析gRPC接口"
+          ]
+        },
+        "non_functional_requirements": {
+          "slot": "non_functional_requirements",
+          "gt_count": 6,
+          "pred_count": 6,
+          "tp": 6,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "首页加载时间 (SRS-PERF-001)",
+              "gt_name": "首页加载时间（SRS-PERF-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档搜索响应时间 (SRS-PERF-002)",
+              "gt_name": "文档搜索响应时间（SRS-PERF-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "并发用户数支持 (SRS-PERF-003)",
+              "gt_name": "并发用户数支持（SRS-PERF-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "用户认证 (SRS-SEC-001)",
+              "gt_name": "用户认证（SRS-SEC-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "密码安全 (SRS-SEC-002)",
+              "gt_name": "密码安全（SRS-SEC-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "传输安全 (SRS-SEC-003)",
+              "gt_name": "传输安全（SRS-SEC-003）",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        }
+      },
+      "summary": {
+        "tp": 13,
+        "fp": 3,
+        "fn": 8,
+        "precision": 0.8125,
+        "recall": 0.619,
+        "f1": 0.7027
+      }
+    },
+    "static/examples/srs_example.md": {
+      "doc_id": "srs_example",
+      "doc_path": "static/examples/srs_example.md",
+      "doc_type": "srs",
+      "mode": "cached",
+      "slots": {
+        "entities": {
+          "slot": "entities",
+          "gt_count": 16,
+          "pred_count": 22,
+          "tp": 14,
+          "fp": 8,
+          "fn": 2,
+          "precision": 0.6364,
+          "recall": 0.875,
+          "f1": 0.7368,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "智能文档分析系统",
+              "gt_name": "智能文档分析系统",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "系统管理员",
+              "gt_name": "系统管理员",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "项目经理",
+              "gt_name": "项目经理",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "开发人员",
+              "gt_name": "开发人员",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "测试人员",
+              "gt_name": "测试人员",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "产品经理",
+              "gt_name": "产品经理",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "NLP模型服务",
+              "gt_name": "NLP模型服务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "对象存储服务",
+              "gt_name": "对象存储服务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "企业微信",
+              "gt_name": "企业微信",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "钉钉",
+              "gt_name": "钉钉",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档解析服务",
+              "gt_name": "文档解析服务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "OCR服务提供商",
+              "gt_name": "OCR服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "搜索服务",
+              "gt_name": "Elasticsearch搜索服务",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "消息队列",
+              "gt_name": "RabbitMQ消息队列",
+              "similarity": 0.95
+            }
+          ],
+          "false_positive_examples": [
+            "开发团队",
+            "测试团队",
+            "项目管理团队",
+            "协作模块",
+            "报表与统计模块"
+          ],
+          "false_negative_examples": [
+            "PostgreSQL数据库",
+            "Redis缓存"
+          ]
+        },
+        "functional_requirements": {
+          "slot": "functional_requirements",
+          "gt_count": 12,
+          "pred_count": 12,
+          "tp": 12,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "SRS-USER-001 用户注册",
+              "gt_name": "用户注册（SRS-USER-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-USER-002 用户登录",
+              "gt_name": "用户登录（SRS-USER-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-USER-003 权限管理",
+              "gt_name": "权限管理（SRS-USER-003）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-DOC-001 文档上传",
+              "gt_name": "文档上传（SRS-DOC-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-DOC-002 文档解析",
+              "gt_name": "文档解析（SRS-DOC-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-DOC-003 文档版本控制",
+              "gt_name": "文档版本控制（SRS-DOC-003）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-ANALYSIS-001 文档关联分析",
+              "gt_name": "文档关联分析（SRS-ANALYSIS-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-ANALYSIS-002 智能检索",
+              "gt_name": "智能检索（SRS-ANALYSIS-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-ANALYSIS-003 质量评估",
+              "gt_name": "质量评估（SRS-ANALYSIS-003）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-COLLAB-001 在线评审",
+              "gt_name": "在线评审（SRS-COLLAB-001）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-COLLAB-002 变更通知",
+              "gt_name": "变更通知（SRS-COLLAB-002）",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "SRS-REPORT-001 文档统计",
+              "gt_name": "文档统计（SRS-REPORT-001）",
+              "similarity": 0.95
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 8,
+          "pred_count": 12,
+          "tp": 4,
+          "fp": 8,
+          "fn": 4,
+          "precision": 0.3333,
+          "recall": 0.5,
+          "f1": 0.4,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "企业微信 API",
+              "gt_name": "企业微信API",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "钉钉 API",
+              "gt_name": "钉钉API",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "GitLab/GitHub API",
+              "gt_name": "GitLab/GitHub API",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "Jira API",
+              "gt_name": "Jira API",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [
+            "Web 界面",
+            "移动端适配",
+            "硬件接口",
+            "文档解析服务",
+            "搜索服务"
+          ],
+          "false_negative_examples": [
+            "文档解析gRPC",
+            "Elasticsearch REST API",
+            "Redis缓存",
+            "RabbitMQ消息队列"
+          ]
+        },
+        "non_functional_requirements": {
+          "slot": "non_functional_requirements",
+          "gt_count": 32,
+          "pred_count": 32,
+          "tp": 32,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "1. 合规性约束",
+              "gt_name": "合规性约束",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "2. 兼容性约束",
+              "gt_name": "兼容性约束",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "3. 性能约束",
+              "gt_name": "性能约束",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "4. 存储约束",
+              "gt_name": "存储约束",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "5. 安全约束",
+              "gt_name": "安全约束",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-PERF-001 首页加载时间",
+              "gt_name": "首页加载时间（SRS-PERF-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-PERF-002 文档搜索响应时间",
+              "gt_name": "文档搜索响应时间（SRS-PERF-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-PERF-003 文档上传速度",
+              "gt_name": "文档上传速度（SRS-PERF-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-PERF-004 并发用户数支持",
+              "gt_name": "并发用户数支持（SRS-PERF-004）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-PERF-005 系统可用性",
+              "gt_name": "系统可用性（SRS-PERF-005）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-PERF-006 数据库查询响应时间",
+              "gt_name": "数据库查询响应时间（SRS-PERF-006）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-001 用户认证",
+              "gt_name": "用户认证（SRS-SEC-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-002 密码安全",
+              "gt_name": "密码安全（SRS-SEC-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-003 传输安全",
+              "gt_name": "传输安全（SRS-SEC-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-004 数据加密",
+              "gt_name": "数据加密（SRS-SEC-004）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-005 访问控制",
+              "gt_name": "访问控制（SRS-SEC-005）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-006 审计日志",
+              "gt_name": "审计日志（SRS-SEC-006）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SEC-007 防攻击",
+              "gt_name": "防攻击（SRS-SEC-007）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-AVA-001 界面语言",
+              "gt_name": "界面语言（SRS-AVA-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-AVA-002 浏览器兼容",
+              "gt_name": "浏览器兼容（SRS-AVA-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-AVA-003 响应式设计",
+              "gt_name": "响应式设计（SRS-AVA-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-AVA-004 辅助功能",
+              "gt_name": "辅助功能（SRS-AVA-004）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-AVA-005 容错性",
+              "gt_name": "容错性（SRS-AVA-005）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-MAINT-001 日志规范",
+              "gt_name": "日志规范（SRS-MAINT-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-MAINT-002 监控告警",
+              "gt_name": "监控告警（SRS-MAINT-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-MAINT-003 备份恢复",
+              "gt_name": "备份恢复（SRS-MAINT-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-MAINT-004 文档完善",
+              "gt_name": "文档完善（SRS-MAINT-004）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-MAINT-005 热更新",
+              "gt_name": "热更新（SRS-MAINT-005）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SCAL-001 水平扩展",
+              "gt_name": "水平扩展（SRS-SCAL-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SCAL-002 存储扩展",
+              "gt_name": "存储扩展（SRS-SCAL-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SCAL-003 插件机制",
+              "gt_name": "插件机制（SRS-SCAL-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "SRS-SCAL-004 API 扩展",
+              "gt_name": "API扩展（SRS-SCAL-004）",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        }
+      },
+      "summary": {
+        "tp": 62,
+        "fp": 16,
+        "fn": 6,
+        "precision": 0.7949,
+        "recall": 0.9118,
+        "f1": 0.8493
+      }
+    },
+    "experiments/assets/api_mini.md": {
+      "doc_id": "api_mini",
+      "doc_path": "experiments/assets/api_mini.md",
+      "doc_type": "api",
+      "mode": "cached",
+      "slots": {
+        "auth": {
+          "slot": "auth",
+          "gt_count": 1,
+          "pred_count": 1,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "Bearer Token",
+              "gt_name": "Bearer Token",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "endpoints": {
+          "slot": "endpoints",
+          "gt_count": 3,
+          "pred_count": 3,
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "上传文档",
+              "gt_name": "上传文档",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "获取文档",
+              "gt_name": "获取文档",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "全文搜索",
+              "gt_name": "全文搜索",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "entities": {
+          "slot": "entities",
+          "gt_count": 2,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": false,
+          "matched_pairs": [],
+          "false_positive_examples": [],
+          "false_negative_examples": [
+            "智能文档系统",
+            "用户"
+          ]
+        },
+        "schemas": {
+          "slot": "schemas",
+          "gt_count": 0,
+          "pred_count": 3,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": true,
+          "ignore_reason": "marked in ground_truth.ignored_slots",
+          "matched_pairs": [],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        }
+      },
+      "summary": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.6667,
+        "f1": 0.8
+      }
+    },
+    "static/examples/api_example.md": {
+      "doc_id": "api_example",
+      "doc_path": "static/examples/api_example.md",
+      "doc_type": "api",
+      "mode": "cached",
+      "slots": {
+        "auth": {
+          "slot": "auth",
+          "gt_count": 1,
+          "pred_count": 1,
+          "tp": 0,
+          "fp": 1,
+          "fn": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": false,
+          "matched_pairs": [],
+          "false_positive_examples": [
+            "获取访问令牌 (2.1)"
+          ],
+          "false_negative_examples": [
+            "Bearer Token"
+          ]
+        },
+        "endpoints": {
+          "slot": "endpoints",
+          "gt_count": 17,
+          "pred_count": 17,
+          "tp": 17,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "获取访问令牌 (2.1)",
+              "gt_name": "获取访问令牌",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "创建实验项目 (4.1)",
+              "gt_name": "创建实验项目",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查询项目列表 (4.2)",
+              "gt_name": "查询项目列表",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "批量创建样本 (5.1)",
+              "gt_name": "批量创建样本",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "获取样本详情 (5.2)",
+              "gt_name": "获取样本详情",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "注册设备 (6.1)",
+              "gt_name": "注册设备",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查询设备状态 (6.2)",
+              "gt_name": "查询设备状态",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "创建实验任务 (7.1)",
+              "gt_name": "创建实验任务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "启动实验 (7.2)",
+              "gt_name": "启动实验 (7.2)",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "暂停实验 (7.3)",
+              "gt_name": "暂停实验 (7.3)",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "终止实验 (7.4)",
+              "gt_name": "终止实验 (7.4)",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "上传传感器数据 (8.1)",
+              "gt_name": "上传传感器数据",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查询实验数据 (8.2)",
+              "gt_name": "查询实验数据 (8.2)",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "创建分析任务 (9.1)",
+              "gt_name": "创建分析任务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查询分析结果 (9.2)",
+              "gt_name": "查询分析结果 (9.2)",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查询审计日志 (10.1)",
+              "gt_name": "查询审计日志",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "注册 Webhook (11.1)",
+              "gt_name": "注册Webhook",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "entities": {
+          "slot": "entities",
+          "gt_count": 3,
+          "pred_count": 4,
+          "tp": 0,
+          "fp": 4,
+          "fn": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": false,
+          "matched_pairs": [],
+          "false_positive_examples": [
+            "Device",
+            "Experiment",
+            "DataPoint",
+            "AnalysisJob"
+          ],
+          "false_negative_examples": [
+            "NebulaLab实验编排平台",
+            "研究者",
+            "传感器"
+          ]
+        },
+        "schemas": {
+          "slot": "schemas",
+          "gt_count": 0,
+          "pred_count": 30,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": true,
+          "ignore_reason": "marked in ground_truth.ignored_slots",
+          "matched_pairs": [],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        }
+      },
+      "summary": {
+        "tp": 17,
+        "fp": 5,
+        "fn": 4,
+        "precision": 0.7727,
+        "recall": 0.8095,
+        "f1": 0.7907
+      }
+    },
+    "static/examples/test_case_example.md": {
+      "doc_id": "test_case_example",
+      "doc_path": "static/examples/test_case_example.md",
+      "doc_type": "test",
+      "mode": "cached",
+      "slots": {
+        "defects": {
+          "slot": "defects",
+          "gt_count": 0,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": false,
+          "matched_pairs": [],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "entities": {
+          "slot": "entities",
+          "gt_count": 4,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": false,
+          "matched_pairs": [],
+          "false_positive_examples": [],
+          "false_negative_examples": [
+            "用户",
+            "电商平台",
+            "短信验证码服务",
+            "支付宝"
+          ]
+        },
+        "test_cases": {
+          "slot": "test_cases",
+          "gt_count": 10,
+          "pred_count": 10,
+          "tp": 10,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "验证用户使用有效手机号成功注册",
+              "gt_name": "验证用户使用有效手机号成功注册（TC-USER-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证已注册用户通过手机号密码登录",
+              "gt_name": "验证已注册用户通过手机号密码登录（TC-USER-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证通过关键词搜索商品返回正确结果",
+              "gt_name": "验证通过关键词搜索商品返回正确结果（TC-PROD-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证用户可将商品加入购物车",
+              "gt_name": "验证用户可将商品加入购物车（TC-CART-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证用户可从购物车创建订单",
+              "gt_name": "验证用户可从购物车创建订单（TC-ORDER-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证用户可完成订单支付",
+              "gt_name": "验证用户可完成订单支付（TC-PAY-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证连续输入错误密码后账号锁定",
+              "gt_name": "验证连续输入错误密码后账号锁定（TC-USER-003）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证商品库存不足时的处理",
+              "gt_name": "验证商品库存不足时的处理（TC-PROD-002）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证订单可使用符合条件的优惠券",
+              "gt_name": "验证订单可使用符合条件的优惠券（TC-PROMO-001）",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "验证用户可取消待支付订单",
+              "gt_name": "验证用户可取消待支付订单（TC-ORDER-002）",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "test_steps": {
+          "slot": "test_steps",
+          "gt_count": 49,
+          "pred_count": 48,
+          "tp": 40,
+          "fp": 8,
+          "fn": 9,
+          "precision": 0.8333,
+          "recall": 0.8163,
+          "f1": 0.8247,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "打开注册页面",
+              "gt_name": "打开注册页面",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "输入未注册的手机号（如：13800138001）",
+              "gt_name": "输入未注册的手机号",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "等待接收短信验证码",
+              "gt_name": "等待接收短信验证码",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "输入正确的6位验证码",
+              "gt_name": "输入正确的6位验证码",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "设置密码（8-20位，包含字母和数字）",
+              "gt_name": "设置密码8-20位包含字母和数字",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "勾选用户协议",
+              "gt_name": "勾选用户协议",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "打开登录页面",
+              "gt_name": "打开登录页面",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "输入已注册的手机号",
+              "gt_name": "输入已注册的手机号",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "输入正确的密码",
+              "gt_name": "输入正确的密码",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "进入首页",
+              "gt_name": "进入首页",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "点击搜索按钮或按回车键",
+              "gt_name": "点击搜索按钮或按回车键",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "浏览商品列表，选择一个商品进入详情页",
+              "gt_name": "浏览商品列表选择一个商品进入详情页",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "选择商品规格（如：颜色-黑色，内存-256GB）",
+              "gt_name": "选择商品规格",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "设置购买数量为 2",
+              "gt_name": "设置购买数量为2",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "进入购物车页面",
+              "gt_name": "进入购物车页面",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "勾选要购买的商品",
+              "gt_name": "勾选要购买的商品",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "确认收货地址",
+              "gt_name": "确认收货地址",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "选择配送方式（普通快递）",
+              "gt_name": "选择配送方式",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "确认订单金额",
+              "gt_name": "确认订单金额",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "进入订单详情页或订单列表",
+              "gt_name": "进入订单详情页或订单列表",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "选择支付方式（支付宝）",
+              "gt_name": "选择支付方式支付宝",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "在支付页面完成支付操作",
+              "gt_name": "在支付页面完成支付操作",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "输入正确的手机号",
+              "gt_name": "输入正确的手机号",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "连续5次输入错误的密码",
+              "gt_name": "连续5次输入错误的密码",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "第6次输入正确的密码",
+              "gt_name": "第6次输入正确的密码",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "用户A将该商品加入购物车（数量1）",
+              "gt_name": "用户A将商品加入购物车数量1",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "用户A提交订单（未支付）",
+              "gt_name": "用户A提交订单未支付",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "用户B尝试购买该商品",
+              "gt_name": "用户B尝试购买该商品",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "进入购物车，选择商品（金额120元）",
+              "gt_name": "进入购物车选择商品",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "选择满100减20的优惠券",
+              "gt_name": "选择满100减20优惠券",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查看订单金额变化",
+              "gt_name": "查看订单金额变化",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "提交订单",
+              "gt_name": "提交订单",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "找到待支付的订单",
+              "gt_name": "找到待支付的订单",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "选择取消原因（\"不想买了\"）",
+              "gt_name": "选择取消原因",
+              "similarity": 0.95
+            },
+            {
+              "pred_name": "在搜索框中输入\"iPhone\"",
+              "gt_name": "在搜索框中输入iPhone",
+              "similarity": 0.7333
+            },
+            {
+              "pred_name": "在优惠券区域点击\"选择优惠券\"",
+              "gt_name": "点击选择优惠券",
+              "similarity": 0.6923
+            },
+            {
+              "pred_name": "点击\"获取验证码\"按钮",
+              "gt_name": "点击获取验证码按钮",
+              "similarity": 0.5
+            },
+            {
+              "pred_name": "点击\"加入购物车\"按钮",
+              "gt_name": "点击加入购物车按钮",
+              "similarity": 0.5
+            },
+            {
+              "pred_name": "点击\"确认支付\"",
+              "gt_name": "点击确认支付",
+              "similarity": 0.5
+            },
+            {
+              "pred_name": "点击\"确认取消\"",
+              "gt_name": "点击确认取消",
+              "similarity": 0.5
+            }
+          ],
+          "false_positive_examples": [
+            "点击\"注册\"按钮",
+            "点击\"登录\"按钮",
+            "点击\"去结算\"按钮",
+            "点击\"提交订单\"按钮",
+            "点击\"立即支付\"按钮"
+          ],
+          "false_negative_examples": [
+            "点击注册按钮",
+            "点击登录按钮",
+            "点击去结算按钮",
+            "点击提交订单按钮",
+            "点击立即支付按钮"
+          ]
+        }
+      },
+      "summary": {
+        "tp": 50,
+        "fp": 8,
+        "fn": 13,
+        "precision": 0.8621,
+        "recall": 0.7937,
+        "f1": 0.8264
+      }
+    },
+    "experiments/assets/design_mini.md": {
+      "doc_id": "design_mini",
+      "doc_path": "experiments/assets/design_mini.md",
+      "doc_type": "design",
+      "mode": "cached",
+      "slots": {
+        "decisions": {
+          "slot": "decisions",
+          "gt_count": 3,
+          "pred_count": 3,
+          "tp": 1,
+          "fp": 2,
+          "fn": 2,
+          "precision": 0.3333,
+          "recall": 0.3333,
+          "f1": 0.3333,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "文档 IR 使用稳定元素 ID 支持证据回溯",
+              "gt_name": "文档 IR 使用稳定元素 ID",
+              "similarity": 0.95
+            }
+          ],
+          "false_positive_examples": [
+            "抽取结果统一映射到实体、流程、需求、接口和产物五类对象",
+            "解析失败时保留错误信息，避免覆盖原始文档记录"
+          ],
+          "false_negative_examples": [
+            "抽取结果统一映射到结构化对象",
+            "解析失败保留错误信息"
+          ]
+        },
+        "entities": {
+          "slot": "entities",
+          "gt_count": 5,
+          "pred_count": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "ignored": false,
+          "matched_pairs": [],
+          "false_positive_examples": [],
+          "false_negative_examples": [
+            "Web前端",
+            "API服务",
+            "文档解析服务",
+            "数据库",
+            "用户"
+          ]
+        },
+        "interfaces": {
+          "slot": "interfaces",
+          "gt_count": 3,
+          "pred_count": 3,
+          "tp": 3,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "上传文档",
+              "gt_name": "上传文档接口",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "查询文档",
+              "gt_name": "查询文档接口",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "解析文档",
+              "gt_name": "文档解析RPC",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        },
+        "modules": {
+          "slot": "modules",
+          "gt_count": 4,
+          "pred_count": 4,
+          "tp": 4,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "ignored": false,
+          "matched_pairs": [
+            {
+              "pred_name": "Web 前端",
+              "gt_name": "Web前端",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "API 服务",
+              "gt_name": "API服务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "文档解析服务",
+              "gt_name": "文档解析服务",
+              "similarity": 1.0
+            },
+            {
+              "pred_name": "数据库",
+              "gt_name": "数据库",
+              "similarity": 1.0
+            }
+          ],
+          "false_positive_examples": [],
+          "false_negative_examples": []
+        }
+      },
+      "summary": {
+        "tp": 8,
+        "fp": 2,
+        "fn": 7,
+        "precision": 0.8,
+        "recall": 0.5333,
+        "f1": 0.64
+      }
+    }
+  }
+}

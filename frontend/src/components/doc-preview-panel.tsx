@@ -80,8 +80,8 @@ export function DocPreviewPanel({
   );
 
   const extractionItems = useMemo(
-    () => buildExtractionItems(doc?.extracted_data),
-    [doc?.extracted_data],
+    () => buildExtractionItems(doc?.extracted_data, doc?.doc_type),
+    [doc?.extracted_data, doc?.doc_type],
   );
 
   useEffect(() => {

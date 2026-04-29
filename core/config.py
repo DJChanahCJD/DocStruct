@@ -43,7 +43,6 @@ class RuntimeSettings:
     docling_enable_ocr: bool
     docling_enable_table_structure: bool
     docling_force_backend_text: bool
-    use_typed_schema: bool
     phase0_enabled: bool
     phase0_max_sample_chars: int
 
@@ -66,7 +65,6 @@ def get_settings() -> RuntimeSettings:
         docling_enable_ocr=_get_bool("DOCLING_ENABLE_OCR", False),
         docling_enable_table_structure=_get_bool("DOCLING_ENABLE_TABLE_STRUCTURE", True),
         docling_force_backend_text=_get_bool("DOCLING_FORCE_BACKEND_TEXT", True),
-        use_typed_schema=_get_bool("USE_TYPED_SCHEMA", False),
         phase0_enabled=_get_bool("PHASE0_ENABLED", False),
         phase0_max_sample_chars=_get_int("PHASE0_MAX_SAMPLE_CHARS", 6000),
     )

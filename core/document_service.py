@@ -11,7 +11,7 @@ from fastapi import UploadFile
 from core.extractor import extract_structure_with_meta
 from core.ir import build_basic_ir_from_markdown, document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
-from core.schema_registry import TYPE_MODEL_MAP, normalize_doc_type
+from core.schema_registry import get_response_model, normalize_doc_type
 from schemas.dto import UploadResponse
 from schemas.models import DocType, DocumentRecord
 
@@ -30,7 +30,7 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
         raise ValueError("文档尚未解析，无法重试提取")
 
     normalized_doc_type = normalize_doc_type(doc.doc_type)
-    target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
+    target_model = get_response_model(normalized_doc_type)
     if target_model is None:
         raise ValueError(f"不支持的文档类型: {doc.doc_type}")
 
@@ -144,7 +144,7 @@ async def process_document_record(doc_id: int) -> None:
     ).save()
 
     # 阶段 2: 提取结构化数据
-    target_model = TYPE_MODEL_MAP.get(normalized_doc_type)
+    target_model = get_response_model(normalized_doc_type)
     if target_model is None:
         await doc.update_from_dict({"status": "completed"}).save()
         return
