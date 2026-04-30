@@ -1,89 +1,67 @@
 {
-  "doc_type": "design",
+  "doc_type": "hld",
   "title": "智能文档系统概要设计",
-  "entities": [
-    {
-      "name": "Web前端",
-      "entity_type": "system"
-    },
-    {
-      "name": "API服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "文档解析服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "数据库",
-      "entity_type": "data"
-    },
-    {
-      "name": "用户",
-      "entity_type": "actor"
-    }
-  ],
+  "architecture_style": "",
+  "technology_stack": [],
   "modules": [
     {
       "name": "Web前端",
-      "responsibility": ""
+      "description": "",
+      "responsibilities": []
     },
     {
       "name": "API服务",
-      "responsibility": ""
+      "description": "",
+      "responsibilities": []
     },
     {
       "name": "文档解析服务",
-      "responsibility": ""
+      "description": "",
+      "responsibilities": []
     },
     {
       "name": "数据库",
-      "responsibility": ""
+      "description": "",
+      "responsibilities": []
     }
   ],
-  "interfaces": [
+  "core_flows": [
     {
-      "name": "上传文档接口",
-      "interface_type": "http",
-      "http_method": "post",
-      "endpoint": "/documents",
-      "provider": "API服务",
-      "consumer": "Web前端"
-    },
-    {
-      "name": "查询文档接口",
-      "interface_type": "http",
-      "http_method": "get",
-      "endpoint": "/documents/{document_id}",
-      "provider": "API服务",
-      "consumer": "Web前端"
-    },
-    {
-      "name": "文档解析RPC",
-      "interface_type": "rpc",
-      "endpoint": "ParseDocument",
-      "provider": "文档解析服务",
-      "consumer": "API服务"
+      "name": "文档处理流程",
+      "participants": [
+        "Web 前端",
+        "API 服务",
+        "文档解析服务",
+        "抽取模块"
+      ],
+      "steps": [
+        "用户在 Web 前端上传文档",
+        "API 服务保存原始文件并创建文档记录",
+        "文档解析服务生成文档 IR",
+        "抽取模块根据文档类型输出结构化对象",
+        "API 服务更新处理状态并返回结果"
+      ],
+      "outcome": "文档处理状态更新并返回结构化抽取结果"
     }
   ],
-  "decisions": [
+  "design_decisions": [
     {
-      "name": "文档 IR 使用稳定元素 ID",
-      "rationale": "支持证据回溯",
-      "alternatives": []
+      "name": "稳定元素 ID 支持证据回溯",
+      "decision": "文档 IR 使用稳定元素 ID 支持证据回溯",
+      "rationale": "",
+      "tradeoffs": []
     },
     {
-      "name": "抽取结果统一映射到结构化对象",
-      "rationale": "便于跨文档分析与展示",
-      "alternatives": []
+      "name": "统一对象类别映射",
+      "decision": "抽取结果统一映射到实体、流程、需求、接口和产物五类对象",
+      "rationale": "",
+      "tradeoffs": []
     },
     {
       "name": "解析失败保留错误信息",
-      "rationale": "避免覆盖原始文档记录",
-      "alternatives": []
+      "decision": "解析失败时保留错误信息，避免覆盖原始文档记录",
+      "rationale": "",
+      "tradeoffs": []
     }
-  ],
-  "ignored_slots": [
-    "entities"
   ]
 }

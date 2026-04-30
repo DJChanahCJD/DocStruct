@@ -1,71 +1,11 @@
 {
   "doc_type": "srs",
   "title": "智能文档分析系统软件需求规格说明书",
-  "entities": [
-    {
-      "name": "系统管理员",
-      "entity_type": "actor"
-    },
-    {
-      "name": "项目经理",
-      "entity_type": "actor"
-    },
-    {
-      "name": "开发人员",
-      "entity_type": "actor"
-    },
-    {
-      "name": "测试人员",
-      "entity_type": "actor"
-    },
-    {
-      "name": "产品经理",
-      "entity_type": "actor"
-    },
-    {
-      "name": "智能文档分析系统",
-      "entity_type": "system"
-    },
-    {
-      "name": "OCR服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "NLP模型服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "对象存储服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "PostgreSQL数据库",
-      "entity_type": "data"
-    },
-    {
-      "name": "Redis缓存",
-      "entity_type": "data"
-    },
-    {
-      "name": "RabbitMQ消息队列",
-      "entity_type": "system"
-    },
-    {
-      "name": "Elasticsearch搜索服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "文档解析服务",
-      "entity_type": "system"
-    },
-    {
-      "name": "企业微信",
-      "entity_type": "system"
-    },
-    {
-      "name": "钉钉",
-      "entity_type": "system"
-    }
+  "system_name": "智能文档分析系统",
+  "target_users": [
+    "系统管理员",
+    "项目经理",
+    "开发人员"
   ],
   "functional_requirements": [
     {
@@ -76,11 +16,9 @@
         "密码复杂度8-20位大小写字母数字",
         "自动创建个人空间"
       ],
-      "criteria": [
-        "验证码5分钟内有效",
-        "不可重复注册",
-        "注册成功率>99%"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "验证码5分钟内有效；不可重复注册；注册成功率>99%"
     },
     {
       "name": "用户登录（SRS-USER-002）",
@@ -90,10 +28,9 @@
         "记住我7天免登录",
         "连续5次错误锁定30分钟"
       ],
-      "criteria": [
-        "登录响应时间<2秒",
-        "Token有效期2小时自动续期"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "登录响应时间<2秒；Token有效期2小时自动续期"
     },
     {
       "name": "权限管理（SRS-USER-003）",
@@ -103,10 +40,9 @@
         "文档级访问权限",
         "权限变更实时生效"
       ],
-      "criteria": [
-        "权限校验<100ms",
-        "最多1000个角色"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "权限校验<100ms；最多1000个角色"
     },
     {
       "name": "文档上传（SRS-DOC-001）",
@@ -117,11 +53,9 @@
         "进度条显示",
         "病毒扫描和格式校验"
       ],
-      "criteria": [
-        "单文件最大100MB",
-        "断点续传",
-        "格式校验错误提示"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "单文件最大100MB；断点续传；格式校验错误提示"
     },
     {
       "name": "文档解析（SRS-DOC-002）",
@@ -132,11 +66,9 @@
         "识别表格图片代码块",
         "提取元数据"
       ],
-      "criteria": [
-        "OCR准确率>95%",
-        "类型识别准确率>90%",
-        "50页PDF<30秒"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "OCR准确率>95%；类型识别准确率>90%；50页PDF<30秒"
     },
     {
       "name": "文档关联分析（SRS-ANALYSIS-001）",
@@ -147,10 +79,9 @@
         "生成依赖关系图谱",
         "变更影响分析"
       ],
-      "criteria": [
-        "关联识别准确率>85%",
-        "图谱渲染<5秒"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "关联识别准确率>85%；图谱渲染<5秒"
     },
     {
       "name": "智能检索（SRS-ANALYSIS-002）",
@@ -161,10 +92,9 @@
         "相关度排序",
         "关键词高亮"
       ],
-      "criteria": [
-        "检索响应<2秒",
-        "语义检索TOP10准确率>80%"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "检索响应<2秒；语义检索TOP10准确率>80%"
     },
     {
       "name": "文档版本控制（SRS-DOC-003）",
@@ -175,10 +105,9 @@
         "回滚到任意历史版本",
         "版本标签"
       ],
-      "criteria": [
-        "保留最近100个历史版本",
-        "版本对比响应时间<3秒"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "保留最近100个历史版本；版本对比响应时间<3秒"
     },
     {
       "name": "质量评估（SRS-ANALYSIS-003）",
@@ -189,10 +118,9 @@
         "生成质量评分和改进建议",
         "生成质量趋势报告"
       ],
-      "criteria": [
-        "质量评估时间<10秒/文档",
-        "评估维度不少于10个"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "质量评估时间<10秒/文档；评估维度不少于10个"
     },
     {
       "name": "在线评审（SRS-COLLAB-001）",
@@ -203,10 +131,9 @@
         "评审意见分类",
         "评审状态跟踪"
       ],
-      "criteria": [
-        "支持最多20人同时评审",
-        "批注实时同步延迟<1秒"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "支持最多20人同时评审；批注实时同步延迟<1秒"
     },
     {
       "name": "变更通知（SRS-COLLAB-002）",
@@ -217,10 +144,9 @@
         "订阅特定文档或文件夹",
         "通知历史查询"
       ],
-      "criteria": [
-        "通知发送延迟<5分钟",
-        "通知送达率>99%"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "通知发送延迟<5分钟；通知送达率>99%"
     },
     {
       "name": "文档统计（SRS-REPORT-001）",
@@ -231,10 +157,9 @@
         "文档变更频率分析",
         "导出Excel/PDF报表"
       ],
-      "criteria": [
-        "统计数据刷新延迟<1小时",
-        "支持最多1年数据回溯"
-      ]
+      "actor": "",
+      "priority": "medium",
+      "acceptance_criteria": "统计数据刷新延迟<1小时；支持最多1年数据回溯"
     }
   ],
   "non_functional_requirements": [
@@ -399,53 +324,62 @@
       "description": "RESTful API 设计，支持版本控制"
     }
   ],
-  "interfaces": [
+  "business_flows": [
     {
-      "name": "企业微信API",
-      "interface_type": "http",
-      "provider": "企业微信",
-      "consumer": "智能文档分析系统"
+      "name": "用户注册流程",
+      "actor": "新用户",
+      "steps": [
+        "用户输入邮箱或手机号、密码、确认密码进行注册",
+        "系统发送验证码进行身份验证",
+        "系统校验密码复杂度和账号唯一性",
+        "注册成功后自动创建个人空间"
+      ],
+      "outcome": "新用户账号创建成功"
     },
     {
-      "name": "钉钉API",
-      "interface_type": "http",
-      "provider": "钉钉",
-      "consumer": "智能文档分析系统"
+      "name": "用户登录流程",
+      "actor": "用户",
+      "steps": [
+        "用户通过邮箱、手机号或第三方认证发起登录",
+        "系统校验账号密码或第三方认证结果",
+        "系统处理记住我选项",
+        "连续错误达到限制时锁定账号"
+      ],
+      "outcome": "用户登录成功并获得可续期 Token，或账号被临时锁定"
     },
     {
-      "name": "GitLab/GitHub API",
-      "interface_type": "http",
-      "provider": "GitLab/GitHub",
-      "consumer": "智能文档分析系统"
+      "name": "文档上传流程",
+      "actor": "用户",
+      "steps": [
+        "用户选择或拖拽上传 PDF、Word、Markdown 或 TXT 文档",
+        "系统支持批量上传和文件夹上传",
+        "系统显示上传进度和预计剩余时间",
+        "系统进行病毒扫描和格式校验"
+      ],
+      "outcome": "文档上传完成，校验失败时给出明确提示"
     },
     {
-      "name": "Jira API",
-      "interface_type": "http",
-      "provider": "Jira",
-      "consumer": "智能文档分析系统"
+      "name": "文档解析流程",
+      "actor": "系统",
+      "steps": [
+        "系统对 PDF 进行 OCR 文字识别",
+        "系统识别文档类型",
+        "系统提取文档大纲章节",
+        "系统识别表格、图片和代码块",
+        "系统提取文档元数据"
+      ],
+      "outcome": "上传文档被解析为可用于结构化抽取的内容"
     },
     {
-      "name": "文档解析gRPC",
-      "interface_type": "rpc",
-      "provider": "文档解析服务",
-      "consumer": "API服务"
-    },
-    {
-      "name": "Elasticsearch REST API",
-      "interface_type": "http",
-      "endpoint": "/api/v1/",
-      "provider": "Elasticsearch",
-      "consumer": "搜索模块"
-    },
-    {
-      "name": "Redis缓存",
-      "interface_type": "database",
-      "provider": "Redis"
-    },
-    {
-      "name": "RabbitMQ消息队列",
-      "interface_type": "message",
-      "provider": "RabbitMQ"
+      "name": "在线评审流程",
+      "actor": "评审发起人和评审人",
+      "steps": [
+        "发起评审流程并指定评审人",
+        "评审人进行行级批注和评论",
+        "评审意见按问题、建议或疑问分类",
+        "系统跟踪评审状态"
+      ],
+      "outcome": "评审意见被记录并进入待处理、已解决或已忽略状态"
     }
   ]
 }

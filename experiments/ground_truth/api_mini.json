@@ -1,46 +1,25 @@
 {
   "doc_type": "api",
   "title": "智能文档系统 API",
-  "ignored_slots": [
-    "entities",
-    "schemas"
-  ],
-  "entities": [
-    {
-      "name": "智能文档系统",
-      "entity_type": "system"
-    },
-    {
-      "name": "用户",
-      "entity_type": "actor"
-    }
-  ],
-  "endpoints": [
+  "base_url": "",
+  "apis": [
     {
       "name": "上传文档",
-      "http_method": "post",
+      "method": "POST",
       "path": "/documents",
-      "summary": "上传文档"
+      "description": "上传文档"
     },
     {
       "name": "获取文档",
-      "http_method": "get",
+      "method": "GET",
       "path": "/documents/{document_id}",
-      "summary": "获取文档"
+      "description": "获取文档"
     },
     {
       "name": "全文搜索",
-      "http_method": "post",
+      "method": "POST",
       "path": "/search",
-      "summary": "全文搜索"
-    }
-  ],
-  "schemas": [],
-  "auth": [
-    {
-      "name": "Bearer Token",
-      "auth_type": "Bearer",
-      "description": "通过 Authorization: Bearer token 请求头认证"
+      "description": "全文搜索"
     }
   ]
 }
