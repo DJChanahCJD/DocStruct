@@ -3,6 +3,8 @@ import ast
 import re
 from typing import Any
 
+from pydantic import BaseModel
+
 def _repair_truncated_json(text: str) -> str:
     """尝试修复被截断的 JSON：删除不完整片段并补齐缺失的闭合括号。"""
     stripped = text.rstrip()
@@ -102,4 +104,12 @@ def normalize_extracted_data(value: Any) -> Any:
 
     return value
 
+
+def dump_extracted_document(document: BaseModel) -> dict[str, Any]:
+    """序列化结构化抽取结果，并统一把 evidence 放到 JSON 末尾。"""
+    payload = document.model_dump(mode="json")
+    evidence = payload.pop("evidence", None)
+    if evidence is not None:
+        payload["evidence"] = evidence
+    return payload
 

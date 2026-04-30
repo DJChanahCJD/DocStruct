@@ -59,8 +59,11 @@ def _generate_prefix(slot: str) -> str:
     prefix_map = {
         "functional_requirements": "FREQ",
         "non_functional_requirements": "NFR",
+        "business_flows": "BFL",
         "apis": "APIS",
         "modules": "MOD",
+        "core_flows": "CFL",
+        "design_decisions": "DEC",
         "test_cases": "TC",
         "tables": "TBL",
     }

@@ -12,6 +12,7 @@ from core.extractor import extract_structure_with_meta, generate_document_summar
 from core.ir import build_basic_ir_from_markdown, document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
 from core.schema_registry import get_response_model, normalize_doc_type
+from core.utils import dump_extracted_document
 from schemas.dto import UploadResponse
 from schemas.models import DocType, DocumentRecord
 
@@ -67,12 +68,12 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
         await doc.update_from_dict(
             {
                 "status": "completed",
-                "extracted_data": extracted.model_dump(mode="json"),
+                "extracted_data": dump_extracted_document(extracted),
                 "extraction_meta": extraction_meta,
                 "error_message": None,
             }
         ).save()
-        if extraction_meta.get("partial"):
+        if extraction_meta.get("failed_chunks", 0) > 0:
             logger.warning(
                 "Retry extraction partially succeeded for doc %s: failed chunks %s/%s",
                 doc.id,
@@ -182,7 +183,7 @@ async def process_document_record(doc_id: int) -> None:
             document_ir=document_ir_payload,
             document_summary=doc.summary,
         )
-        extracted_payload = extracted.model_dump(mode="json")
+        extracted_payload = dump_extracted_document(extracted)
         await doc.update_from_dict(
             {
                 "status": "completed",
@@ -191,9 +192,8 @@ async def process_document_record(doc_id: int) -> None:
                 "error_message": None,
             }
         ).save()
-        partial = bool(extraction_meta.get("partial"))
-        if partial:
-            failed_chunks = extraction_meta.get("failed_chunks", 0)
+        failed_chunks = extraction_meta.get("failed_chunks", 0)
+        if failed_chunks > 0:
             chunk_count = extraction_meta.get("chunk_count", 0)
             logger.warning(
                 "Extraction partially succeeded for doc %s: failed chunks %s/%s",

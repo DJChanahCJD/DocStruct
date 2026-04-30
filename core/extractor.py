@@ -17,14 +17,14 @@ from core.constants import (
 )
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
-from core.reducer import discover_slots, reduce_extraction_results
+from core.reducer import discover_document_fields, discover_slots, reduce_extraction_results
 from core.schema_registry import normalize_doc_type
 from core.utils import clean_and_parse_json, normalize_extracted_data
+from schemas.extraction import ExtractionContract, ExtractionMeta
 from schemas.models import (
     DocType,
     DocumentChunk,
     DocumentIR,
-    ExtractionContract,
 )
 
 
@@ -66,8 +66,10 @@ def build_extraction_contract(
         "只返回目标对象槽位；未出现的对象槽返回空列表。",
     ]
     target_slots = discover_slots(response_model)
+    document_fields = discover_document_fields(response_model)
     return ExtractionContract(
         doc_type=normalized,
+        document_fields=document_fields,
         target_slots=target_slots,
         rules=common_rules,
         ignore_sections=["术语表", "术语定义", "参考资料", "参考文献", "附录", "references", "glossary"],
@@ -350,21 +352,14 @@ async def extract_structure_with_meta(
     )
     validated = response_model.model_validate(reduced_data)
     failed_chunks = len(failed_chunk_indexes)
-    return validated, {
-        "mode": "unified-pipeline",
-        "chunk_count": len(chunks),
-        "failed_chunks": failed_chunks,
-        "failed_chunk_indexes": failed_chunk_indexes,
-        "failed_chunk_details": failed_chunk_details,
-        "partial": failed_chunks > 0 or finalizer_failed,
-        "finalizer_failed": finalizer_failed,
-        "phase0_enabled": False,
-        "summary_injected": bool(document_summary and document_summary.strip()),
-        "typed_schema": True,
-        "element_count": len(ir.elements),
-        "section_count": len(ir.outline.sections),
-        **evidence_meta,
-    }
+    return validated, ExtractionMeta(
+        llm_model=model_name or "",
+        confidence=round(evidence_meta.get("evidence_coverage", 0.0), 4),
+        chunk_count=len(chunks),
+        failed_chunks=failed_chunks,
+        element_count=len(ir.elements),
+        section_count=len(ir.outline.sections),
+    ).model_dump(mode="json")
 
 
 def extract_structure(markdown_content: str, response_model: type[BaseModel]) -> BaseModel:

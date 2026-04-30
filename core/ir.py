@@ -5,18 +5,19 @@ from typing import Any
 
 from core.parser import DocBlock, MarkdownNormalizer, MarkdownRenderer, ParseResult
 from core.schema_registry import normalize_doc_type
+from schemas.constants import ElementType
 from schemas.models import DocType, DocumentElement, DocumentIR, DocumentOutline
 
 
 BLOCK_TYPE_MAP = {
-    "title": "heading",
-    "paragraph": "paragraph",
-    "quote": "paragraph",
-    "section_break": "separator",
-    "code": "code",
-    "list": "paragraph",
-    "table": "table",
-    "image": "image",
+    "title": ElementType.HEADING,
+    "paragraph": ElementType.PARAGRAPH,
+    "quote": ElementType.PARAGRAPH,
+    "section_break": ElementType.SEPARATOR,
+    "code": ElementType.CODE,
+    "list": ElementType.PARAGRAPH,
+    "table": ElementType.TABLE,
+    "image": ElementType.IMAGE,
 }
 SRS_FIELD_LABELS = {
     "需求编号",
@@ -65,7 +66,7 @@ def parse_result_to_ir(
         bbox = _normalize_bbox(block.attrs.get("bbox"))
         element = DocumentElement(
             element_id=f"{element_prefix}-{len(elements) + 1:04d}",
-            element_type=BLOCK_TYPE_MAP.get(block.type, "paragraph"),
+            element_type=BLOCK_TYPE_MAP.get(block.type, ElementType.PARAGRAPH),
             text=text or None,
             markdown=markdown or text or None,
             section_path=list(heading_stack),

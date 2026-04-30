@@ -10,6 +10,7 @@ from core.extractor import extract_structure_with_meta
 from core.ir import document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
 from core.schema_registry import get_response_model, normalize_doc_type
+from core.utils import dump_extracted_document
 
 
 def parse_document(file_path: str | Path, doc_type: str | None = None) -> tuple[str, dict[str, Any]]:
@@ -53,10 +54,11 @@ async def extract_document(
         prompt_template=prompt_template,
         model_name=model_name,
     )
-    return extracted.model_dump(mode="json"), {
+    if not extraction_meta.get("llm_model"):
+        extraction_meta["llm_model"] = model_name or get_settings().llm_model
+    return dump_extracted_document(extracted), {
         **extraction_meta,
         "doc_type": normalized_doc_type.value,
-        "model_name": model_name or get_settings().llm_model,
         "supported": True,
     }
 
@@ -94,7 +96,7 @@ def summarize_sample_result(result: dict[str, Any]) -> dict[str, Any]:
         "block_count": parse_meta.get("block_count"),
         "element_count": parse_meta.get("element_count"),
         "doc_type": extraction_meta.get("doc_type"),
-        "model_name": extraction_meta.get("model_name"),
+        "model_name": extraction_meta.get("llm_model"),
         "supported": extraction_meta.get("supported"),
         "error_message": extraction_meta.get("error_message"),
     }
