@@ -69,7 +69,6 @@ def build_extraction_contract(
     return ExtractionContract(
         doc_type=normalized,
         target_slots=target_slots,
-        slot_descriptions={},  # Typed schemas don't need verbose descriptions
         rules=common_rules,
         ignore_sections=["术语表", "术语定义", "参考资料", "参考文献", "附录", "references", "glossary"],
     )

@@ -55,7 +55,6 @@ export interface DocumentElement {
   page: number | null;
   bbox: number[] | null;
   order: number;
-  metadata: Record<string, unknown>;
 }
 
 export interface DocumentIR {
@@ -68,7 +67,6 @@ export interface DocumentIR {
     sections: string[];
     main_topics: string[];
   };
-  metadata: Record<string, unknown>;
 }
 
 export interface DocumentChunkDebug {

@@ -62,7 +62,6 @@ def parse_result_to_ir(
         if not text and not markdown:
             continue
 
-        metadata = _block_metadata(block)
         bbox = _normalize_bbox(block.attrs.get("bbox"))
         element = DocumentElement(
             element_id=f"{element_prefix}-{len(elements) + 1:04d}",
@@ -73,7 +72,6 @@ def parse_result_to_ir(
             page=block.source_page,
             bbox=bbox,
             order=len(elements),
-            metadata=metadata,
         )
         elements.append(element)
 
@@ -88,7 +86,6 @@ def parse_result_to_ir(
         doc_type=normalized_doc_type,
         elements=elements,
         outline=outline,
-        metadata=dict(parse_result.metadata),
     )
 
 
@@ -125,16 +122,6 @@ def _block_plain_text(block: DocBlock, markdown: str) -> str:
     if markdown:
         return markdown.strip()
     return ""
-
-
-def _block_metadata(block: DocBlock) -> dict[str, Any]:
-    metadata = dict(block.attrs)
-    metadata.pop("bbox", None)
-    if block.level is not None:
-        metadata["level"] = block.level
-    if block.type:
-        metadata["block_type"] = block.type
-    return metadata
 
 
 def _normalize_bbox(value: Any) -> list[float] | None:
