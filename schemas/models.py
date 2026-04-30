@@ -10,8 +10,8 @@ All types now live in their own modules under `schemas/`:
 Document-type-specific files live under `schemas/docs/`:
 - srs.py          — FunctionalReqItem, NonFunctionalReqItem, SrsExtraction, SrsExtractedDocument
 - api.py          — RequestParamItem, ResponseFieldItem, ErrorCodeItem, ApiItem, ApiExtraction, ApiExtractedDocument
-- design.py       — ModuleItem, HLDExtraction
-- test.py         — TestStepItem, TestCaseItem, TestExtraction, TestExtractedDocument
+- design.py       — ModuleItem, HLDExtraction, HLDExtractedDocument
+- test.py         — TestStepItem, TestCaseItem, TestCaseExtraction, TestCaseExtractedDocument
 - dbdd.py         — FieldItem, TableItem, DBDDExtraction, DBDDExtractedDocument
 """
 

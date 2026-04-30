@@ -8,7 +8,7 @@ import uuid
 import aiofiles
 from fastapi import UploadFile
 
-from core.extractor import extract_structure_with_meta
+from core.extractor import extract_structure_with_meta, generate_document_summary
 from core.ir import build_basic_ir_from_markdown, document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
 from core.schema_registry import get_response_model, normalize_doc_type
@@ -21,12 +21,27 @@ logger = logging.getLogger(__name__)
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".md", ".txt"}
 
 
+async def generate_summary_safely(
+    markdown_text: str,
+    document_ir_payload: dict,
+) -> tuple[str | None, dict[str, object]]:
+    """生成文档摘要；失败时返回元信息但不阻断主流程。"""
+    try:
+        summary = await asyncio.to_thread(generate_document_summary, markdown_text, document_ir_payload)
+    except Exception as exc:
+        logger.warning("Document summary generation failed: %s", exc)
+        return None, {"summary_generated": False, "summary_error": str(exc)}
+    if not summary:
+        return None, {"summary_generated": False}
+    return summary, {"summary_generated": True, "summary_chars": len(summary)}
+
+
 async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
     """
     重试提取结构化数据。
-    仅当 parsed_content 存在时有效。
+    仅当 raw_text 存在时有效。
     """
-    if not doc.parsed_content:
+    if not doc.raw_text:
         raise ValueError("文档尚未解析，无法重试提取")
 
     normalized_doc_type = normalize_doc_type(doc.doc_type)
@@ -39,19 +54,21 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
     try:
         document_ir = doc.document_ir
         if document_ir is None:
-            regenerated_ir = build_basic_ir_from_markdown(doc.parsed_content, doc_type=normalized_doc_type)
+            regenerated_ir = build_basic_ir_from_markdown(doc.raw_text, doc_type=normalized_doc_type)
             document_ir = document_ir_to_payload(regenerated_ir)
             await doc.update_from_dict({"document_ir": document_ir}).save()
 
         extracted, extraction_meta = await extract_structure_with_meta(
-            doc.parsed_content,
+            doc.raw_text,
             target_model,
             document_ir=document_ir,
+            document_summary=doc.summary,
         )
         await doc.update_from_dict(
             {
                 "status": "completed",
                 "extracted_data": extracted.model_dump(mode="json"),
+                "extraction_meta": extraction_meta,
                 "error_message": None,
             }
         ).save()
@@ -100,7 +117,7 @@ async def process_uploaded_file(
         await handle.write(await file.read())
 
     doc = await DocumentRecord.create(
-        filename=file.filename,
+        title=file.filename,
         stored_path=file_path,
         status="uploaded",
         doc_type=normalized_doc_type.value,
@@ -108,7 +125,7 @@ async def process_uploaded_file(
 
     return UploadResponse(
         id=doc.id,
-        filename=doc.filename,
+        title=doc.title,
         status=doc.status,
         message="文件已上传，正在后台处理中",
     )
@@ -138,8 +155,16 @@ async def process_document_record(doc_id: int) -> None:
     # 解析成功，先保存 Markdown 预览和机器可读 IR
     await doc.update_from_dict(
         {
-            "parsed_content": markdown_text,
+            "raw_text": markdown_text,
             "document_ir": document_ir_payload,
+        }
+    ).save()
+
+    summary, summary_meta = await generate_summary_safely(markdown_text, document_ir_payload)
+    await doc.update_from_dict(
+        {
+            "summary": summary,
+            "extraction_meta": summary_meta,
         }
     ).save()
 
@@ -155,12 +180,14 @@ async def process_document_record(doc_id: int) -> None:
             markdown_text,
             target_model,
             document_ir=document_ir_payload,
+            document_summary=doc.summary,
         )
         extracted_payload = extracted.model_dump(mode="json")
         await doc.update_from_dict(
             {
                 "status": "completed",
                 "extracted_data": extracted_payload,
+                "extraction_meta": {**summary_meta, **extraction_meta},
                 "error_message": None,
             }
         ).save()

@@ -74,11 +74,14 @@ async def update_document(doc_id: int, body: DocumentUpdateRequest) -> DocumentR
         raise HTTPException(404, "记录不存在")
 
     update_fields: list[str] = []
-    if body.parsed_content is not None and body.parsed_content != doc.parsed_content:
-        doc.parsed_content = body.parsed_content
+    if body.raw_text is not None and body.raw_text != doc.raw_text:
+        doc.raw_text = body.raw_text
         doc.document_ir = None
-        update_fields.append("parsed_content")
+        update_fields.append("raw_text")
         update_fields.append("document_ir")
+    if body.summary is not None and body.summary != doc.summary:
+        doc.summary = body.summary
+        update_fields.append("summary")
     if body.extracted_data is not None and body.extracted_data != doc.extracted_data:
         doc.extracted_data = body.extracted_data
         update_fields.append("extracted_data")
@@ -142,7 +145,7 @@ async def get_document_file(doc_id: int) -> FileResponse:
     if not doc.stored_path or not os.path.exists(doc.stored_path):
         raise HTTPException(404, "原始文件不存在")
 
-    return FileResponse(path=doc.stored_path, filename=doc.filename)
+    return FileResponse(path=doc.stored_path, filename=doc.title)
 
 
 def build_document_chunks_response(doc: DocumentRecord) -> DocumentChunksResponse:
@@ -167,11 +170,11 @@ def build_document_chunks_response(doc: DocumentRecord) -> DocumentChunksRespons
 
 
 def _prepare_debug_document_ir(doc: DocumentRecord) -> DocumentIR:
-    """读取已保存 IR，缺失时用 parsed_content 临时构造基础 IR。"""
+    """读取已保存 IR，缺失时用 raw_text 临时构造基础 IR。"""
     if doc.document_ir:
         return document_ir_from_payload(doc.document_ir)
-    if doc.parsed_content:
-        return build_basic_ir_from_markdown(doc.parsed_content, doc_type=doc.doc_type)
+    if doc.raw_text:
+        return build_basic_ir_from_markdown(doc.raw_text, doc_type=doc.doc_type)
     raise ValueError("文档尚未解析，暂无分块数据")
 
 

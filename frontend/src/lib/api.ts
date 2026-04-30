@@ -8,25 +8,29 @@ export const ACTIVE_DOCUMENT_STATUSES = ["pending", "uploaded", "parsing", "extr
 
 export interface DocumentRecord {
   id: number;
-  filename: string;
+  title: string;
   stored_path: string;
-  upload_time: string;
+  created_at: string;
+  updated_at: string | null;
   doc_type: string;
-  parsed_content: string | null;
+  raw_text: string | null;
+  summary: string | null;
   document_ir: Record<string, unknown> | null;
   extracted_data: Record<string, unknown> | null;
+  extraction_meta: Record<string, unknown> | null;
   status: string;
   error_message: string | null;
 }
 
 export interface UpdateDocumentRequest {
-  parsed_content?: string;
+  raw_text?: string;
+  summary?: string;
   extracted_data?: Record<string, unknown>;
 }
 
 export interface UploadResponse {
   id: number;
-  filename: string;
+  title: string;
   status: string;
   message: string;
 }
@@ -40,6 +44,31 @@ export interface DocumentFilePayload {
   blob: Blob;
   contentType: string;
   fileName: string;
+}
+
+export interface DocumentElement {
+  element_id: string;
+  element_type: string;
+  text: string | null;
+  markdown: string | null;
+  section_path: string[];
+  page: number | null;
+  bbox: number[] | null;
+  order: number;
+  metadata: Record<string, unknown>;
+}
+
+export interface DocumentIR {
+  title: string | null;
+  doc_type: string;
+  elements: DocumentElement[];
+  outline: {
+    title: string | null;
+    doc_type: string;
+    sections: string[];
+    main_topics: string[];
+  };
+  metadata: Record<string, unknown>;
 }
 
 export interface DocumentChunkDebug {

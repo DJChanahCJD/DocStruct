@@ -101,7 +101,7 @@ export function DocPreviewPanel({
   }, [extractionItems]);
 
   useEffect(() => {
-    const nextRawContent = doc?.parsed_content ?? "";
+    const nextRawContent = doc?.raw_text ?? "";
     const nextJsonContent = doc?.extracted_data
       ? JSON.stringify(doc.extracted_data, null, 2)
       : "";
@@ -109,7 +109,7 @@ export function DocPreviewPanel({
     setSavedRawContent(nextRawContent);
     setJsonDraft(nextJsonContent);
     setSavedJsonContent(nextJsonContent);
-  }, [doc?.id, doc?.parsed_content, doc?.extracted_data]);
+  }, [doc?.id, doc?.raw_text, doc?.extracted_data]);
 
   useEffect(() => {
     onRawDirtyChange?.(tab === "raw" && hasRawChanges);
@@ -228,9 +228,9 @@ export function DocPreviewPanel({
     }
     try {
       const updatedDoc = await updateDocument.mutateAsync({
-        parsed_content: rawDraft,
+        raw_text: rawDraft,
       });
-      const nextContent = updatedDoc.parsed_content ?? "";
+      const nextContent = updatedDoc.raw_text ?? "";
       setRawDraft(nextContent);
       setSavedRawContent(nextContent);
       toast.success("Markdown 已保存");

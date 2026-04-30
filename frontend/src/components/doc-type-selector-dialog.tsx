@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, Plug, Blocks, FlaskConical, BookOpen, Bug, HelpCircle } from "lucide-react";
+import { FileText, Plug, Blocks, FlaskConical, Database, HelpCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,36 +29,28 @@ const DOC_TYPE_OPTIONS = [
     iconColor: "text-green-500",
   },
   {
-    value: "design",
-    label: "设计文档",
+    value: "hld",
+    label: "概要设计",
     icon: Blocks,
     desc: "系统架构与模块设计",
     color: "bg-purple-50 border-purple-200 hover:border-purple-400",
     iconColor: "text-purple-500",
   },
   {
-    value: "test",
-    label: "测试文档",
+    value: "tc",
+    label: "测试用例",
     icon: FlaskConical,
     desc: "测试用例与测试报告",
     color: "bg-orange-50 border-orange-200 hover:border-orange-400",
     iconColor: "text-orange-500",
   },
   {
-    value: "manual",
-    label: "用户手册",
-    icon: BookOpen,
-    desc: "使用说明与操作指南",
+    value: "dbdd",
+    label: "数据库设计",
+    icon: Database,
+    desc: "表结构与字段定义",
     color: "bg-teal-50 border-teal-200 hover:border-teal-400",
     iconColor: "text-teal-500",
-  },
-  {
-    value: "issue",
-    label: "问题单",
-    icon: Bug,
-    desc: "Bug 报告与缺陷跟踪",
-    color: "bg-red-50 border-red-200 hover:border-red-400",
-    iconColor: "text-red-500",
   },
   {
     value: "unknown",

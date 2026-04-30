@@ -29,6 +29,22 @@ Schema:
 {json_instruction}
 """
 
+SUMMARY_USER_PROMPT_TEMPLATE = """
+请为以下软件工程文档生成摘要，用于后续分块结构化抽取的全局背景。
+
+要求：
+- 只概括原文明确出现的信息，不要补充外部知识。
+- 覆盖文档目标、系统/模块/接口/数据对象、关键章节和主要约束。
+- 使用中文，控制在 300-500 字。
+- 只输出摘要正文，不要 Markdown 标题或列表。
+
+文档大纲:
+{outline}
+
+文档内容:
+{content}
+"""
+
 # === Phase 0 Pre-scan Prompts ===
 
 PHASE0_SYSTEM_PROMPT = """

@@ -103,7 +103,7 @@ def build_basic_ir_from_markdown(
         metadata={
             "parser_name": "MarkdownNormalizer",
             "source_type": "markdown",
-            "ir_source": "parsed_content",
+            "ir_source": "raw_text",
         },
     )
     return parse_result_to_ir(parse_result, doc_type=doc_type)

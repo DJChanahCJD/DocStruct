@@ -4,22 +4,20 @@ from pydantic import BaseModel
 
 from schemas.models import (
     ApiExtractedDocument,
-    DesignExtractedDocument,
+    DBDDExtractedDocument,
     DocType,
-    IssueExtractedDocument,
-    ManualExtractedDocument,
+    HLDExtractedDocument,
     SrsExtractedDocument,
-    TestExtractedDocument,
+    TestCaseExtractedDocument,
 )
 
 
 TYPED_MODEL_MAP: dict[DocType, type[BaseModel]] = {
     DocType.SRS: SrsExtractedDocument,
     DocType.API: ApiExtractedDocument,
-    DocType.DESIGN: DesignExtractedDocument,
-    DocType.TEST: TestExtractedDocument,
-    DocType.MANUAL: ManualExtractedDocument,
-    DocType.ISSUE: IssueExtractedDocument,
+    DocType.HLD: HLDExtractedDocument,
+    DocType.TC: TestCaseExtractedDocument,
+    DocType.DBDD: DBDDExtractedDocument,
 }
 
 

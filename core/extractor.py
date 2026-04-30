@@ -12,6 +12,7 @@ from core.config import get_settings
 from core.constants import (
     JSON_FORMAT_INSTRUCTION,
     MAP_USER_PROMPT_TEMPLATE,
+    SUMMARY_USER_PROMPT_TEMPLATE,
     SYSTEM_PROMPT,
 )
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 raw_client = get_openai_client()
 RESPONSE_PREVIEW_CHARS = 500
+SUMMARY_INPUT_MAX_CHARS = 12000
 
 
 FINALIZE_USER_PROMPT_TEMPLATE = """
@@ -102,6 +104,11 @@ def _preview_text(text: str, limit: int = RESPONSE_PREVIEW_CHARS) -> str:
     return f"{normalized[:limit]}..."
 
 
+def _compact_text(text: str) -> str:
+    """返回压缩空白后的文本，用于摘要输入裁剪。"""
+    return " ".join((text or "").split())
+
+
 def _create_text_completion(
     messages: list[dict[str, str]],
     *,
@@ -116,6 +123,29 @@ def _create_text_completion(
         )
     )
     return response.choices[0].message.content or ""
+
+
+def generate_document_summary(
+    markdown_content: str,
+    document_ir: dict[str, Any] | DocumentIR,
+    *,
+    model_name: str | None = None,
+) -> str:
+    """基于全文和 IR 大纲生成用于抽取上下文的文档摘要。"""
+    ir = document_ir_from_payload(document_ir)
+    compact_content = _compact_text(markdown_content)
+    content = compact_content[:SUMMARY_INPUT_MAX_CHARS]
+    outline = ir.outline.model_dump_json(indent=2)
+    prompt = SUMMARY_USER_PROMPT_TEMPLATE.format(outline=outline, content=content)
+    summary = _create_text_completion(
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT.strip()},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        model_name=model_name,
+    )
+    return _compact_text(summary)
 
 
 def _extract_once(
@@ -166,6 +196,7 @@ async def _extract_chunk(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     response_model: type[BaseModel],
+    document_summary: str | None = None,
     prompt_template: str | None = None,
     model_name: str | None = None,
 ) -> dict[str, object]:
@@ -176,7 +207,10 @@ async def _extract_chunk(
                 chunk.markdown,
                 response_model,
                 context_note=_render_chunk_context(
-                    document_ir=document_ir, contract=contract, chunk=chunk,
+                    document_ir=document_ir,
+                    contract=contract,
+                    chunk=chunk,
+                    document_summary=document_summary,
                 ),
                 prompt_template=prompt_template,
                 model_name=model_name,
@@ -191,6 +225,7 @@ async def extract_structure_with_meta(
     response_model: type[BaseModel],
     *,
     document_ir: dict[str, Any] | DocumentIR | None = None,
+    document_summary: str | None = None,
     prompt_template: str | None = None,
     model_name: str | None = None,
 ) -> tuple[BaseModel, dict[str, object]]:
@@ -251,6 +286,7 @@ async def extract_structure_with_meta(
             document_ir=ir,
             contract=contract,
             response_model=chunk_model,
+            document_summary=document_summary,
             prompt_template=prompt_template,
             model_name=model_name,
         )
@@ -293,6 +329,7 @@ async def extract_structure_with_meta(
             contract=contract,
             chunk_results=partial_results,
             response_model=chunk_model,
+            document_summary=document_summary,
             model_name=model_name,
         )
         chunk_results_for_reduce = [finalized_data]
@@ -322,6 +359,7 @@ async def extract_structure_with_meta(
         "partial": failed_chunks > 0 or finalizer_failed,
         "finalizer_failed": finalizer_failed,
         "phase0_enabled": False,
+        "summary_injected": bool(document_summary and document_summary.strip()),
         "typed_schema": True,
         "element_count": len(ir.elements),
         "section_count": len(ir.outline.sections),
@@ -360,6 +398,7 @@ def _finalize_extraction_once(
     contract: ExtractionContract,
     chunk_results: list[dict[str, Any]],
     response_model: type[BaseModel],
+    document_summary: str | None = None,
     model_name: str | None = None,
 ) -> dict[str, object]:
     """
@@ -370,6 +409,7 @@ def _finalize_extraction_once(
             document_ir=document_ir,
             contract=contract,
             chunk_results=chunk_results,
+            document_summary=document_summary,
         ),
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
@@ -400,18 +440,17 @@ def _finalize_extraction_once(
 def _typed_extraction_model(response_model: type[BaseModel]) -> type[BaseModel]:
     """从文档模型提取对应的抽取容器（去除 evidence/doc_type 等包装字段）。"""
     from schemas.models import (
-        ApiExtractedDocument, DesignExtractedDocument, IssueExtractedDocument,
-        ManualExtractedDocument, SrsExtractedDocument, TestExtractedDocument,
-        ApiExtraction, DesignExtraction, IssueExtraction,
-        ManualExtraction, SrsExtraction, TestExtraction,
+        ApiExtractedDocument, DBDDExtractedDocument, HLDExtractedDocument,
+        SrsExtractedDocument, TestCaseExtractedDocument,
+        ApiExtraction, DBDDExtraction, HLDExtraction,
+        SrsExtraction, TestCaseExtraction,
     )
     mapping: dict[type[BaseModel], type[BaseModel]] = {
         SrsExtractedDocument: SrsExtraction,
         ApiExtractedDocument: ApiExtraction,
-        DesignExtractedDocument: DesignExtraction,
-        TestExtractedDocument: TestExtraction,
-        ManualExtractedDocument: ManualExtraction,
-        IssueExtractedDocument: IssueExtraction,
+        HLDExtractedDocument: HLDExtraction,
+        TestCaseExtractedDocument: TestCaseExtraction,
+        DBDDExtractedDocument: DBDDExtraction,
     }
     if response_model not in mapping:
         raise ValueError(f"不支持的 typed response model: {response_model.__name__}")
@@ -431,12 +470,18 @@ def _render_finalizer_input(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     chunk_results: list[dict[str, Any]],
+    document_summary: str | None = None,
 ) -> str:
     """Render finalizer input with candidates and evidence snippets."""
     parts = [
         "[Document Outline]",
         document_ir.outline.model_dump_json(indent=2),
     ]
+    if document_summary and document_summary.strip():
+        parts.extend([
+            "[Document Summary]",
+            document_summary.strip(),
+        ])
     parts.extend([
         "[Extraction Contract]",
         contract.model_dump_json(indent=2),
@@ -453,11 +498,17 @@ def _render_chunk_context(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     chunk: DocumentChunk,
+    document_summary: str | None = None,
 ) -> str:
     parts = [
         "[Document Outline]",
         document_ir.outline.model_dump_json(indent=2),
     ]
+    if document_summary and document_summary.strip():
+        parts.extend([
+            "[Document Summary]",
+            document_summary.strip(),
+        ])
     parts.extend([
         "[Extraction Contract]",
         contract.model_dump_json(indent=2),

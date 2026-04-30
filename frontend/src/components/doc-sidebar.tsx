@@ -75,9 +75,9 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
       const normalized = keyword.toLowerCase();
       const isIdSearch = /^\d+$/.test(keyword.trim());
       result = result.filter((doc: DocumentRecord) => {
-        const matchFilename = doc.filename.toLowerCase().includes(normalized);
+        const matchTitle = doc.title.toLowerCase().includes(normalized);
         const matchId = isIdSearch && doc.id === Number.parseInt(keyword.trim(), 10);
-        return matchFilename || matchId;
+        return matchTitle || matchId;
       });
     }
     if (filters.status.length > 0) {
@@ -106,7 +106,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
   };
 
   const handleDelete = async (doc: DocumentRecord) => {
-    if (!window.confirm(`确定删除 "${doc.filename}"？`)) {
+    if (!window.confirm(`确定删除 "${doc.title}"？`)) {
       return;
     }
     try {
@@ -228,7 +228,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
                   key={doc.id}
                   doc={doc}
                   selected={selectedId === doc.id}
-                  onSelect={() => onSelectDoc(doc.id, doc.filename)}
+                  onSelect={() => onSelectDoc(doc.id, doc.title)}
                   onDelete={() => handleDelete(doc)}
                   onRetry={() => handleRetry(doc)}
                 />

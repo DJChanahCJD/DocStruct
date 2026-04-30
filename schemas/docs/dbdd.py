@@ -8,7 +8,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from schemas.docs.base import BaseExtractedDocument
+from schemas.docs.base import BaseExtractedDocument, BaseNode
 from schemas.constants import DocType
 
 
@@ -21,9 +21,8 @@ class FieldItem(BaseModel):
     comment: str = Field(default="", description="字段说明")
 
 
-class TableItem(BaseModel):
+class TableItem(BaseNode):
     """数据库表定义。"""
-    name: str = Field(..., description="表名")
     comment: str = Field(default="", description="表注释")
     fields: list[FieldItem] = Field(default_factory=list, description="字段列表")
 

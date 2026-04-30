@@ -9,9 +9,9 @@ DocStruct 当前聚焦于软件工程文档的结构化提取与离线评测。�
 ## 当前能力
 
 - 支持 `PDF`、`DOCX`、`MD`、`TXT` 文件上传
-- 支持 6 类主干软件工程文档：`srs`、`api`、`design`、`test`、`manual`、`issue`
-- `unknown` 类型只保留解析后的原文与 IR，不执行结构化抽取
-- 解析结果同时保存 `parsed_content` 和 `document_ir`
+- 支持 5 类主干软件工程文档：`srs`、`api`、`hld`、`tc`、`dbdd`
+- `unknown` 类型只保留解析后的原文、摘要与 IR，不执行结构化抽取
+- 解析结果同时保存 `raw_text`、`summary` 和 `document_ir`
 - 抽取结果统一输出五类主干对象和证据回溯
 - 前端支持 PDF 原文与结构化结果左右对照，并可点击提取项定位 Docling bbox 证据
 - 提供离线评测脚本，便于论文实验复现
@@ -24,6 +24,8 @@ DocStruct 不做通用 JSON 生成器，而是面向软件工程文档建立稳�
 PDF / DOCX / MD / TXT
     ↓
 Parser → Document IR
+    ↓
+LLM Summary
     ↓
 Section-aware Chunking
     ↓
@@ -39,6 +41,7 @@ Final JSON
 核心思想：
 
 - `Document IR` 保存标题、段落、表格、页码、bbox、章节路径和阅读顺序
+- `summary` 在解析后由 LLM 基于全文和大纲生成，并作为分块抽取的全局上下文
 - `ExtractionContract` 控制每类文档抽什么，不使用任意动态 Schema
 - LLM 只负责 chunk 内局部语义抽取，Reduce 尽量使用确定性逻辑
 - 每个对象通过 1-3 个 `evidence_element_ids` 锚点绑定到原文元素，最终生成 `evidence`
@@ -58,11 +61,10 @@ Final JSON
 | --- | --- | --- |
 | 软件需求规格说明书 | `srs` | 角色、模块、需求、接口；需求内包含验收标准 |
 | API 接口文档 | `api` | 接口、endpoint 元数据、请求响应产物 |
-| 系统设计说明书 | `design` | 模块、服务、设计产物 |
-| 测试文档 | `test` | 测试流程、测试用例、测试报告 |
-| 用户手册 | `manual` | 操作流程、手册章节、相关实体 |
-| 问题单 / 缺陷单 | `issue` | 问题描述、复现流程、期望结果 |
-| 未知类型 | `unknown` | 仅保留基础元信息、原文和 IR |
+| 概要设计说明书 | `hld` | 架构风格、技术栈、模块职责 |
+| 测试用例文档 | `tc` | 测试范围、测试用例、测试步骤 |
+| 数据库设计文档 | `dbdd` | 数据库、表、字段定义 |
+| 未知类型 | `unknown` | 仅保留基础元信息、原文、摘要和 IR |
 
 ## Typed 输出结构
 
@@ -76,7 +78,7 @@ class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):
     evidence: list[Evidence] = Field(default_factory=list)
 ```
 
-- 每类文档使用独立 typed schema，例如 SRS 使用 `functional_requirements` / `non_functional_requirements`，API 使用 `endpoints` / `schemas` / `auth`
+- 每类文档使用独立 typed schema，例如 SRS 使用 `functional_requirements` / `non_functional_requirements`，API 使用 `apis`，HLD 使用 `modules`，TC 使用 `test_cases`，DBDD 使用 `tables`
 - `id` 是系统生成的稳定对象 ID，例如 `FREQ-001`；原文编号可作为 `name` 后缀保留，例如 `用户注册（SRS-USER-001）`
 - SRS 的验收标准不作为独立需求输出，局部验收条目写入对应功能需求的 `criteria`
 - `entities` 只保存产品域或架构中可独立指称的角色、模块、系统、服务、组件、数据对象，不保存需求标题
@@ -173,6 +175,8 @@ DocStruct/
     ↓
 Parser 生成 Markdown 与 Document IR
     ↓
+LLM 生成 summary
+    ↓
 用户指定 doc_type
     ↓
 构建 DocumentOutline 与 ExtractionContract
@@ -188,7 +192,7 @@ Evidence Binding 回填 page / bbox / text_span
 保存 extracted_data
 ```
 
-`parsed_content` 用于人类预览和修订，`document_ir` 是分块与证据绑定的机器可读来源。
+`raw_text` 用于人类预览和修订，`summary` 用作分块抽取的全局背景，`document_ir` 是分块与证据绑定的机器可读来源。`summary` 不作为 evidence 来源，不会进入 `allowed_evidence_element_ids`。
 
 ## API 接口
 
@@ -197,7 +201,7 @@ Evidence Binding 回填 page / bbox / text_span
 | `POST` | `/api/upload` | 上传文件并执行结构化抽取 |
 | `GET` | `/api/documents` | 获取文档列表 |
 | `GET` | `/api/documents/{doc_id}` | 获取文档详情 |
-| `PATCH` | `/api/documents/{doc_id}` | 人工修订 `parsed_content` 或 `extracted_data` |
+| `PATCH` | `/api/documents/{doc_id}` | 人工修订 `raw_text`、`summary` 或 `extracted_data` |
 | `DELETE` | `/api/documents/{doc_id}` | 删除文档记录与原始文件 |
 
 上传请求要求：
@@ -213,19 +217,22 @@ Evidence Binding 回填 page / bbox / text_span
 | `db/db.sqlite3` | 主数据库 |
 | `experiments/results/` | 评测输出结果 |
 
+当前数据库模型使用 `title`、`created_at`、`raw_text`、`summary` 等字段，不兼容旧版 `filename`、`upload_time`、`parsed_content` 表结构。开发环境如保留旧 SQLite 文件，需要重建数据库或执行单独迁移。
+
 ## 手动验证
 
 建议至少覆盖以下场景：
 
 1. 上传 `PDF / DOCX / MD / TXT`，确认状态从 `uploaded` / `parsing` / `extracting` 变为 `completed` 或 `failed`
-2. 检查 `parsed_content` 是否正常生成
-3. 检查 `document_ir` 是否包含 `elements`、`outline`、`section_path`
+2. 检查 `raw_text` 是否正常生成
+3. 检查 `summary` 是否生成，并确认摘要失败不会阻断结构化抽取
+4. 检查 `document_ir` 是否包含 `elements`、`outline`、`section_path`
 4. 检查 `extracted_data` 是否符合五类主干对象和 `evidence`
 5. 对使用 Docling 解析的 PDF，点击前端提取项，确认 PDF 跳转到对应页并高亮 bbox
 6. 对 basic parser 或非 PDF 文档，确认前端仍可展示文本证据且不会错误绘制 PDF 框
 7. 上传 `unknown` 类型文档，确认只保留原文和 IR
 8. 上传超长文档，确认返回明确错误
-9. 修改 `parsed_content` 或 `extracted_data`，确认 `PATCH` 生效
+9. 修改 `raw_text`、`summary` 或 `extracted_data`，确认 `PATCH` 生效
 10. 删除文档后确认数据库记录与上传文件一并清理
 
 ## CI Test

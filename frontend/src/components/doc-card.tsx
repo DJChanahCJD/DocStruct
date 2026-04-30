@@ -61,7 +61,7 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{doc.filename}</div>
+              <div className="truncate text-sm font-medium">{doc.title}</div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <Badge variant="secondary" className="text-[10px] uppercase">
                   {doc.doc_type || "unknown"}
@@ -105,7 +105,7 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
                     <MoreVertical className="h-4 w-4 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {doc.status === "failed" && doc.parsed_content && onRetry && (
+                    {doc.status === "failed" && doc.raw_text && onRetry && (
                       <DropdownMenuItem
                         onClick={(event: MouseEvent<HTMLDivElement>) => {
                           event.stopPropagation();
@@ -136,8 +136,8 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
 
       <TooltipContent side="right" className="max-w-72 p-3">
         <div className="space-y-2">
-          <div className="truncate pr-1 text-sm font-semibold" title={doc.filename}>
-            {doc.filename}
+          <div className="truncate pr-1 text-sm font-semibold" title={doc.title}>
+            {doc.title}
           </div>
 
           <div className="flex items-center gap-1.5 text-xs">
@@ -167,12 +167,12 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
             <DocMetaItem
               icon={<FileText className="h-3 w-3" />}
               label="Markdown"
-              value={`${doc.parsed_content?.length ?? 0} 字符`}
+              value={`${doc.raw_text?.length ?? 0} 字符`}
             />
             <DocMetaItem
               icon={<Clock className="h-3 w-3" />}
-              label="上传"
-              value={new Date(doc.upload_time).toLocaleString("zh-CN", {
+              label="创建"
+              value={new Date(doc.created_at).toLocaleString("zh-CN", {
                 month: "short",
                 day: "numeric",
                 hour: "2-digit",
