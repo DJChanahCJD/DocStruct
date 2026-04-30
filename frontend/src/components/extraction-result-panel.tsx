@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileSearch, MapPin, Save } from "lucide-react";
+import { Edit3, FileSearch, Save } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,24 @@ const DETAIL_FIELD_CONFIGS: Record<string, DetailFieldConfig[]> = {
     { key: "description", label: "功能描述", kind: "text", rows: 2 },
     { key: "responsibilities", label: "职责列表", kind: "list", rows: 4 },
   ],
+  business_flows: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "actor", label: "参与者", kind: "text", rows: 1 },
+    { key: "steps", label: "业务步骤", kind: "list", rows: 5 },
+    { key: "outcome", label: "业务结果", kind: "text", rows: 2 },
+  ],
+  core_flows: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "participants", label: "参与模块", kind: "list", rows: 3 },
+    { key: "steps", label: "流程步骤", kind: "list", rows: 5 },
+    { key: "outcome", label: "流程结果", kind: "text", rows: 2 },
+  ],
+  design_decisions: [
+    { key: "name", label: "名称", kind: "text", rows: 2 },
+    { key: "decision", label: "决策内容", kind: "text", rows: 3 },
+    { key: "rationale", label: "决策理由", kind: "text", rows: 3 },
+    { key: "tradeoffs", label: "取舍影响", kind: "list", rows: 4 },
+  ],
   test_cases: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "priority", label: "优先级", kind: "text", rows: 1 },
@@ -120,6 +138,7 @@ interface ExtractionResultPanelProps {
   onSelectEvidence: (evidence: ExtractionEvidence) => void;
   onPatchItem: (item: ExtractionItem, patch: Record<string, unknown>) => void;
   onSelectedItemChange?: (item: ExtractionItem | null) => void;
+  onEditItem?: (item: ExtractionItem) => void;
 }
 
 /**
@@ -131,6 +150,7 @@ export function ExtractionResultPanel({
   onSelectEvidence,
   onPatchItem,
   onSelectedItemChange,
+  onEditItem,
 }: ExtractionResultPanelProps) {
   const groupedItems = useMemo(() => groupItemsBySlot(items), [items]);
   const slotConfigs = useMemo(() => deriveSlotConfigs(items), [items]);
@@ -235,6 +255,7 @@ export function ExtractionResultPanel({
         selectedEvidence={selectedEvidence}
         onSelectEvidence={onSelectEvidence}
         onPatchItem={onPatchItem}
+        onEditItem={onEditItem}
       />
     </div>
   );
@@ -290,6 +311,7 @@ interface ExtractionDetailProps {
   selectedEvidence: ExtractionEvidence | null;
   onSelectEvidence: (evidence: ExtractionEvidence) => void;
   onPatchItem: (item: ExtractionItem, patch: Record<string, unknown>) => void;
+  onEditItem?: (item: ExtractionItem) => void;
 }
 
 /**
@@ -300,6 +322,7 @@ function ExtractionDetail({
   selectedEvidence,
   onSelectEvidence,
   onPatchItem,
+  onEditItem,
 }: ExtractionDetailProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
@@ -315,7 +338,6 @@ function ExtractionDetail({
     return null;
   }
 
-  const primaryEvidence = getPrimaryEvidence(item);
   const fieldConfigs = getFieldConfigs(item.slot, item.raw);
 
   const handleSave = () => {
@@ -334,13 +356,15 @@ function ExtractionDetail({
             </div>
             <h4 className="mt-2 line-clamp-2 text-base font-semibold text-foreground">{item.title}</h4>
           </div>
-          {primaryEvidence && (
-            <Button variant="secondary" size="sm" onClick={() => onSelectEvidence(primaryEvidence)}>
-              <MapPin data-icon="inline-start" />
-              定位
-            </Button>
-          )}
-        </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onEditItem?.(item)}
+          >
+            <Edit3 data-icon="inline-start" />
+            编辑 JSON
+          </Button>
+      </div>
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
