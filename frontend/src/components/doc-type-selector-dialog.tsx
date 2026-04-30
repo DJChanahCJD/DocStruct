@@ -117,10 +117,10 @@ export function DocTypeSelectorDialog({
                 onClick={() => setSelectedType(option.value)}
                 className={cn(
                   "flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all duration-200",
-                  "hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                  "hover:shadow-md focus:outline-none",
                   option.color,
                   isSelected
-                    ? "border-primary ring-2 ring-primary ring-offset-2 shadow-md"
+                    ? "border-primary shadow-md "
                     : "border-opacity-50"
                 )}
               >
