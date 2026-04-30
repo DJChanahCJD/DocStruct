@@ -4,7 +4,8 @@ Backward-compatible re-export hub.
 All types now live in their own modules under `schemas/`:
 - constants.py   — all enum types (DocType, Priority, …)
 - orm.py          — DocumentRecord (Tortoise ORM)
-- ir.py           — DocumentElement, DocumentOutline, DocumentChunk, DocumentIR, ExtractionContract
+- extraction.py   — ExtractionContract, ExtractionMeta
+- ir.py           — DocumentElement, DocumentOutline, DocumentChunk, DocumentIR
 - base.py         — BaseNode, Evidence, BaseExtractedDocument
 
 Document-type-specific files live under `schemas/docs/`:
@@ -19,6 +20,7 @@ from __future__ import annotations
 
 from schemas.constants import *
 from schemas.ir import *
+from schemas.extraction import *
 from schemas.docs.base import *
 from schemas.docs.srs import *
 from schemas.docs.api import *

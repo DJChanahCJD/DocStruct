@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+from http import HTTPMethod
 from schemas.constants import DocType
 
 from schemas.docs.base import BaseExtractedDocument, BaseNode
@@ -37,7 +38,7 @@ class ApiItem(BaseNode):
     """API 接口。"""
     id: Optional[str] = Field(None, description="接口 ID")
     name: str = Field(..., description="接口名称")
-    method: str = Field(default="", description="HTTP 方法")
+    method: HTTPMethod = Field(default=HTTPMethod.GET, description="HTTP 方法")
     path: str = Field(default="", description="URL 路径")
     description: str = Field(default="", description="接口描述")
     request_parameters: list[RequestParamItem] = Field(default_factory=list, description="请求参数")

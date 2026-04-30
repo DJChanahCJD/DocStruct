@@ -12,7 +12,7 @@ import {
 } from "@/lib/evidence";
 import { cn } from "@/lib/utils";
 
-type DetailFieldKind = "text" | "list" | "steps" | "select";
+type DetailFieldKind = "text" | "list" | "steps" | "json" | "select";
 
 interface DetailFieldConfig {
   key: string;
@@ -28,160 +28,55 @@ interface DetailFieldOption {
 }
 
 const TYPE_FIELD_OPTIONS: Record<string, DetailFieldOption[]> = {
-  entity_type: [
-    { value: "actor", label: "actor - 人或角色" },
-    { value: "system", label: "system - 系统或模块" },
-    { value: "data", label: "data - 数据对象" },
-    { value: "other", label: "other - 其他实体" },
-  ],
-  process_type: [
-    { value: "business", label: "business - 业务流程" },
-    { value: "technical", label: "technical - 技术流程" },
-    { value: "test", label: "test - 测试流程" },
-    { value: "other", label: "other - 其他流程" },
-  ],
-  requirement_type: [
-    { value: "functional", label: "functional - 功能需求" },
-    { value: "non_functional", label: "non_functional - 非功能需求" },
-    { value: "other", label: "other - 其他需求" },
-  ],
-  interface_type: [
-    { value: "http", label: "http - HTTP API" },
-    { value: "rpc", label: "rpc - RPC 调用" },
-    { value: "message", label: "message - 消息通道" },
-    { value: "ui", label: "ui - 用户界面入口" },
-    { value: "database", label: "database - 数据库交换" },
-    { value: "file", label: "file - 文件交换" },
-    { value: "other", label: "other - 其他接口" },
-  ],
-  artifact_type: [
-    { value: "test_case", label: "test_case - 测试用例" },
-    { value: "decision", label: "decision - 决策记录" },
-    { value: "table", label: "table - 表格产物" },
-    { value: "issue", label: "issue - 问题记录" },
-    { value: "section", label: "section - 文档章节" },
-    { value: "other", label: "other - 其他产物" },
-  ],
   http_method: [
-    { value: "", label: "未指定" },
-    { value: "get", label: "GET - 读取资源" },
-    { value: "post", label: "POST - 创建或提交" },
-    { value: "put", label: "PUT - 整体更新" },
-    { value: "patch", label: "PATCH - 局部更新" },
-    { value: "delete", label: "DELETE - 删除资源" },
-    { value: "head", label: "HEAD - 读取响应头" },
-    { value: "options", label: "OPTIONS - 查询支持方法" },
+    { value: "GET", label: "GET - 读取资源" },
+    { value: "POST", label: "POST - 创建或提交" },
+    { value: "PUT", label: "PUT - 整体更新" },
+    { value: "PATCH", label: "PATCH - 局部更新" },
+    { value: "DELETE", label: "DELETE - 删除资源" },
+    { value: "HEAD", label: "HEAD - 读取响应头" },
+    { value: "OPTIONS", label: "OPTIONS - 查询支持方法" },
   ],
 };
 
 const DETAIL_FIELD_CONFIGS: Record<string, DetailFieldConfig[]> = {
-  entities: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "entity_type", label: "实体类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.entity_type },
-  ],
-  processes: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "process_type", label: "流程类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.process_type },
-    { key: "steps", label: "步骤", kind: "steps", rows: 5 },
-  ],
-  requirements: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "requirement_type", label: "需求类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.requirement_type },
-    { key: "points", label: "功能点 / 明细", kind: "list", rows: 4 },
-    { key: "criteria", label: "验收标准", kind: "list", rows: 3 },
-  ],
   functional_requirements: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "points", label: "功能点", kind: "list", rows: 4 },
-    { key: "criteria", label: "验收标准", kind: "list", rows: 3 },
+    { key: "actor", label: "执行者", kind: "text", rows: 1 },
+    { key: "priority", label: "优先级", kind: "text", rows: 1 },
+    { key: "acceptance_criteria", label: "验收标准", kind: "text", rows: 3 },
   ],
   non_functional_requirements: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
     { key: "category", label: "分类", kind: "text", rows: 1 },
     { key: "description", label: "描述", kind: "text", rows: 3 },
   ],
-  interfaces: [
+  apis: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "interface_type", label: "接口类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.interface_type },
-    { key: "http_method", label: "HTTP 方法", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.http_method },
-    { key: "endpoint", label: "入口标识", kind: "text", rows: 2 },
-    { key: "provider", label: "提供方", kind: "text", rows: 1 },
-    { key: "consumer", label: "调用方", kind: "text", rows: 1 },
-  ],
-  endpoints: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "http_method", label: "HTTP 方法", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.http_method },
+    { key: "method", label: "HTTP 方法", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.http_method },
     { key: "path", label: "路径", kind: "text", rows: 1 },
-    { key: "summary", label: "功能简述", kind: "text", rows: 2 },
-    { key: "request_schema", label: "请求结构", kind: "text", rows: 2 },
-    { key: "response_schema", label: "响应结构", kind: "text", rows: 2 },
-  ],
-  schemas: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "description", label: "用途说明", kind: "text", rows: 2 },
-    { key: "fields", label: "字段", kind: "list", rows: 5 },
-  ],
-  auth: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "auth_type", label: "认证类型", kind: "text", rows: 1 },
-    { key: "description", label: "说明", kind: "text", rows: 3 },
+    { key: "description", label: "接口描述", kind: "text", rows: 3 },
+    { key: "request_parameters", label: "请求参数", kind: "json", rows: 6 },
+    { key: "response_fields", label: "响应字段", kind: "json", rows: 6 },
+    { key: "error_codes", label: "错误码", kind: "json", rows: 6 },
   ],
   modules: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "responsibility", label: "职责", kind: "text", rows: 2 },
-    { key: "sub_modules", label: "子模块", kind: "list", rows: 3 },
-  ],
-  decisions: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "rationale", label: "理由", kind: "text", rows: 3 },
-    { key: "alternatives", label: "替代方案", kind: "list", rows: 3 },
+    { key: "description", label: "功能描述", kind: "text", rows: 2 },
+    { key: "responsibilities", label: "职责列表", kind: "list", rows: 4 },
   ],
   test_cases: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "precondition", label: "前置条件", kind: "text", rows: 2 },
-    { key: "expected_result", label: "预期结果", kind: "text", rows: 2 },
+    { key: "priority", label: "优先级", kind: "text", rows: 1 },
+    { key: "preconditions", label: "前置条件", kind: "list", rows: 3 },
+    { key: "steps", label: "测试步骤", kind: "steps", rows: 5 },
+    { key: "expected_result", label: "预期结果", kind: "text", rows: 3 },
   ],
-  test_steps: [
+  tables: [
     { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "action", label: "操作", kind: "text", rows: 2 },
-    { key: "expected", label: "预期行为", kind: "text", rows: 2 },
-  ],
-  defects: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "severity", label: "严重程度", kind: "text", rows: 1 },
-    { key: "description", label: "描述", kind: "text", rows: 3 },
-  ],
-  procedures: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "steps", label: "步骤", kind: "steps", rows: 5 },
-  ],
-  ui_elements: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "element_type", label: "元素类型", kind: "text", rows: 1 },
-    { key: "location", label: "所在位置", kind: "text", rows: 1 },
-  ],
-  notes: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "content", label: "内容", kind: "text", rows: 4 },
-  ],
-  symptoms: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "description", label: "现象描述", kind: "text", rows: 3 },
-  ],
-  reproduction_steps: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "action", label: "操作", kind: "text", rows: 2 },
-    { key: "expected", label: "预期", kind: "text", rows: 2 },
-    { key: "actual", label: "实际", kind: "text", rows: 2 },
-  ],
-  environment: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "value", label: "值", kind: "text", rows: 1 },
-  ],
-  artifacts: [
-    { key: "name", label: "名称", kind: "text", rows: 2 },
-    { key: "artifact_type", label: "产物类型", kind: "select", rows: 1, options: TYPE_FIELD_OPTIONS.artifact_type },
-    { key: "details", label: "要点", kind: "list", rows: 5 },
+    { key: "comment", label: "表注释", kind: "text", rows: 2 },
+    { key: "fields", label: "字段列表", kind: "json", rows: 6 },
   ],
 };
 
@@ -199,7 +94,9 @@ function getFieldConfigs(slot: string, sampleItem: Record<string, unknown> | nul
       if (key === "id" || key === "evidence_element_ids") continue;
       const value = sampleItem[key];
       if (Array.isArray(value)) {
-        if (value.length > 0 && typeof value[0] === "object" && value[0] !== null && "name" in value[0]) {
+        if (value.some((item) => typeof item === "object" && item !== null)) {
+          configs.push({ key, label: key, kind: "json", rows: 5 });
+        } else if (value.length > 0 && typeof value[0] === "object" && value[0] !== null && "name" in value[0]) {
           configs.push({ key, label: key, kind: "steps", rows: 4 });
         } else {
           configs.push({ key, label: key, kind: "list", rows: 4 });
@@ -405,7 +302,6 @@ function ExtractionDetail({
   onPatchItem,
 }: ExtractionDetailProps) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const selectedEvidenceRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!item) {
@@ -414,21 +310,6 @@ function ExtractionDetail({
     }
     setDrafts(buildDrafts(item));
   }, [item]);
-
-  useEffect(() => {
-    if (!selectedEvidence) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      selectedEvidenceRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [item, selectedEvidence]);
 
   if (!item) {
     return null;
@@ -484,11 +365,6 @@ function ExtractionDetail({
                 item.evidence.map((evidence, index) => (
                   <button
                     key={`${evidence.objectId}-${evidence.elementId ?? evidence.textSpan ?? index}`}
-                    ref={(node) => {
-                      if (evidenceMatches(evidence, selectedEvidence)) {
-                        selectedEvidenceRef.current = node;
-                      }
-                    }}
                     type="button"
                     onClick={() => onSelectEvidence(evidence)}
                     className={cn(
@@ -642,6 +518,9 @@ function draftValue(value: unknown, kind: DetailFieldKind): string {
   if (kind === "steps") {
     return stepValue(value).join("\n");
   }
+  if (kind === "json") {
+    return jsonDraftValue(value);
+  }
   return stringValue(value);
 }
 
@@ -655,6 +534,9 @@ function patchValue(value: string, kind: DetailFieldKind): unknown {
   }
   if (kind === "steps") {
     return linesValue(value).map((line) => ({ name: line }));
+  }
+  if (kind === "json") {
+    return jsonPatchValue(value);
   }
   if (kind === "select") {
     return text || null;
@@ -714,6 +596,31 @@ function arrayValue(value: unknown): string[] {
     return [];
   }
   return value.map((item) => String(item));
+}
+
+/**
+ * Convert nested JSON-like values into editable formatted JSON.
+ */
+function jsonDraftValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  return JSON.stringify(value, null, 2);
+}
+
+/**
+ * Parse JSON editor text, falling back to null when the field is cleared.
+ */
+function jsonPatchValue(value: string): unknown {
+  const text = value.trim();
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
 }
 
 /**

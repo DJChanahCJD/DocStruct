@@ -1,7 +1,8 @@
 import unittest
 
 from core.extractor import _render_chunk_context, _render_finalizer_input
-from schemas.models import DocType, DocumentChunk, DocumentElement, DocumentIR, DocumentOutline, ExtractionContract
+from schemas.extraction import ExtractionContract
+from schemas.models import DocType, DocumentChunk, DocumentElement, DocumentIR, DocumentOutline
 
 
 def _sample_ir() -> DocumentIR:

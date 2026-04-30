@@ -15,10 +15,6 @@ class DocType(str, Enum):
     DBDD = "dbdd" # 数据库设计文档
     UNKNOWN = "unknown"
 
-class RequirementType(str, Enum):
-    FUNCTIONAL = "functional"
-    NON_FUNCTIONAL = "non_functional"
-
 class Priority(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"
@@ -32,6 +28,13 @@ class DocumentStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+class ElementType(str, Enum):
+    HEADING = "heading"
+    PARAGRAPH = "paragraph"
+    SEPARATOR = "separator"
+    CODE = "code"
+    TABLE = "table"
+    IMAGE = "image"
 
 class NonFunctionalCategory(str, Enum):
     PERFORMANCE = "performance"     # 性能
@@ -43,3 +46,4 @@ class NonFunctionalCategory(str, Enum):
     STORAGE = "storage"             # 存储
     SCALABILITY = "scalability"     # 可扩展性
     OTHER = "other"
+

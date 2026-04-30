@@ -62,13 +62,10 @@ def _guess_type_field(slot: str, items: list[dict[str, Any]]) -> str:
     """从槽位名和实际数据中推测类型字段名。"""
     # Known mappings
     known = {
-        "entities": "entity_type", "requirements": "requirement_type",
-        "interfaces": "interface_type", "processes": "process_type",
-        "artifacts": "artifact_type",
-        "functional_requirements": "requirement_type",
-        "non_functional_requirements": "requirement_type",
-        "endpoints": "http_method", "test_cases": "test_stage",
-        "modules": "entity_type", "decisions": "artifact_type",
+        "functional_requirements": "priority",
+        "non_functional_requirements": "category",
+        "apis": "method",
+        "test_cases": "priority",
     }
     if slot in known:
         return known[slot]

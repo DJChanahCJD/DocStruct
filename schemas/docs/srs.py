@@ -64,11 +64,20 @@ class NonFunctionalReqItem(BaseNode):
         return NonFunctionalCategory.OTHER
 
 
+class BusinessFlowItem(BaseNode):
+    """业务流程：用户或业务视角下完成目标的一组步骤。"""
+    actor: str = Field(default="", description="主要参与者或业务角色")
+    steps: list[str] = Field(default_factory=list, description="业务步骤")
+    outcome: str = Field(default="", description="业务结果")
+
+
 class SrsExtraction(BaseModel):
+    """软件需求规格说明书。"""
     system_name: str = Field(default="", description="系统名称")
     target_users: list[str] = Field(default_factory=list, description="用户角色")
     functional_requirements: list[FunctionalReqItem] = Field(default_factory=list, description="功能需求")
     non_functional_requirements: list[NonFunctionalReqItem] = Field(default_factory=list, description="非功能需求")
+    business_flows: list[BusinessFlowItem] = Field(default_factory=list, description="业务流程")
 
 class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):
     doc_type: Literal[DocType.SRS] = Field(default=DocType.SRS)

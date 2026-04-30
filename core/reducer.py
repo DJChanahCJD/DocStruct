@@ -10,7 +10,8 @@ from schemas.models import BaseNode, DocumentElement, DocumentIR
 
 # Non-slot fields to exclude from dynamic discovery.
 # Keep in sync with frontend/src/lib/evidence.ts discoverSlotConfigs knownKeys.
-_NON_SLOT_FIELDS = {"doc_type", "title", "version", "extra", "evidence", "base_url", "test_stage"}
+_NON_SLOT_FIELDS = {"doc_type", "title", "version", "extra", "evidence"}
+_DOCUMENT_IDENTITY_FIELDS = {"doc_type", "title", "version", "extra", "evidence"}
 
 
 def discover_slots(model: type[BaseModel]) -> list[str]:
@@ -36,17 +37,32 @@ def discover_slots(model: type[BaseModel]) -> list[str]:
     return slots
 
 
+def discover_document_fields(model: type[BaseModel]) -> list[str]:
+    """从 response_model 动态发现非对象槽位的文档级字段。"""
+    fields: list[str] = []
+    for field_name, field_info in model.model_fields.items():
+        if field_name in _DOCUMENT_IDENTITY_FIELDS:
+            continue
+        annotation = field_info.annotation
+        origin = getattr(annotation, "__origin__", None)
+        args = getattr(annotation, "__args__", ())
+        if origin is list and args:
+            item_type = args[0]
+            if isinstance(item_type, type) and issubclass(item_type, BaseNode):
+                continue
+        fields.append(field_name)
+    return fields
+
+
 def _generate_prefix(slot: str) -> str:
     """从槽位名生成 ID 前缀。"""
     prefix_map = {
-        "entities": "ENT", "interfaces": "INT",
-        "functional_requirements": "FREQ", "non_functional_requirements": "NFR",
-        "endpoints": "EP", "schemas": "SCH", "auth": "AUTH",
-        "modules": "MOD", "decisions": "DEC",
-        "test_cases": "TC", "test_steps": "TS", "defects": "DEF",
-        "procedures": "PROC", "ui_elements": "UI", "notes": "NOTE",
-        "symptoms": "SYM", "reproduction_steps": "RST", "environment": "ENV",
-        "processes": "PROC", "requirements": "REQ", "artifacts": "ART",
+        "functional_requirements": "FREQ",
+        "non_functional_requirements": "NFR",
+        "apis": "APIS",
+        "modules": "MOD",
+        "test_cases": "TC",
+        "tables": "TBL",
     }
     return prefix_map.get(slot, slot[:4].upper())
 
@@ -61,15 +77,20 @@ def reduce_extraction_results(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """合并分块抽取结果，并按 typed response model 绑定证据。"""
     slots = discover_slots(response_model)
+    document_fields = discover_document_fields(response_model)
 
     reduced: dict[str, Any] = {
         "doc_type": doc_type,
         "title": title,
-        "evidence": [],
         "extra": {},
     }
+    for field_name in document_fields:
+        reduced[field_name] = _default_field_value(response_model, field_name)
     for slot in slots:
         reduced[slot] = []
+
+    for field_name in document_fields:
+        reduced[field_name] = _merge_document_field(field_name, chunk_results)
 
     for slot in slots:
         slot_items = _collect_slot_items(slot, chunk_results)
@@ -79,6 +100,42 @@ def reduce_extraction_results(
     evidence, evidence_meta = bind_evidence(reduced, document_ir.elements, slots)
     reduced["evidence"] = evidence
     return _clean_empty_values(reduced), evidence_meta
+
+
+def _default_field_value(model: type[BaseModel], field_name: str) -> Any:
+    """读取 Pydantic 字段默认值，用于没有抽取结果时保持字段类型。"""
+    field_info = model.model_fields.get(field_name)
+    if field_info is None:
+        return None
+    if not field_info.is_required():
+        return field_info.get_default(call_default_factory=True)
+    return None
+
+
+def _merge_document_field(field_name: str, chunk_results: list[dict[str, Any]]) -> Any:
+    """从分块候选中合并文档级标量或列表字段。"""
+    merged: Any = None
+    for result in chunk_results:
+        if not isinstance(result, dict) or field_name not in result:
+            continue
+        value = _clean_empty_values(result.get(field_name))
+        if value in (None, "", [], {}):
+            continue
+        merged = _merge_document_values(merged, value)
+    return merged
+
+
+def _merge_document_values(existing: Any, incoming: Any) -> Any:
+    """按字段值类型合并文档级字段，避免空值覆盖有效值。"""
+    if existing in (None, "", [], {}):
+        return incoming
+    if isinstance(existing, list) and isinstance(incoming, list):
+        return _merge_lists(existing, incoming)
+    if isinstance(existing, dict) and isinstance(incoming, dict):
+        return _merge_dicts(existing, incoming)
+    if isinstance(existing, str) and isinstance(incoming, str):
+        return incoming if len(incoming.strip()) > len(existing.strip()) else existing
+    return existing
 
 
 def bind_evidence(
@@ -204,49 +261,12 @@ def _entry_from_element(
 
 
 def _identity_for_item(slot: str, item: dict[str, Any]) -> str:
-    # Existing slot-specific logic (legacy + common types)
-    if slot == "interfaces":
-        interface_type = _norm(item.get("interface_type"))
-        http_method = _norm(item.get("http_method"))
-        endpoint = _norm(item.get("endpoint"))
-        if endpoint:
-            return f"interface_endpoint::{interface_type}::{http_method}::{endpoint}"
-        name = _norm(item.get("name"))
-        provider = _norm(item.get("provider"))
-        consumer = _norm(item.get("consumer"))
-        if name or provider or consumer:
-            return f"interface_name::{interface_type}::{name}::{provider}::{consumer}"
-
     if slot == "entities":
         name = _norm(item.get("name"))
         entity_type = _norm(item.get("entity_type"))
         if name:
             return f"entity::{entity_type}::{name}"
 
-    if slot == "processes":
-        name = _norm(item.get("name"))
-        process_type = _norm(item.get("process_type"))
-        if name:
-            return f"process::{process_type}::{name}"
-
-    if slot == "requirements":
-        raw_id = _norm(item.get("id"))
-        if raw_id and not raw_id.startswith("chunk") and not _is_generated_id(slot, raw_id):
-            return f"requirement_id::{raw_id}"
-        name = _norm(item.get("name"))
-        requirement_type = _norm(item.get("requirement_type"))
-        text_parts = _flatten_text_values([item.get("points"), item.get("criteria")])
-        text_key = "::".join(text_parts)
-        if name or text_key:
-            return f"requirement::{requirement_type}::{name}::{text_key[:160]}"
-
-    if slot == "artifacts":
-        name = _norm(item.get("name"))
-        artifact_type = _norm(item.get("artifact_type"))
-        if name:
-            return f"artifact::{artifact_type}::{name}"
-
-    # Generic fallback for doc-type-specific slots
     name = _norm(item.get("name"))
     if name:
         type_field = _find_type_field(item)

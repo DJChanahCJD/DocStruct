@@ -5,40 +5,20 @@ interface SlotConfig {
 
 const DOC_TYPE_SLOT_CONFIGS: Record<string, SlotConfig[]> = {
   srs: [
-    { key: "entities", label: "实体" },
     { key: "functional_requirements", label: "功能需求" },
     { key: "non_functional_requirements", label: "非功能需求" },
-    { key: "interfaces", label: "接口" },
   ],
   api: [
-    { key: "entities", label: "实体" },
-    { key: "endpoints", label: "端点" },
-    { key: "schemas", label: "数据模型" },
-    { key: "auth", label: "认证" },
+    { key: "apis", label: "接口" },
   ],
-  design: [
-    { key: "entities", label: "实体" },
+  hld: [
     { key: "modules", label: "模块" },
-    { key: "interfaces", label: "接口" },
-    { key: "decisions", label: "架构决策" },
   ],
-  test: [
-    { key: "entities", label: "实体" },
+  tc: [
     { key: "test_cases", label: "测试用例" },
-    { key: "test_steps", label: "测试步骤" },
-    { key: "defects", label: "缺陷" },
   ],
-  manual: [
-    { key: "entities", label: "实体" },
-    { key: "procedures", label: "操作步骤" },
-    { key: "ui_elements", label: "界面元素" },
-    { key: "notes", label: "注意事项" },
-  ],
-  issue: [
-    { key: "entities", label: "实体" },
-    { key: "symptoms", label: "问题现象" },
-    { key: "reproduction_steps", label: "复现步骤" },
-    { key: "environment", label: "环境信息" },
+  dbdd: [
+    { key: "tables", label: "数据表" },
   ],
 };
 
@@ -78,7 +58,7 @@ export function getSlotConfigs(docType: string | null | undefined): SlotConfig[]
 function discoverSlotConfigs(data: Record<string, unknown>): SlotConfig[] {
   const configs: SlotConfig[] = [];
   // Keep in sync with core/reducer.py _NON_SLOT_FIELDS.
-  const knownKeys = new Set(["doc_type", "title", "version", "extra", "evidence", "base_url", "test_stage"]);
+  const knownKeys = new Set(["doc_type", "title", "version", "extra", "evidence", "base_url", "system_name", "target_users", "architecture_style", "technology_stack", "test_scope", "db_name", "db_type"]);
   for (const key of Object.keys(data)) {
     if (knownKeys.has(key)) continue;
     if (Array.isArray(data[key])) {
@@ -244,11 +224,12 @@ function getItemTitle(
   }
 
   // Interface / Endpoint: use http_method + path
-  if (slot === "interfaces" || slot === "endpoints") {
+  if (slot === "apis" || slot === "interfaces" || slot === "endpoints") {
     const httpMethod = stringValue(item.http_method);
+    const method = stringValue(item.method) || httpMethod;
     const endpoint = stringValue(item.endpoint) || stringValue(item.path);
-    if (httpMethod || endpoint) {
-      return [httpMethod?.toUpperCase(), endpoint].filter(Boolean).join(" ");
+    if (method || endpoint) {
+      return [method, endpoint].filter(Boolean).join(" ");
     }
   }
 
@@ -272,31 +253,14 @@ function getItemTitle(
  */
 function getTypeLabel(slot: ExtractionSlotKey, item: Record<string, unknown>): string | null {
   const typeFieldBySlot: Record<string, string> = {
-    entities: "entity_type",
-    processes: "process_type",
-    requirements: "requirement_type",
-    interfaces: "interface_type",
-    artifacts: "artifact_type",
-    functional_requirements: "requirement_type",
-    non_functional_requirements: "requirement_type",
-    endpoints: "http_method",
-    auth: "auth_type",
-    modules: "entity_type",
-    test_cases: "test_stage",
-    defects: "severity",
-    procedures: "process_type",
-    ui_elements: "element_type",
-    symptoms: "severity",
+    functional_requirements: "priority",
+    non_functional_requirements: "category",
+    apis: "method",
+    test_cases: "priority",
   };
   const typeField = typeFieldBySlot[slot];
   if (typeField) {
     return stringValue(item[typeField]);
-  }
-  // Auto-detect: find first field ending in _type
-  for (const key of Object.keys(item)) {
-    if (key.endsWith("_type") && key !== "doc_type") {
-      return stringValue(item[key]);
-    }
   }
   return null;
 }
