@@ -12,8 +12,6 @@ from core.config import get_settings
 from core.constants import (
     JSON_FORMAT_INSTRUCTION,
     MAP_USER_PROMPT_TEMPLATE,
-    PHASE0_SYSTEM_PROMPT,
-    PHASE0_USER_PROMPT_TEMPLATE,
     SYSTEM_PROMPT,
 )
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
@@ -26,7 +24,6 @@ from schemas.models import (
     DocumentChunk,
     DocumentIR,
     ExtractionContract,
-    Phase0Result,
 )
 
 
@@ -49,46 +46,6 @@ Schema:
 
 {json_instruction}
 """
-
-
-def run_phase0_prescan(
-    markdown_content: str,
-    *,
-    model_name: str | None = None,
-) -> Phase0Result:
-    """廉价全文预扫描：采样文档头部+中部+尾部，产出文档元信息。"""
-    settings = get_settings()
-    sample_limit = settings.phase0_max_sample_chars
-    content_len = len(markdown_content)
-    if content_len <= sample_limit:
-        sample = markdown_content
-    else:
-        third = sample_limit // 3
-        head = markdown_content[:third]
-        mid_start = (content_len - third) // 2
-        mid = markdown_content[mid_start:mid_start + third]
-        tail = markdown_content[-third:]
-        sample = f"{head}\n\n...\n\n{mid}\n\n...\n\n{tail}"
-
-    prompt = PHASE0_USER_PROMPT_TEMPLATE.format(content=sample)
-    response_text = _create_text_completion(
-        messages=[
-            {"role": "system", "content": PHASE0_SYSTEM_PROMPT.strip()},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.0,
-        model_name=model_name,
-    )
-    try:
-        data = clean_and_parse_json(response_text)
-    except ValueError as exc:
-        logger.warning("Phase 0 JSON parse failed, returning default")
-        return Phase0Result(doc_type=DocType.UNKNOWN, doc_type_confidence=0.0)
-    try:
-        return Phase0Result.model_validate(data)
-    except ValidationError as exc:
-        logger.warning("Phase 0 validation failed: %s", exc)
-        return Phase0Result(doc_type=DocType.UNKNOWN, doc_type_confidence=0.0)
 
 
 def build_extraction_contract(
@@ -208,7 +165,6 @@ async def _extract_chunk(
     *,
     document_ir: DocumentIR,
     contract: ExtractionContract,
-    phase0: Phase0Result | None = None,
     response_model: type[BaseModel],
     prompt_template: str | None = None,
     model_name: str | None = None,
@@ -220,7 +176,7 @@ async def _extract_chunk(
                 chunk.markdown,
                 response_model,
                 context_note=_render_chunk_context(
-                    document_ir=document_ir, contract=contract, chunk=chunk, phase0=phase0,
+                    document_ir=document_ir, contract=contract, chunk=chunk,
                 ),
                 prompt_template=prompt_template,
                 model_name=model_name,
@@ -263,13 +219,6 @@ async def extract_structure_with_meta(
 
     contract = build_extraction_contract(normalized_doc_type, response_model=response_model)
 
-    # Phase 0: pre-scan for document-wide understanding
-    phase0: Phase0Result | None = None
-    if get_settings().phase0_enabled:
-        phase0 = await asyncio.to_thread(run_phase0_prescan, markdown_content, model_name=model_name)
-        logger.info("Phase 0 result: doc_type=%s confidence=%.2f entities=%s",
-                     phase0.doc_type.value, phase0.doc_type_confidence, phase0.key_entities)
-
     chunk_model = _typed_extraction_model(response_model)
 
     # Unified chunk path — small docs = 1 chunk
@@ -301,7 +250,6 @@ async def extract_structure_with_meta(
             chunk,
             document_ir=ir,
             contract=contract,
-            phase0=phase0,
             response_model=chunk_model,
             prompt_template=prompt_template,
             model_name=model_name,
@@ -345,7 +293,6 @@ async def extract_structure_with_meta(
             contract=contract,
             chunk_results=partial_results,
             response_model=chunk_model,
-            phase0=phase0,
             model_name=model_name,
         )
         chunk_results_for_reduce = [finalized_data]
@@ -374,7 +321,7 @@ async def extract_structure_with_meta(
         "failed_chunk_details": failed_chunk_details,
         "partial": failed_chunks > 0 or finalizer_failed,
         "finalizer_failed": finalizer_failed,
-        "phase0_enabled": get_settings().phase0_enabled,
+        "phase0_enabled": False,
         "typed_schema": True,
         "element_count": len(ir.elements),
         "section_count": len(ir.outline.sections),
@@ -413,7 +360,6 @@ def _finalize_extraction_once(
     contract: ExtractionContract,
     chunk_results: list[dict[str, Any]],
     response_model: type[BaseModel],
-    phase0: Phase0Result | None = None,
     model_name: str | None = None,
 ) -> dict[str, object]:
     """
@@ -424,7 +370,6 @@ def _finalize_extraction_once(
             document_ir=document_ir,
             contract=contract,
             chunk_results=chunk_results,
-            phase0=phase0,
         ),
         schema=_json_schema_text(response_model),
         json_instruction=JSON_FORMAT_INSTRUCTION,
@@ -473,17 +418,6 @@ def _typed_extraction_model(response_model: type[BaseModel]) -> type[BaseModel]:
     return mapping[response_model]
 
 
-def _render_phase0_context(phase0: Phase0Result) -> str:
-    """将 Phase 0 结果渲染为注入 chunk 上下文的文本。"""
-    return "\n\n".join([
-        "[Document Pre-Analysis]",
-        f"文档类型: {phase0.doc_type.value}（置信度: {phase0.doc_type_confidence:.2f}）",
-        f"关键实体: {', '.join(phase0.key_entities) if phase0.key_entities else '无'}",
-        f"章节主题: {json.dumps(phase0.section_themes, ensure_ascii=False, indent=2)}",
-        f"提取提示: {'; '.join(phase0.extraction_hints) if phase0.extraction_hints else '无'}",
-    ])
-
-
 def _render_document_elements(document_ir: DocumentIR) -> str:
     """Render all IR elements with stable evidence markers."""
     return "\n\n".join(
@@ -497,15 +431,12 @@ def _render_finalizer_input(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     chunk_results: list[dict[str, Any]],
-    phase0: Phase0Result | None = None,
 ) -> str:
-    """Render finalizer input with candidates, evidence snippets, and Phase 0 context."""
+    """Render finalizer input with candidates and evidence snippets."""
     parts = [
         "[Document Outline]",
         document_ir.outline.model_dump_json(indent=2),
     ]
-    if phase0:
-        parts.append(_render_phase0_context(phase0))
     parts.extend([
         "[Extraction Contract]",
         contract.model_dump_json(indent=2),
@@ -522,14 +453,11 @@ def _render_chunk_context(
     document_ir: DocumentIR,
     contract: ExtractionContract,
     chunk: DocumentChunk,
-    phase0: Phase0Result | None = None,
 ) -> str:
     parts = [
         "[Document Outline]",
         document_ir.outline.model_dump_json(indent=2),
     ]
-    if phase0:
-        parts.append(_render_phase0_context(phase0))
     parts.extend([
         "[Extraction Contract]",
         contract.model_dump_json(indent=2),
