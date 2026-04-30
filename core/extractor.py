@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from core.chunker import render_element_marker, split_ir_into_chunks, summarize_chunk
+from core.chunker import split_ir_into_chunks, summarize_chunk
 from core.config import get_settings
 from core.constants import (
     JSON_FORMAT_INSTRUCTION,
@@ -37,8 +37,9 @@ SUMMARY_INPUT_MAX_CHARS = 12000
 
 FINALIZE_USER_PROMPT_TEMPLATE = """
 请使用给定 JSON Schema，把分块级抽取候选合并成一个最终结构化文档。
-结合文档大纲和证据片段处理去重、合并和父子结构。
-证据片段中使用 [ELEMENT: element_id page=n] 标记了文档元素，只引用这些元素 ID 作为证据。
+结合文档大纲、文档摘要和分块候选处理去重、合并和父子结构。
+不要新增分块候选中不存在的对象事实。
+保留并合并候选对象已有的 evidence_element_ids；不要编造新的证据 ID。
 
 输入:
 {content}
@@ -457,14 +458,6 @@ def _typed_extraction_model(response_model: type[BaseModel]) -> type[BaseModel]:
     return mapping[response_model]
 
 
-def _render_document_elements(document_ir: DocumentIR) -> str:
-    """Render all IR elements with stable evidence markers."""
-    return "\n\n".join(
-        render_element_marker(element)
-        for element in sorted(document_ir.elements, key=lambda item: item.order)
-    )
-
-
 def _render_finalizer_input(
     *,
     document_ir: DocumentIR,
@@ -472,7 +465,7 @@ def _render_finalizer_input(
     chunk_results: list[dict[str, Any]],
     document_summary: str | None = None,
 ) -> str:
-    """Render finalizer input with candidates and evidence snippets."""
+    """渲染 finalizer 输入，只提供全局背景和分块候选。"""
     parts = [
         "[Document Outline]",
         document_ir.outline.model_dump_json(indent=2),
@@ -487,8 +480,6 @@ def _render_finalizer_input(
         contract.model_dump_json(indent=2),
         "[Chunk Candidates]",
         json.dumps(chunk_results, ensure_ascii=False, indent=2),
-        "[Evidence Snippets]",
-        _render_document_elements(document_ir),
     ])
     return "\n\n".join(parts)
 
@@ -500,6 +491,7 @@ def _render_chunk_context(
     chunk: DocumentChunk,
     document_summary: str | None = None,
 ) -> str:
+    """渲染分块抽取上下文，summary 仅作为背景，证据仍限定在当前分块。"""
     parts = [
         "[Document Outline]",
         document_ir.outline.model_dump_json(indent=2),
@@ -526,6 +518,7 @@ def _render_chunk_context(
         ),
         (
             "evidence_element_ids 必须来自 allowed_evidence_element_ids。"
+            "Document Summary 只用于理解上下文，不能作为对象存在或证据引用的依据。"
             "每个字段名即为该字段的语义含义，请按字段名自然理解其用途。"
             "当前分块没有某类对象时，该槽位返回空列表。"
         ),

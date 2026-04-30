@@ -41,9 +41,10 @@ Final JSON
 核心思想：
 
 - `Document IR` 保存标题、段落、表格、页码、bbox、章节路径和阅读顺序
-- `summary` 在解析后由 LLM 基于全文和大纲生成，并作为分块抽取的全局上下文
+- `summary` 在解析后由 LLM 基于文档内容和大纲生成，并作为分块抽取的全局上下文
 - `ExtractionContract` 控制每类文档抽什么，不使用任意动态 Schema
-- LLM 只负责 chunk 内局部语义抽取，Reduce 尽量使用确定性逻辑
+- LLM 只负责 chunk 内局部语义抽取和候选合并，Reduce 尽量使用确定性逻辑
+- finalizer 只合并分块候选，不再读取完整原文证据片段，避免退化为全文一次性抽取
 - 每个对象通过 1-3 个 `evidence_element_ids` 锚点绑定到原文元素，最终生成 `evidence`
 - 前端通过 `evidence.object_id/page/bbox` 将结构化对象映射回 PDF 页面证据
 - Schema 只保留高价值事实字段，避免用派生分组或兜底字段稀释结果
@@ -192,7 +193,7 @@ Evidence Binding 回填 page / bbox / text_span
 保存 extracted_data
 ```
 
-`raw_text` 用于人类预览和修订，`summary` 用作分块抽取的全局背景，`document_ir` 是分块与证据绑定的机器可读来源。`summary` 不作为 evidence 来源，不会进入 `allowed_evidence_element_ids`。
+`raw_text` 用于人类预览和修订，`summary` 用作分块抽取的全局背景，`document_ir` 是分块与证据绑定的机器可读来源。`summary` 不作为 evidence 来源，不会进入 `allowed_evidence_element_ids`。finalizer 只处理分块候选及其已有证据 ID，不重新读取完整 `document_ir.elements`。
 
 ## API 接口
 
@@ -227,13 +228,13 @@ Evidence Binding 回填 page / bbox / text_span
 2. 检查 `raw_text` 是否正常生成
 3. 检查 `summary` 是否生成，并确认摘要失败不会阻断结构化抽取
 4. 检查 `document_ir` 是否包含 `elements`、`outline`、`section_path`
-4. 检查 `extracted_data` 是否符合五类主干对象和 `evidence`
-5. 对使用 Docling 解析的 PDF，点击前端提取项，确认 PDF 跳转到对应页并高亮 bbox
-6. 对 basic parser 或非 PDF 文档，确认前端仍可展示文本证据且不会错误绘制 PDF 框
-7. 上传 `unknown` 类型文档，确认只保留原文和 IR
-8. 上传超长文档，确认返回明确错误
-9. 修改 `raw_text`、`summary` 或 `extracted_data`，确认 `PATCH` 生效
-10. 删除文档后确认数据库记录与上传文件一并清理
+5. 检查 `extracted_data` 是否符合五类主干对象和 `evidence`
+6. 对使用 Docling 解析的 PDF，点击前端提取项，确认 PDF 跳转到对应页并高亮 bbox
+7. 对 basic parser 或非 PDF 文档，确认前端仍可展示文本证据且不会错误绘制 PDF 框
+8. 上传 `unknown` 类型文档，确认只保留原文和 IR
+9. 上传超长文档，确认返回明确错误
+10. 修改 `raw_text`、`summary` 或 `extracted_data`，确认 `PATCH` 生效
+11. 删除文档后确认数据库记录与上传文件一并清理
 
 ## CI Test
 
