@@ -4,11 +4,13 @@ import {
   ExternalLink,
   Copy,
   Download,
+  FileEdit,
   FileText,
   Loader2,
   RotateCcw,
   Save,
   Braces,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
@@ -20,6 +22,7 @@ import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 
 import { ChunkDebugPanel } from "@/components/chunk-debug-panel";
+import { ExtractionMetadataDialog } from "@/components/extraction-metadata-dialog";
 import { ExtractionResultPanel } from "@/components/extraction-result-panel";
 import { PdfEvidenceViewer } from "@/components/pdf-evidence-viewer";
 import { Button } from "@/components/ui/button";
@@ -31,7 +34,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocument, useDocumentFile, useUpdateDocument } from "@/hooks/use-api";
 import {
@@ -40,6 +42,7 @@ import {
   type ExtractionEvidence,
   type ExtractionItem,
 } from "@/lib/evidence";
+import { formatMetadataSummary } from "@/lib/metadata";
 
 interface DocPreviewPanelProps {
   docId: number | null;
@@ -55,13 +58,15 @@ export function DocPreviewPanel({
 }: DocPreviewPanelProps) {
   const { data: doc, isLoading } = useDocument(docId);
   const { data: documentFile, isLoading: isFileLoading } = useDocumentFile(docId);
-  const [tab, setTab] = useState("evidence");
+  const [rawSheetOpen, setRawSheetOpen] = useState(false);
+  const [chunkSheetOpen, setChunkSheetOpen] = useState(false);
   const [rawDraft, setRawDraft] = useState("");
   const [savedRawContent, setSavedRawContent] = useState("");
   const [jsonDraft, setJsonDraft] = useState("");
   const [savedJsonContent, setSavedJsonContent] = useState("");
   const [selectedEvidence, setSelectedEvidence] = useState<ExtractionEvidence | null>(null);
   const [selectedItem, setSelectedItem] = useState<ExtractionItem | null>(null);
+  const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
   const [jsonSheetOpen, setJsonSheetOpen] = useState(false);
   const [sourcePreview, setSourcePreview] = useState<SourcePreviewState>({
     kind: "empty",
@@ -84,11 +89,18 @@ export function DocPreviewPanel({
     [doc?.extracted_data, doc?.doc_type],
   );
 
+  const metadataTitle = useMemo(
+    () => formatMetadataSummary(doc?.doc_type, doc?.extracted_data),
+    [doc],
+  );
+
   useEffect(() => {
-    setTab("evidence");
     setSelectedEvidence(null);
     setSelectedItem(null);
+    setMetadataDialogOpen(false);
     setJsonSheetOpen(false);
+    setRawSheetOpen(false);
+    setChunkSheetOpen(false);
   }, [docId]);
 
   useEffect(() => {
@@ -112,8 +124,8 @@ export function DocPreviewPanel({
   }, [doc?.id, doc?.raw_text, doc?.extracted_data]);
 
   useEffect(() => {
-    onRawDirtyChange?.(tab === "raw" && hasRawChanges);
-  }, [hasRawChanges, onRawDirtyChange, tab]);
+    onRawDirtyChange?.(rawSheetOpen && hasRawChanges);
+  }, [hasRawChanges, onRawDirtyChange, rawSheetOpen]);
 
   useEffect(() => {
     if (!jsonSheetOpen) {
@@ -207,16 +219,6 @@ export function DocPreviewPanel({
     toast.success("JSON 已下载");
   };
 
-  const handleTabChange = (nextTab: string) => {
-    if (tab === "raw" && nextTab !== "raw" && hasRawChanges) {
-      const confirmed = window.confirm("当前 Markdown 校对内容尚未保存，确定要离开这个标签页吗？");
-      if (!confirmed) {
-        return;
-      }
-    }
-    setTab(nextTab);
-  };
-
   const handleResetRaw = () => {
     setRawDraft(savedRawContent);
     toast.info("已恢复到最近一次保存的 Markdown");
@@ -237,6 +239,21 @@ export function DocPreviewPanel({
     } catch {
       toast.error("Markdown 保存失败");
     }
+  };
+
+  const handleRawSheetOpenChange = (open: boolean) => {
+    if (!open && hasRawChanges) {
+      const confirmed = window.confirm("当前 Markdown 校对内容尚未保存，确定要关闭吗？");
+      if (!confirmed) {
+        return;
+      }
+    }
+    setRawSheetOpen(open);
+  };
+
+  const handleOpenJsonSheet = () => {
+    setRawSheetOpen(false);
+    setJsonSheetOpen(true);
   };
 
   const handleResetJson = () => {
@@ -298,6 +315,30 @@ export function DocPreviewPanel({
     }
   };
 
+  const handlePatchMetadata = async (patch: Record<string, unknown>) => {
+    if (!doc?.extracted_data) {
+      return;
+    }
+
+    const updatedData = {
+      ...doc.extracted_data,
+      ...patch,
+    };
+    try {
+      const updatedDoc = await updateDocument.mutateAsync({
+        extracted_data: updatedData,
+      });
+      const nextContent = updatedDoc.extracted_data
+        ? JSON.stringify(updatedDoc.extracted_data, null, 2)
+        : "";
+      setJsonDraft(nextContent);
+      setSavedJsonContent(nextContent);
+      toast.success("文档元数据已保存");
+    } catch {
+      toast.error("文档元数据保存失败");
+    }
+  };
+
   if (!docId) {
     return null;
   }
@@ -321,106 +362,200 @@ export function DocPreviewPanel({
 
   return (
     <div className="flex h-full w-full flex-1 flex-col overflow-hidden bg-background">
-      <Tabs value={tab} onValueChange={handleTabChange} className="flex flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 border-b px-4 py-2">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="evidence">证据对照</TabsTrigger>
-            <TabsTrigger value="raw">Markdown 校对</TabsTrigger>
-            <TabsTrigger value="chunks">分块调试</TabsTrigger>
-          </TabsList>
+      {doc.error_message && (
+        <div className="shrink-0 flex items-center gap-2 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          <span>{doc.error_message}</span>
+        </div>
+      )}
+
+      <div className="flex min-h-0 flex-1 flex-col bg-background">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              证据定位
+            </p>
+            <h3 className="mt-1 text-base font-semibold text-foreground">原始 PDF 与提取结果对照</h3>
+          </div>
+          <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
+            {extractionItems.length > 0 ? `${extractionItems.length} 个对象` : "暂无对象"}
+          </div>
         </div>
 
-        {doc.error_message && (
-          <div className="shrink-0 flex items-center gap-2 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4" />
-            <span>{doc.error_message}</span>
-          </div>
-        )}
-
-        <TabsContent value="evidence" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <div className="flex h-full min-h-0 flex-col bg-background">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  证据定位
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-foreground">原始 PDF 与提取结果对照</h3>
+        <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+          <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/15 shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <p className="min-w-0 truncate text-sm font-medium text-foreground">
+                {documentFile?.fileName ?? "原始文档"}
+              </p>
+              <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                {selectedEvidence?.page && <span>Page {selectedEvidence.page}</span>}
+                {selectedEvidence?.elementId && (
+                  <span className="max-w-40 truncate font-mono">
+                    {selectedEvidence.elementId}
+                  </span>
+                )}
               </div>
+            </div>
+            <div className="min-h-0 flex-1">
+              <SourcePreview
+                preview={sourcePreview}
+                isLoading={isFileLoading}
+                file={documentFile}
+                items={extractionItems}
+                selectedEvidence={selectedEvidence}
+                onSelectEvidence={setSelectedEvidence}
+              />
+            </div>
+          </section>
+
+          <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+              <div>
+                <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                  结构化结果
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  点击对象定位原文证据，必要时打开 JSON 校正
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setMetadataDialogOpen(true)}
+                  disabled={!doc.extracted_data}
+                  title={metadataTitle}
+                >
+                  <SlidersHorizontal data-icon="inline-start" />
+                  元数据
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleOpenJsonSheet}
+                  disabled={!jsonDraft}
+                >
+                  <Braces data-icon="inline-start" />
+                  JSON
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setRawSheetOpen(true)}
+                  disabled={!rawDraft}
+                >
+                  <FileEdit data-icon="inline-start" />
+                  Markdown
+                </Button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1">
+              <ExtractionResultPanel
+                items={extractionItems}
+                selectedEvidence={selectedEvidence}
+                onSelectEvidence={setSelectedEvidence}
+                onPatchItem={handlePatchExtractionItem}
+                onSelectedItemChange={setSelectedItem}
+                onEditItem={handleOpenJsonSheet}
+              />
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <ExtractionMetadataDialog
+        open={metadataDialogOpen}
+        onOpenChange={setMetadataDialogOpen}
+        docType={doc.doc_type}
+        extractedData={doc.extracted_data}
+        isSaving={updateDocument.isPending}
+        onSave={handlePatchMetadata}
+      />
+      <Sheet open={jsonSheetOpen} onOpenChange={setJsonSheetOpen}>
+        <SheetContent
+          className="gap-0 p-0 sm:max-w-none"
+          style={{ width: "min(1200px, 90vw)", maxWidth: "none" }}
+        >
+          <SheetHeader className="border-b pr-12">
+            <SheetTitle>结构化 JSON</SheetTitle>
+            <SheetDescription>
+              {selectedItem
+                ? `已定位到 ${selectedItem.slotLabel}：${selectedItem.title}`
+                : "可直接校正整份结构化结果"}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
-                {extractionItems.length > 0 ? `${extractionItems.length} 个对象` : "暂无对象"}
+                {updateDocument.isPending ? "保存中..." : hasJsonChanges ? "未保存修改" : "已同步"}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCopyJson}
+                  disabled={!jsonDraft}
+                >
+                  <Copy data-icon="inline-start" />
+                  复制
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownloadJson}
+                  disabled={!jsonDraft}
+                >
+                  <Download data-icon="inline-start" />
+                  下载
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleResetJson}
+                  disabled={!hasJsonChanges || updateDocument.isPending}
+                >
+                  <RotateCcw data-icon="inline-start" />
+                  恢复
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveJson}
+                  disabled={!hasJsonChanges || updateDocument.isPending}
+                >
+                  {updateDocument.isPending ? (
+                    <Loader2 data-icon="inline-start" className="animate-spin" />
+                  ) : (
+                    <Save data-icon="inline-start" />
+                  )}
+                  保存 JSON
+                </Button>
               </div>
             </div>
-
-            <div className="grid min-h-0 flex-1 gap-4 p-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-              <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-muted/15 shadow-sm">
-                <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-                  <p className="min-w-0 truncate text-sm font-medium text-foreground">
-                    {documentFile?.fileName ?? "原始文档"}
-                  </p>
-                  <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                    {selectedEvidence?.page && <span>Page {selectedEvidence.page}</span>}
-                    {selectedEvidence?.elementId && (
-                      <span className="max-w-40 truncate font-mono">
-                        {selectedEvidence.elementId}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="min-h-0 flex-1">
-                  <SourcePreview
-                    preview={sourcePreview}
-                    isLoading={isFileLoading}
-                    file={documentFile}
-                    items={extractionItems}
-                    selectedEvidence={selectedEvidence}
-                    onSelectEvidence={setSelectedEvidence}
-                  />
-                </div>
-              </section>
-
-              <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
-                  <div>
-                    <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                      结构化结果
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      点击对象定位原文证据，必要时打开 JSON 校正
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setJsonSheetOpen(true)}
-                    disabled={!jsonDraft}
-                  >
-                    <Braces data-icon="inline-start" />
-                    JSON
-                  </Button>
-                </div>
-                <div className="min-h-0 flex-1">
-                  <ExtractionResultPanel
-                    items={extractionItems}
-                    selectedEvidence={selectedEvidence}
-                    onSelectEvidence={setSelectedEvidence}
-                    onPatchItem={handlePatchExtractionItem}
-                    onSelectedItemChange={setSelectedItem}
-                  />
-                </div>
-              </section>
+            <div className="min-h-0 flex-1 p-4">
+              <Textarea
+                ref={jsonTextareaRef}
+                value={jsonDraft}
+                onChange={(event) => setJsonDraft(event.target.value)}
+                placeholder="这里显示结构化提取结果，可直接修正 JSON。"
+                spellCheck={false}
+                className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+              />
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="raw" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <div className="flex h-full min-h-0 flex-col bg-background">
+        </SheetContent>
+      </Sheet>
+      <Sheet open={rawSheetOpen} onOpenChange={handleRawSheetOpenChange}>
+        <SheetContent
+          className="gap-0 p-0 sm:max-w-none"
+          style={{ width: "min(1200px, 90vw)", maxWidth: "none" }}
+        >
+          <SheetHeader className="border-b pr-12">
+            <SheetTitle>Markdown 校对</SheetTitle>
+            <SheetDescription>解析结果可人工修正</SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Markdown 校对
-                </p>
-                <h3 className="mt-1 text-base font-semibold text-foreground">解析结果可人工修正</h3>
-              </div>
               <div className="flex items-center gap-2">
                 <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
                   {updateDocument.isPending
@@ -499,83 +634,6 @@ export function DocPreviewPanel({
                   />
                 </div>
               </section>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="chunks" className="m-0 flex-1 overflow-hidden focus-visible:outline-none">
-          <ChunkDebugPanel docId={docId} />
-        </TabsContent>
-      </Tabs>
-      <Sheet open={jsonSheetOpen} onOpenChange={setJsonSheetOpen}>
-        <SheetContent
-          className="gap-0 p-0 sm:max-w-none"
-          style={{ width: "min(1200px, 90vw)", maxWidth: "none" }}
-        >
-          <SheetHeader className="border-b pr-12">
-            <SheetTitle>结构化 JSON</SheetTitle>
-            <SheetDescription>
-              {selectedItem
-                ? `已定位到 ${selectedItem.slotLabel}：${selectedItem.title}`
-                : "可直接校正整份结构化结果"}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-              <div className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground">
-                {updateDocument.isPending ? "保存中..." : hasJsonChanges ? "未保存修改" : "已同步"}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCopyJson}
-                  disabled={!jsonDraft}
-                >
-                  <Copy data-icon="inline-start" />
-                  复制
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleDownloadJson}
-                  disabled={!jsonDraft}
-                >
-                  <Download data-icon="inline-start" />
-                  下载
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleResetJson}
-                  disabled={!hasJsonChanges || updateDocument.isPending}
-                >
-                  <RotateCcw data-icon="inline-start" />
-                  恢复
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSaveJson}
-                  disabled={!hasJsonChanges || updateDocument.isPending}
-                >
-                  {updateDocument.isPending ? (
-                    <Loader2 data-icon="inline-start" className="animate-spin" />
-                  ) : (
-                    <Save data-icon="inline-start" />
-                  )}
-                  保存 JSON
-                </Button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 p-4">
-              <Textarea
-                ref={jsonTextareaRef}
-                value={jsonDraft}
-                onChange={(event) => setJsonDraft(event.target.value)}
-                placeholder="这里显示结构化提取结果，可直接修正 JSON。"
-                spellCheck={false}
-                className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
-              />
             </div>
           </div>
         </SheetContent>
