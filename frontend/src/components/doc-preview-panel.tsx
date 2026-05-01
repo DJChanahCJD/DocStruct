@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ExternalLink,
@@ -19,6 +19,7 @@ import "katex/dist/katex.min.css";
 import { ExtractionMetadataDialog } from "@/components/extraction-metadata-dialog";
 import { ExtractionResultPanel } from "@/components/extraction-result-panel";
 import { DocxEvidenceViewer } from "@/components/docx-evidence-viewer";
+import { JsonCodeEditor } from "@/components/json-code-editor";
 import { MarkdownEvidenceViewer } from "@/components/markdown-evidence-viewer";
 import { PdfEvidenceViewer } from "@/components/pdf-evidence-viewer";
 import { PlainTextEvidenceViewer } from "@/components/plain-text-evidence-viewer";
@@ -68,7 +69,6 @@ export function DocPreviewPanel({
   const [sourcePreview, setSourcePreview] = useState<SourcePreviewState>({
     kind: "empty",
   });
-  const jsonTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const updateDocument = useUpdateDocument(docId ?? -1);
 
   const hasRawChanges = useMemo(
@@ -127,26 +127,6 @@ export function DocPreviewPanel({
   useEffect(() => {
     onRawDirtyChange?.(rawSheetOpen && hasRawChanges);
   }, [hasRawChanges, onRawDirtyChange, rawSheetOpen]);
-
-  useEffect(() => {
-    if (!jsonSheetOpen) {
-      return;
-    }
-
-    let innerFrameId = 0;
-    const frameId = window.requestAnimationFrame(() => {
-      innerFrameId = window.requestAnimationFrame(() => {
-        selectJsonItemRange(jsonTextareaRef.current, jsonDraft, selectedItem);
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      if (innerFrameId) {
-        window.cancelAnimationFrame(innerFrameId);
-      }
-    };
-  }, [jsonDraft, jsonSheetOpen, selectedItem]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -263,7 +243,8 @@ export function DocPreviewPanel({
     setRawSheetOpen(open);
   };
 
-  const handleOpenJsonSheet = () => {
+  const handleOpenJsonSheet = (item?: ExtractionItem) => {
+    if (item) setSelectedItem(item);
     setRawSheetOpen(false);
     setJsonSheetOpen(true);
   };
@@ -279,9 +260,12 @@ export function DocPreviewPanel({
     }
 
     let extractedData: Record<string, unknown> | undefined;
+    let formattedJson = "";
+
     if (jsonDraft.trim()) {
       try {
         extractedData = JSON.parse(jsonDraft) as Record<string, unknown>;
+        formattedJson = JSON.stringify(extractedData, null, 2);
       } catch {
         toast.error("JSON 格式无效，无法保存");
         return;
@@ -292,14 +276,26 @@ export function DocPreviewPanel({
       const updatedDoc = await updateDocument.mutateAsync({
         extracted_data: extractedData,
       });
+
       const nextContent = updatedDoc.extracted_data
         ? JSON.stringify(updatedDoc.extracted_data, null, 2)
-        : "";
+        : formattedJson;
+
       setJsonDraft(nextContent);
       setSavedJsonContent(nextContent);
       toast.success("JSON 已保存");
     } catch {
       toast.error("JSON 保存失败");
+    }
+  };
+
+  const handleFormatJson = () => {
+    try {
+      const parsed = JSON.parse(jsonDraft);
+      setJsonDraft(JSON.stringify(parsed, null, 2));
+      toast.success("JSON 已格式化");
+    } catch {
+      toast.error("JSON 格式无效，无法格式化");
     }
   };
 
@@ -532,6 +528,14 @@ export function DocPreviewPanel({
                   恢复
                 </Button>
                 <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleFormatJson}
+                  disabled={!jsonDraft || updateDocument.isPending}
+                >
+                  格式化
+                </Button>
+                <Button
                   size="sm"
                   onClick={handleSaveJson}
                   disabled={!hasJsonChanges || updateDocument.isPending}
@@ -546,13 +550,10 @@ export function DocPreviewPanel({
               </div>
             </div>
             <div className="min-h-0 flex-1 p-4">
-              <Textarea
-                ref={jsonTextareaRef}
+              <JsonCodeEditor
                 value={jsonDraft}
-                onChange={(event) => setJsonDraft(event.target.value)}
-                placeholder="这里显示结构化提取结果，可直接修正 JSON。"
-                spellCheck={false}
-                className="h-full min-h-full resize-none border-0 bg-muted/10 font-mono text-sm leading-6 shadow-none"
+                onChange={setJsonDraft}
+                selectedItem={selectedItem}
               />
             </div>
           </div>
@@ -833,160 +834,4 @@ function normalizeDocumentIr(value: Record<string, unknown> | null | undefined):
     return null;
   }
   return value as unknown as DocumentIR;
-}
-
-/**
- * Select the JSON object that corresponds to the currently selected extraction item.
- */
-function selectJsonItemRange(
-  textarea: HTMLTextAreaElement | null,
-  jsonText: string,
-  item: ExtractionItem | null,
-) {
-  if (!textarea || !item) {
-    return;
-  }
-
-  const range = findJsonItemRange(jsonText, item);
-  if (!range) {
-    return;
-  }
-
-  textarea.focus();
-  textarea.setSelectionRange(range.start, range.end);
-  const lineIndex = jsonText.slice(0, range.start).split("\n").length - 1;
-  const lineHeight = getTextareaLineHeight(textarea);
-  const centeredTop = lineIndex * lineHeight - (textarea.clientHeight - lineHeight) / 2;
-  textarea.scrollTop = Math.max(0, centeredTop);
-}
-
-/**
- * Find a selected object's character range in formatted JSON text.
- */
-function findJsonItemRange(
-  jsonText: string,
-  item: ExtractionItem,
-): { start: number; end: number } | null {
-  const slotKeyIndex = jsonText.indexOf(`"${item.slot}"`);
-  if (slotKeyIndex < 0) {
-    return null;
-  }
-
-  const arrayStart = jsonText.indexOf("[", slotKeyIndex);
-  if (arrayStart < 0) {
-    return null;
-  }
-
-  const arrayEnd = findMatchingJsonToken(jsonText, arrayStart, "[", "]");
-  if (arrayEnd < 0) {
-    return null;
-  }
-
-  const idPattern = new RegExp(`"id"\\s*:\\s*"${escapeRegExp(item.id)}"`);
-  let cursor = arrayStart + 1;
-  while (cursor < arrayEnd) {
-    const objectStart = findNextJsonObjectStart(jsonText, cursor, arrayEnd);
-    if (objectStart < 0) {
-      return null;
-    }
-
-    const objectEnd = findMatchingJsonToken(jsonText, objectStart, "{", "}");
-    if (objectEnd < 0 || objectEnd > arrayEnd) {
-      return null;
-    }
-
-    if (idPattern.test(jsonText.slice(objectStart, objectEnd + 1))) {
-      return { start: objectStart, end: objectEnd + 1 };
-    }
-
-    cursor = objectEnd + 1;
-  }
-
-  return null;
-}
-
-/**
- * Find the matching closing token while skipping quoted string content.
- */
-function findMatchingJsonToken(
-  text: string,
-  start: number,
-  openToken: string,
-  closeToken: string,
-): number {
-  let depth = 0;
-  let inString = false;
-  let escaping = false;
-
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index];
-    if (inString) {
-      if (escaping) {
-        escaping = false;
-      } else if (char === "\\") {
-        escaping = true;
-      } else if (char === "\"") {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === "\"") {
-      inString = true;
-    } else if (char === openToken) {
-      depth += 1;
-    } else if (char === closeToken) {
-      depth -= 1;
-      if (depth === 0) {
-        return index;
-      }
-    }
-  }
-
-  return -1;
-}
-
-/**
- * Find the next object start outside quoted string content.
- */
-function findNextJsonObjectStart(text: string, from: number, maxIndex: number): number {
-  let inString = false;
-  let escaping = false;
-
-  for (let index = from; index <= maxIndex; index += 1) {
-    const char = text[index];
-    if (inString) {
-      if (escaping) {
-        escaping = false;
-      } else if (char === "\\") {
-        escaping = true;
-      } else if (char === "\"") {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === "\"") {
-      inString = true;
-    } else if (char === "{") {
-      return index;
-    }
-  }
-
-  return -1;
-}
-
-/**
- * Escape special regex characters in a string.
- */
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Read the rendered line height for textarea scroll positioning.
- */
-function getTextareaLineHeight(textarea: HTMLTextAreaElement): number {
-  const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight);
-  return Number.isFinite(lineHeight) ? lineHeight : 24;
 }
