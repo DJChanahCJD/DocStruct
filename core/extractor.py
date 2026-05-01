@@ -17,6 +17,7 @@ from core.constants import (
 )
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
+from core.metadata import apply_document_metadata, extract_document_metadata
 from core.reducer import discover_document_fields, discover_slots, reduce_extraction_results
 from core.schema_registry import normalize_doc_type
 from core.utils import clean_and_parse_json, normalize_extracted_data
@@ -349,6 +350,10 @@ async def extract_structure_with_meta(
         chunk_results=chunk_results_for_reduce,
         document_ir=ir,
         response_model=response_model,
+    )
+    apply_document_metadata(
+        reduced_data,
+        extract_document_metadata(markdown_content, ir),
     )
     validated = response_model.model_validate(reduced_data)
     failed_chunks = len(failed_chunk_indexes)

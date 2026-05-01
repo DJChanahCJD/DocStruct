@@ -144,19 +144,27 @@ def _is_substring_match(a: str, b: str) -> bool:
 
 
 def _get_name(item: dict[str, Any]) -> str:
+    if isinstance(item, str):
+        return _clean_name(item)
     return _clean_name(item.get("name") or "")
 
 
 def _get_raw_name(item: dict[str, Any]) -> str:
+    if isinstance(item, str):
+        return item.strip()
     return (item.get("name") or "").strip()
 
 
 def _get_type(item: dict[str, Any], type_field: str) -> str:
+    if isinstance(item, str):
+        return ""
     return str(item.get(type_field) or "").strip().lower()
 
 
 def _candidate_texts(item: dict[str, Any], slot: str) -> list[str]:
     """返回 typed 槽位用于名称相似度匹配的候选文本。"""
+    if isinstance(item, str):
+        return [item]
     values: list[str] = []
     for field in ("name", "summary"):
         value = item.get(field)
@@ -189,6 +197,8 @@ def _type_similarity(pred_type: str, gt_type: str) -> float:
 
 def _field_exact_score(pred: dict[str, Any], gt: dict[str, Any], fields: tuple[str, ...]) -> float:
     """按一组字段做严格归一化匹配，全部相等则返回高置信度。"""
+    if isinstance(pred, str) or isinstance(gt, str):
+        return 0.0
     for field in fields:
         pred_value = _normalize_text(pred.get(field, ""))
         gt_value = _normalize_text(gt.get(field, ""))
@@ -218,6 +228,10 @@ def _name_similarity(pred: dict[str, Any], gt: dict[str, Any], slot: str) -> flo
 
 def _slot_similarity(pred: dict[str, Any], gt: dict[str, Any], slot: str, type_field: str) -> float:
     """按 typed slot 语义计算对象匹配分数。"""
+    if isinstance(pred, str) and isinstance(gt, str):
+        return 1.0 if pred == gt else 0.0
+    if isinstance(pred, str) or isinstance(gt, str):
+        return 0.0
     if slot == "endpoints":
         score = _field_exact_score(pred, gt, ("http_method", "path"))
         if score:
@@ -281,6 +295,8 @@ def match_objects(
 
 def _item_label(item: dict[str, Any]) -> str:
     """生成报告中展示对象的稳定短标签。"""
+    if isinstance(item, str):
+        return item
     for field in ("name", "summary", "path", "action", "description"):
         value = item.get(field)
         if value:
