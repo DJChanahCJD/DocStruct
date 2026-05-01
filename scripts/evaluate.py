@@ -192,7 +192,9 @@ def _type_similarity(pred_type: str, gt_type: str) -> float:
     """类型字段模糊匹配权重。精确匹配=1.0，已知混淆=0.5-0.7，不匹配=0。"""
     if pred_type == gt_type:
         return 1.0
-    return _TYPE_SIMILARITY.get((pred_type, gt_type), 0.0)
+    if not pred_type or not gt_type:
+        return 1.0
+    return _TYPE_SIMILARITY.get((pred_type, gt_type), 0.5)
 
 
 def _field_exact_score(pred: dict[str, Any], gt: dict[str, Any], fields: tuple[str, ...]) -> float:
@@ -589,13 +591,38 @@ def main() -> None:
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST, help="实验清单路径")
     parser.add_argument("--output", default=None, help="输出目录")
     parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR, help="缓存目录")
+    parser.add_argument("--doc", default=None, help="单文档路径（指定后只评估该文档，需配合 --gt）")
+    parser.add_argument("--gt", default=None, help="单文档对应的 ground truth 路径")
     args = parser.parse_args()
+
+    output_dir = args.output or DEFAULT_OUTPUT_DIR
+
+    if args.doc:
+        if not args.gt:
+            print("单文档模式需要 --gt 指定 ground truth 路径")
+            sys.exit(1)
+        result = evaluate_document(args.doc, args.gt, live=args.live, cache_dir=args.cache_dir)
+        if result is None:
+            print("SKIP (no cache, use --live)")
+            sys.exit(0)
+        s = result["summary"]
+        print(f"F1={s['f1']:.4f}  P={s['precision']:.4f}  R={s['recall']:.4f}  TP={s['tp']} FP={s['fp']} FN={s['fn']}")
+        for slot, r in result["slots"].items():
+            note = " [ignored]" if r.get("ignored") else ""
+            print(f"  {slot}: P={r['precision']:.4f} R={r['recall']:.4f} F1={r['f1']:.4f} (GT={r['gt_count']} Pred={r['pred_count']}){note}")
+        wrapper = {
+            "generated_at": datetime.now().isoformat(),
+            "mode": args.live and "live" or "cached",
+            "overall": result["summary"],
+            "documents": {args.doc: result},
+        }
+        save_report(wrapper, output_dir)
+        return
 
     if not os.path.exists(args.manifest):
         print(f"Manifest not found: {args.manifest}")
         sys.exit(1)
 
-    output_dir = args.output or DEFAULT_OUTPUT_DIR
     results = evaluate_all(args.manifest, live=args.live, cache_dir=args.cache_dir)
     save_report(results, output_dir)
 

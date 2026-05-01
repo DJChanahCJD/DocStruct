@@ -358,7 +358,7 @@ async def extract_structure_with_meta(
     validated = response_model.model_validate(reduced_data)
     failed_chunks = len(failed_chunk_indexes)
     return validated, ExtractionMeta(
-        llm_model=model_name or "",
+        llm_model=model_name or settings.llm_model,
         confidence=round(evidence_meta.get("evidence_coverage", 0.0), 4),
         chunk_count=len(chunks),
         failed_chunks=failed_chunks,

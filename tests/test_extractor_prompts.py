@@ -1,8 +1,11 @@
+import asyncio
 import unittest
+from unittest.mock import AsyncMock, patch
 
-from core.extractor import _render_chunk_context, _render_finalizer_input
+from core.config import get_settings
+from core.extractor import _render_chunk_context, _render_finalizer_input, extract_structure_with_meta
 from schemas.extraction import ExtractionContract
-from schemas.models import DocType, DocumentChunk, DocumentElement, DocumentIR, DocumentOutline
+from schemas.models import DocType, DocumentChunk, DocumentElement, DocumentIR, DocumentOutline, SrsExtractedDocument
 
 
 def _sample_ir() -> DocumentIR:
@@ -86,6 +89,36 @@ class ExtractorPromptRenderingTest(unittest.TestCase):
         self.assertNotIn("[Evidence Snippets]", rendered)
         self.assertNotIn("[ELEMENT: el-1", rendered)
         self.assertIn("evidence_element_ids", rendered)
+
+    def test_extract_structure_meta_records_default_model_name(self) -> None:
+        """未显式传入模型时，抽取元信息应记录配置中的默认模型名。"""
+        chunk_result = {
+            "system_name": "示例系统",
+            "target_users": [],
+            "functional_requirements": [
+                {
+                    "name": "登录",
+                    "points": ["系统应支持登录。"],
+                    "evidence_element_ids": ["el-1"],
+                }
+            ],
+            "non_functional_requirements": [],
+            "business_flows": [],
+        }
+
+        with patch("core.extractor._extract_chunk", new=AsyncMock(return_value=chunk_result)), patch(
+            "core.extractor._finalize_extraction_once",
+            return_value=chunk_result,
+        ):
+            _document, meta = asyncio.run(
+                extract_structure_with_meta(
+                    "系统应支持登录。",
+                    SrsExtractedDocument,
+                    document_ir=_sample_ir(),
+                )
+            )
+
+        self.assertEqual(meta["llm_model"], get_settings().llm_model)
 
 
 if __name__ == "__main__":

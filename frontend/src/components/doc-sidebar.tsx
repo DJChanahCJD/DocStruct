@@ -20,7 +20,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { DocCard } from "./doc-card";
 import { UploadZone } from "./upload-zone";
 import { useDeleteDocument, useDocuments, useRetryExtraction } from "@/hooks/use-api";
-import type { DocumentRecord } from "@/lib/api";
+import type { DocumentListItem } from "@/lib/api";
 
 const statusLabel: Record<string, string> = {
   completed: "已完成",
@@ -74,17 +74,17 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
     if (keyword) {
       const normalized = keyword.toLowerCase();
       const isIdSearch = /^\d+$/.test(keyword.trim());
-      result = result.filter((doc: DocumentRecord) => {
+      result = result.filter((doc: DocumentListItem) => {
         const matchTitle = doc.title.toLowerCase().includes(normalized);
         const matchId = isIdSearch && doc.id === Number.parseInt(keyword.trim(), 10);
         return matchTitle || matchId;
       });
     }
     if (filters.status.length > 0) {
-      result = result.filter((doc: DocumentRecord) => filters.status.includes(doc.status));
+      result = result.filter((doc: DocumentListItem) => filters.status.includes(doc.status));
     }
     if (filters.docType.length > 0) {
-      result = result.filter((doc: DocumentRecord) => filters.docType.includes(doc.doc_type));
+      result = result.filter((doc: DocumentListItem) => filters.docType.includes(doc.doc_type));
     }
     return result;
   }, [docs, keyword, filters]);
@@ -105,7 +105,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
     setFilters({ status: [], docType: [] });
   };
 
-  const handleDelete = async (doc: DocumentRecord) => {
+  const handleDelete = async (doc: DocumentListItem) => {
     if (!window.confirm(`确定删除 "${doc.title}"？`)) {
       return;
     }
@@ -117,7 +117,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
     }
   };
 
-  const handleRetry = async (doc: DocumentRecord) => {
+  const handleRetry = async (doc: DocumentListItem) => {
     try {
       await retryDoc.mutateAsync(doc.id);
       toast.success("重试提取成功");
@@ -223,7 +223,7 @@ export function DocSidebar({ selectedId, onSelectDoc }: DocSidebarProps) {
             <div className="py-8 text-center text-sm text-muted-foreground">暂无文档</div>
           ) : (
             <div className="w-full space-y-2">
-              {filtered.map((doc: DocumentRecord) => (
+              {filtered.map((doc: DocumentListItem) => (
                 <DocCard
                   key={doc.id}
                   doc={doc}

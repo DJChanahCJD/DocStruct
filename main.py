@@ -1,9 +1,11 @@
 import logging
 import os
+import json
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from tortoise import connections
 from tortoise.contrib.fastapi import register_tortoise
 
 from core.config import get_settings
@@ -15,6 +17,7 @@ from core.schema_registry import get_response_model
 from schemas.dto import (
     DocumentChunkDebugDTO,
     DocumentChunksResponse,
+    DocumentListItemDTO,
     DocumentRecordDTO,
     DocumentUpdateRequest,
     UploadResponse,
@@ -25,6 +28,23 @@ from schemas.models import DocumentChunk, DocumentRecord, DocumentIR
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()
+DOCUMENT_LIST_QUERY = """
+SELECT
+    id,
+    title,
+    created_at,
+    updated_at,
+    doc_type,
+    summary,
+    extraction_meta,
+    status,
+    error_message,
+    raw_text IS NOT NULL AS has_raw_text,
+    document_ir IS NOT NULL AS has_document_ir,
+    extracted_data IS NOT NULL AS has_extracted_data
+FROM document
+ORDER BY id DESC
+"""
 
 db_dir = os.path.dirname(settings.db_path)
 if db_dir:
@@ -53,10 +73,10 @@ async def upload_document(
     return response
 
 
-@app.get("/api/documents", response_model=list[DocumentRecordDTO])
-async def list_documents() -> list[DocumentRecordDTO]:
-    docs = await DocumentRecord.all().order_by("-id")
-    return [DocumentRecordDTO.model_validate(doc) for doc in docs]
+@app.get("/api/documents", response_model=list[DocumentListItemDTO])
+async def list_documents() -> list[DocumentListItemDTO]:
+    rows = await connections.get("default").execute_query_dict(DOCUMENT_LIST_QUERY)
+    return [_document_list_item_from_row(row) for row in rows]
 
 
 @app.get("/api/documents/{doc_id}", response_model=DocumentRecordDTO)
@@ -190,6 +210,37 @@ def _chunk_to_debug_dto(chunk: DocumentChunk) -> DocumentChunkDebugDTO:
         element_ids=[element.element_id for element in chunk.elements],
         markdown=chunk.markdown,
     )
+
+
+def _document_list_item_from_row(row: dict[str, object]) -> DocumentListItemDTO:
+    """将轻量列表 SQL 行转换为 DTO，兼容 SQLite JSON 字段返回字符串。"""
+    return DocumentListItemDTO(
+        id=int(row["id"]),
+        title=str(row["title"]),
+        created_at=row["created_at"],
+        updated_at=row.get("updated_at"),
+        doc_type=str(row["doc_type"]),
+        summary=row.get("summary") if isinstance(row.get("summary"), str) else None,
+        extraction_meta=_json_field_from_row(row.get("extraction_meta")),
+        status=str(row["status"]),
+        error_message=row.get("error_message") if isinstance(row.get("error_message"), str) else None,
+        has_raw_text=bool(row.get("has_raw_text")),
+        has_document_ir=bool(row.get("has_document_ir")),
+        has_extracted_data=bool(row.get("has_extracted_data")),
+    )
+
+
+def _json_field_from_row(value: object) -> dict[str, object] | None:
+    """读取 raw SQL 返回的 JSON 字段。"""
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+        return parsed if isinstance(parsed, dict) else None
+    return None
 
 
 register_tortoise(

@@ -28,6 +28,23 @@ class DocumentRecordDTO(BaseModel):
     error_message: Optional[str] = None
 
 
+class DocumentListItemDTO(BaseModel):
+    """文档列表项 DTO，仅包含列表和 hover 展示需要的轻量字段。"""
+
+    id: int
+    title: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    doc_type: str
+    summary: Optional[str] = None
+    extraction_meta: Optional[dict[str, Any]] = None
+    status: str
+    error_message: Optional[str] = None
+    has_raw_text: bool = False
+    has_document_ir: bool = False
+    has_extracted_data: bool = False
+
+
 class DocumentUpdateRequest(BaseModel):
     raw_text: Optional[str] = Field(None, description="用户修订后的 Markdown 内容")
     summary: Optional[str] = Field(None, description="用户修订后的文档摘要")

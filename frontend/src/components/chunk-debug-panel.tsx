@@ -87,11 +87,9 @@ export function ChunkDebugPanel({ docId }: ChunkDebugPanelProps) {
               分块列表
             </p>
             <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  忽略 {data?.ignored_sections.length ?? 0} 条规则
-                  <Info className="h-3 w-3" />
-                </button>
+              <PopoverTrigger className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+                忽略 {data?.ignored_sections.length ?? 0} 条规则
+                <Info className="h-3 w-3" />
               </PopoverTrigger>
               <PopoverContent className="w-64 p-3" align="end">
                 <p className="mb-2 text-xs font-medium text-foreground">被忽略的规则</p>

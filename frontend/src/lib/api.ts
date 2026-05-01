@@ -13,6 +13,10 @@ export interface ExtractionMeta {
   failed_chunks: number;
   element_count: number;
   section_count: number;
+  summary_generated?: boolean;
+  summary_model?: string;
+  summary_chars?: number;
+  summary_error?: string;
 }
 
 export interface DocumentRecord {
@@ -29,6 +33,21 @@ export interface DocumentRecord {
   extraction_meta: ExtractionMeta | null;
   status: string;
   error_message: string | null;
+}
+
+export interface DocumentListItem {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string | null;
+  doc_type: string;
+  summary: string | null;
+  extraction_meta: ExtractionMeta | null;
+  status: string;
+  error_message: string | null;
+  has_raw_text: boolean;
+  has_document_ir: boolean;
+  has_extracted_data: boolean;
 }
 
 export interface UpdateDocumentRequest {
@@ -100,8 +119,8 @@ export interface DocumentChunksResponse {
   chunks: DocumentChunkDebug[];
 }
 
-export async function listDocuments(): Promise<DocumentRecord[]> {
-  const { data } = await api.get<DocumentRecord[]>("/documents");
+export async function listDocuments(): Promise<DocumentListItem[]> {
+  const { data } = await api.get<DocumentListItem[]>("/documents");
   return data;
 }
 

@@ -442,7 +442,7 @@ export function DocPreviewPanel({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={handleOpenJsonSheet}
+                  onClick={() => handleOpenJsonSheet()}
                   disabled={!jsonDraft}
                 >
                   <Braces data-icon="inline-start" />

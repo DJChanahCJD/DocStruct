@@ -8,6 +8,7 @@ import uuid
 import aiofiles
 from fastapi import UploadFile
 
+from core.config import get_settings
 from core.extractor import extract_structure_with_meta, generate_document_summary
 from core.ir import build_basic_ir_from_markdown, document_ir_to_payload, parse_result_to_ir
 from core.parser import ParserFactory
@@ -18,6 +19,7 @@ from schemas.models import DocType, DocumentRecord
 
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".md", ".txt"}
 
@@ -31,10 +33,10 @@ async def generate_summary_safely(
         summary = await asyncio.to_thread(generate_document_summary, markdown_text, document_ir_payload)
     except Exception as exc:
         logger.warning("Document summary generation failed: %s", exc)
-        return None, {"summary_generated": False, "summary_error": str(exc)}
+        return None, {"summary_generated": False, "summary_model": settings.llm_model, "summary_error": str(exc)}
     if not summary:
-        return None, {"summary_generated": False}
-    return summary, {"summary_generated": True, "summary_chars": len(summary)}
+        return None, {"summary_generated": False, "summary_model": settings.llm_model}
+    return summary, {"summary_generated": True, "summary_model": settings.llm_model, "summary_chars": len(summary)}
 
 
 async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
@@ -65,11 +67,12 @@ async def retry_extraction(doc: DocumentRecord) -> DocumentRecord:
             document_ir=document_ir,
             document_summary=doc.summary,
         )
+        existing_meta = doc.extraction_meta if isinstance(doc.extraction_meta, dict) else {}
         await doc.update_from_dict(
             {
                 "status": "completed",
                 "extracted_data": dump_extracted_document(extracted),
-                "extraction_meta": extraction_meta,
+                "extraction_meta": {**existing_meta, **extraction_meta},
                 "error_message": None,
             }
         ).save()

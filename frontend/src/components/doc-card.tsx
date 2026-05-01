@@ -1,5 +1,17 @@
 import type { MouseEvent, ReactNode } from "react";
-import { AlertCircle, Bug, Clock, FileText, FolderOpen, Hash, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  Activity,
+  Bug,
+  Clock,
+  Cpu,
+  FileText,
+  Hash,
+  Layers3,
+  MoreVertical,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,7 +25,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { DocumentRecord } from "@/lib/api";
+import type { DocumentListItem } from "@/lib/api";
 
 const statusColor: Record<string, string> = {
   completed: "bg-emerald-100 text-emerald-700",
@@ -36,7 +48,7 @@ const statusLabel: Record<string, string> = {
 };
 
 interface DocCardProps {
-  doc: DocumentRecord;
+  doc: DocumentListItem;
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -105,7 +117,7 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
                     <MoreVertical className="h-4 w-4 text-muted-foreground" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {doc.status === "failed" && doc.raw_text && onRetry && (
+                    {doc.status === "failed" && doc.has_raw_text && onRetry && (
                       <DropdownMenuItem
                         onClick={(event: MouseEvent<HTMLDivElement>) => {
                           event.stopPropagation();
@@ -168,6 +180,32 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
           <div className="my-1.5 border-t border-border/60" />
 
           <div className="space-y-1">
+            <div className="rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+              <div className="mb-1 font-medium text-foreground">摘要</div>
+              <div className="line-clamp-4">{formatSummary(doc)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <DocMetricItem
+                icon={<Cpu className="h-3 w-3" />}
+                label="模型"
+                value={formatModel(doc)}
+              />
+              <DocMetricItem
+                icon={<Activity className="h-3 w-3" />}
+                label="置信度"
+                value={formatConfidence(doc)}
+              />
+              <DocMetricItem
+                icon={<Layers3 className="h-3 w-3" />}
+                label="Chunks"
+                value={formatChunks(doc)}
+              />
+              <DocMetricItem
+                icon={<FileText className="h-3 w-3" />}
+                label="IR"
+                value={formatIr(doc)}
+              />
+            </div>
             <DocMetaItem
               icon={<Hash className="h-3 w-3" />}
               label="文档 ID"
@@ -176,7 +214,7 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
             <DocMetaItem
               icon={<FileText className="h-3 w-3" />}
               label="Markdown"
-              value={`${doc.raw_text?.length ?? 0} 字符`}
+              value={doc.has_raw_text ? "已生成" : "未生成"}
             />
             <DocMetaItem
               icon={<Clock className="h-3 w-3" />}
@@ -187,11 +225,6 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
                 hour: "2-digit",
                 minute: "2-digit",
               })}
-            />
-            <DocMetaItem
-              icon={<FolderOpen className="h-3 w-3" />}
-              label="路径"
-              value={doc.stored_path}
             />
             {doc.error_message && (
               <div className="rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-xs text-destructive">
@@ -206,6 +239,26 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
         </div>
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function DocMetricItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border bg-background px-2 py-1.5 text-xs">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="mt-0.5 truncate font-medium text-foreground">{value}</div>
+    </div>
   );
 }
 
@@ -225,4 +278,63 @@ function DocMetaItem({
       <span className="font-medium">{value ?? "-"}</span>
     </div>
   );
+}
+
+function formatSummary(doc: DocumentListItem): string {
+  if (doc.summary?.trim()) {
+    return doc.summary.trim();
+  }
+  if (getMetaText(doc, "summary_error")) {
+    return "摘要生成失败";
+  }
+  return "暂无摘要";
+}
+
+function formatModel(doc: DocumentListItem): string {
+  return getMetaText(doc, "llm_model") || "-";
+}
+
+function formatConfidence(doc: DocumentListItem): string {
+  const confidence = getMetaNumber(doc, "confidence");
+  return confidence > 0 ? `${Math.round(confidence * 100)}%` : "-";
+}
+
+function formatChunks(doc: DocumentListItem): string {
+  const chunkCount = getMetaNumber(doc, "chunk_count");
+  const failedChunks = getMetaNumber(doc, "failed_chunks");
+  if (chunkCount <= 0) {
+    return "-";
+  }
+  return failedChunks > 0 ? `${chunkCount}/${failedChunks} 失败` : String(chunkCount);
+}
+
+function formatIr(doc: DocumentListItem): string {
+  const elements = getMetaNumber(doc, "element_count");
+  const sections = getMetaNumber(doc, "section_count");
+  if (elements <= 0 && sections <= 0) {
+    return doc.has_document_ir ? "已生成" : "-";
+  }
+  return `${elements} 元素 / ${sections} 章`;
+}
+
+function getMetaText(doc: DocumentListItem, key: string): string {
+  const meta = doc.extraction_meta;
+  if (!isRecord(meta)) {
+    return "";
+  }
+  const value = meta[key];
+  return typeof value === "string" ? value : "";
+}
+
+function getMetaNumber(doc: DocumentListItem, key: string): number {
+  const meta = doc.extraction_meta;
+  if (!isRecord(meta)) {
+    return 0;
+  }
+  const value = meta[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
