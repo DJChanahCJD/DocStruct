@@ -489,7 +489,7 @@ export function DocPreviewPanel({
           <SheetHeader className="border-b pr-12">
             <SheetTitle>结构化 JSON</SheetTitle>
             <SheetDescription>
-              {selectedItem
+              {selectedItem?.slotLabel && selectedItem?.title
                 ? `已定位到 ${selectedItem.slotLabel}：${selectedItem.title}`
                 : "可直接校正整份结构化结果"}
             </SheetDescription>
