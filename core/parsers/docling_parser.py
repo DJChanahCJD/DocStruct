@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 
 from core.constants import HEADING_MARKDOWN_PATTERN, TABLE_ROW_PATTERN, TABLE_SEPARATOR_PATTERN
+from core.parser import NUMBERED_HEADING_PATTERN
 
 
 @dataclass
@@ -162,7 +163,7 @@ class DoclingParser:
 
         # 使用 iterate_items 遍历文档元素
         if hasattr(document, "iterate_items"):
-            for idx, (item, level) in enumerate(document.iterate_items()):
+            for idx, item in enumerate(document.iterate_items()):
                 element = self._convert_element(item, idx, document)
                 if element:
                     elements.append(element)
@@ -194,6 +195,9 @@ class DoclingParser:
 
         if item_type == "table" and markdown:
             text = markdown
+        elif text:
+            # 保留文本格式（粗体/斜体），表格使用原生 markdown 不处理
+            text = self._apply_formatting(text, item)
 
         if not text and item_type not in ("picture", "image", "figure"):
             return None
@@ -378,13 +382,42 @@ class DoclingParser:
         except Exception:
             return ""
 
+    def _apply_formatting(self, text: str, item: Any) -> str:
+        """根据 Docling 元素的格式化属性包裹 Markdown 格式标记。"""
+        if not text:
+            return text
+        formatting = getattr(item, "formatting", None)
+        if formatting is None:
+            return text
+        is_bold = getattr(formatting, "bold", False)
+        is_italic = getattr(formatting, "italic", False)
+        if is_bold and is_italic:
+            return f"***{text}***"
+        elif is_bold:
+            return f"**{text}**"
+        elif is_italic:
+            return f"*{text}*"
+        return text
+
     def _infer_heading_level(self, item: Any, document: Any) -> int:
-        """从 Docling Markdown 标题前缀推断标题层级。"""
+        """从编号模式、Markdown 标题前缀或元素属性推断标题层级。"""
+        # 获取标题文本
+        text = getattr(item, "text", "") or ""
+        text = str(text).strip()
+
+        # 1. 编号标题：X. → H2, X.Y → H3, X.Y.Z → H4
+        num_match = NUMBERED_HEADING_PATTERN.match(text)
+        if num_match:
+            dot_count = num_match.group(1).count(".")
+            return min(dot_count + 2, 6)
+
+        # 2. Markdown # 前缀（仅 markdown/docx 源有效）
         markdown = self._export_markdown(item, document)
         match = HEADING_MARKDOWN_PATTERN.match(markdown.strip())
         if match:
-            return len(match.group(1))
+            return min(len(match.group(1)), 6)
 
+        # 3. Docling 元素自身 level 属性
         for attr in ["level", "heading_level"]:
             if not hasattr(item, attr):
                 continue
@@ -415,7 +448,7 @@ class DoclingParser:
                 and self._should_merge_paragraphs(merged[-1], block)
             ):
                 previous = merged[-1]
-                separator = "" if block.text.strip().startswith((":", "：")) else " "
+                separator = self._merge_separator(previous.text, block.text)
                 previous.text = f"{previous.text.rstrip()}{separator}{block.text.strip()}"
                 continue
             merged.append(block)
@@ -429,11 +462,25 @@ class DoclingParser:
             return False
         if previous.source_page is not None and current.source_page is not None and previous.source_page != current.source_page:
             return False
-        if self._looks_like_structural_text(current_text):
+        if len(current_text) > 15 and self._looks_like_structural_text(current_text):
             return False
         if previous_text.endswith((":", "：")) or current_text.startswith((":", "：")):
             return True
-        return not self._is_sentence_end(previous_text) and len(previous_text) >= 20
+        return not self._is_sentence_end(previous_text) and len(previous_text) >= 5
+
+    @staticmethod
+    def _merge_separator(prev_text: str, curr_text: str) -> str:
+        """返回合并两段文本时应使用的分隔符，CJK 字符间不加空格。"""
+        curr_stripped = curr_text.strip()
+        if curr_stripped.startswith((":", "：", "。", ".", "，", ",", "）", ")", "；", ";", "、", "？", "?", "！", "!")):
+            return ""
+        prev_rstripped = prev_text.rstrip()
+        if prev_rstripped and curr_stripped:
+            prev_last = prev_rstripped[-1]
+            curr_first = curr_stripped[0]
+            if ord(prev_last) > 127 and ord(curr_first) > 127:
+                return ""
+        return " "
 
     @staticmethod
     def _looks_like_structural_text(value: str) -> bool:
