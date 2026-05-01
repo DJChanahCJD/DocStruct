@@ -201,6 +201,12 @@
 }
 
 @layer components {
+  .evidence-source-block {
+    position: relative;
+  }
+  .evidence-block-highlight {
+    @apply border-primary bg-primary/10 ring-2 ring-primary/30;
+  }
   mark.evidence-highlight {
     @apply rounded-sm border-b-2 border-amber-500/60 bg-amber-300/15 px-0.5 text-inherit transition-colors;
     cursor: pointer;

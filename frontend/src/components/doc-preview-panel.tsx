@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useDocument, useDocumentFile, useUpdateDocument } from "@/hooks/use-api";
+import type { DocumentIR } from "@/lib/api";
 import {
   buildExtractionItems,
   findFirstPositionedEvidence,
@@ -83,6 +84,10 @@ export function DocPreviewPanel({
   const extractionItems = useMemo(
     () => buildExtractionItems(doc?.extracted_data, doc?.doc_type),
     [doc?.extracted_data, doc?.doc_type],
+  );
+  const documentIr = useMemo(
+    () => normalizeDocumentIr(doc?.document_ir),
+    [doc?.document_ir],
   );
 
   const metadataTitle = useMemo(
@@ -409,6 +414,7 @@ export function DocPreviewPanel({
                 preview={sourcePreview}
                 isLoading={isFileLoading}
                 file={documentFile}
+                documentIr={documentIr}
                 items={extractionItems}
                 selectedEvidence={selectedEvidence}
                 onSelectEvidence={setSelectedEvidence}
@@ -619,6 +625,7 @@ export function DocPreviewPanel({
                     preview={sourcePreview}
                     isLoading={isFileLoading}
                     file={documentFile}
+                    documentIr={documentIr}
                     items={[]}
                     selectedEvidence={null}
                     onSelectEvidence={() => undefined}
@@ -665,6 +672,7 @@ function SourcePreview({
   preview,
   isLoading,
   file,
+  documentIr,
   items,
   selectedEvidence,
   onSelectEvidence,
@@ -672,6 +680,7 @@ function SourcePreview({
   preview: SourcePreviewState;
   isLoading: boolean;
   file: { blob: Blob; contentType: string; fileName: string } | undefined;
+  documentIr: DocumentIR | null;
   items: ExtractionItem[];
   selectedEvidence: ExtractionEvidence | null;
   onSelectEvidence: (evidence: ExtractionEvidence) => void;
@@ -700,7 +709,7 @@ function SourcePreview({
   if (preview.kind === "docx") {
     return (
       <DocxEvidenceViewer
-        file={file!}
+        documentIr={documentIr}
         items={items}
         selectedEvidence={selectedEvidence}
         onSelectEvidence={onSelectEvidence}
@@ -814,6 +823,16 @@ function patchExtractionItem(
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Narrow the API document_ir payload into the frontend DocumentIR shape.
+ */
+function normalizeDocumentIr(value: Record<string, unknown> | null | undefined): DocumentIR | null {
+  if (!isRecord(value) || !Array.isArray(value.elements)) {
+    return null;
+  }
+  return value as unknown as DocumentIR;
 }
 
 /**
