@@ -1,5 +1,5 @@
 import type { MouseEvent, ReactNode } from "react";
-import { AlertCircle, Clock, FileText, FolderOpen, Hash, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
+import { AlertCircle, Bug, Clock, FileText, FolderOpen, Hash, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -116,6 +116,15 @@ export function DocCard({ doc, selected, onSelect, onDelete, onRetry }: DocCardP
                         重试提取
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem
+                      onClick={(event: MouseEvent<HTMLDivElement>) => {
+                        event.stopPropagation();
+                        window.open(`/chunk-debug.html?docId=${doc.id}`, "_blank");
+                      }}
+                    >
+                      <Bug className="mr-2 h-3.5 w-3.5" />
+                      调试分块
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={(event: MouseEvent<HTMLDivElement>) => {

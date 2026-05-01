@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, FileSearch, Loader2 } from "lucide-react";
+import { Copy, FileSearch, Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDocumentChunks } from "@/hooks/use-api";
 import type { DocumentChunkDebug } from "@/lib/api";
@@ -81,9 +86,31 @@ export function ChunkDebugPanel({ docId }: ChunkDebugPanelProps) {
             <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
               分块列表
             </p>
-            <span className="text-xs text-muted-foreground">
-              忽略 {data?.ignored_sections.length ?? 0} 条规则
-            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  忽略 {data?.ignored_sections.length ?? 0} 条规则
+                  <Info className="h-3 w-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" align="end">
+                <p className="mb-2 text-xs font-medium text-foreground">被忽略的规则</p>
+                {(data?.ignored_sections.length ?? 0) === 0 ? (
+                  <p className="text-xs text-muted-foreground">没有被忽略的规则</p>
+                ) : (
+                  <ul className="max-h-40 space-y-1 overflow-y-auto">
+                    {data?.ignored_sections.map((section, index) => (
+                      <li
+                        key={index}
+                        className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground"
+                      >
+                        {section}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
           <ScrollArea className="min-h-0 flex-1">
             <div className="flex flex-col gap-2 p-3">
