@@ -6,6 +6,15 @@ const api = axios.create({
 
 export const ACTIVE_DOCUMENT_STATUSES = ["pending", "uploaded", "parsing", "extracting"] as const;
 
+export interface ExtractionMeta {
+  llm_model: string;
+  confidence: number;
+  chunk_count: number;
+  failed_chunks: number;
+  element_count: number;
+  section_count: number;
+}
+
 export interface DocumentRecord {
   id: number;
   title: string;
@@ -17,7 +26,7 @@ export interface DocumentRecord {
   summary: string | null;
   document_ir: Record<string, unknown> | null;
   extracted_data: Record<string, unknown> | null;
-  extraction_meta: Record<string, unknown> | null;
+  extraction_meta: ExtractionMeta | null;
   status: string;
   error_message: string | null;
 }
@@ -46,15 +55,18 @@ export interface DocumentFilePayload {
   fileName: string;
 }
 
+export type ElementType = "heading" | "paragraph" | "separator" | "code" | "table" | "image";
+
 export interface DocumentElement {
   element_id: string;
-  element_type: string;
+  element_type: ElementType;
   text: string | null;
   markdown: string | null;
   section_path: string[];
   page: number | null;
   bbox: number[] | null;
   order: number;
+  metadata: Record<string, unknown>;
 }
 
 export interface DocumentIR {

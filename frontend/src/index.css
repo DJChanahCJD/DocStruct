@@ -199,3 +199,16 @@
     @apply font-sans;
     }
 }
+
+@layer components {
+  mark.evidence-highlight {
+    @apply rounded-sm border-b-2 border-amber-500/60 bg-amber-300/15 px-0.5 text-inherit transition-colors;
+    cursor: pointer;
+  }
+  mark.evidence-highlight:hover {
+    @apply bg-amber-300/25;
+  }
+  mark.evidence-highlight.evidence-highlight-selected {
+    @apply border-primary bg-primary/15 ring-2 ring-primary/35;
+  }
+}

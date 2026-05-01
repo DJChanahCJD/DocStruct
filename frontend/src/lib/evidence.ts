@@ -7,12 +7,15 @@ const DOC_TYPE_SLOT_CONFIGS: Record<string, SlotConfig[]> = {
   srs: [
     { key: "functional_requirements", label: "功能需求" },
     { key: "non_functional_requirements", label: "非功能需求" },
+    { key: "business_flows", label: "业务流程" },
   ],
   api: [
     { key: "apis", label: "接口" },
   ],
   hld: [
     { key: "modules", label: "模块" },
+    { key: "core_flows", label: "核心流程" },
+    { key: "design_decisions", label: "设计决策" },
   ],
   tc: [
     { key: "test_cases", label: "测试用例" },
@@ -118,9 +121,27 @@ export function buildExtractionItems(
 }
 
 /**
- * Return the first evidence that can drive PDF positioning.
+ * Check whether an evidence entry can drive DOM text-level highlighting.
+ */
+export function isTextNavigable(evidence: ExtractionEvidence): boolean {
+  return !!evidence.textSpan;
+}
+
+/**
+ * Return the first evidence that can drive navigation in any viewer.
+ *
+ * Selection priority:
+ * 1. textSpan-based evidence (works for MD, text, DOCX text-level highlighting)
+ * 2. page+bbox evidence (works for PDF canvas positioning)
+ * 3. Any available evidence
  */
 export function findFirstPositionedEvidence(items: ExtractionItem[]): ExtractionEvidence | null {
+  for (const item of items) {
+    const textEvidence = item.evidence.find((entry) => isTextNavigable(entry));
+    if (textEvidence) {
+      return textEvidence;
+    }
+  }
   for (const item of items) {
     const positionedEvidence = item.evidence.find((entry) => entry.page && entry.bbox);
     if (positionedEvidence) {

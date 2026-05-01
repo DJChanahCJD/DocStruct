@@ -71,25 +71,21 @@ Final JSON
 
 ```python
 class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):
-    doc_type: Literal["srs"] = Field(default="srs")
-    entities: list[EntityItem] = Field(default_factory=list)
+    doc_type: Literal[“srs”] = Field(default=”srs”)
+    system_name: str = Field(default=””)
+    target_users: list[str] = Field(default_factory=list)
     functional_requirements: list[FunctionalReqItem] = Field(default_factory=list)
     non_functional_requirements: list[NonFunctionalReqItem] = Field(default_factory=list)
-    interfaces: list[InterfaceItem] = Field(default_factory=list)
+    business_flows: list[BusinessFlowItem] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
 ```
 
-- 每类文档使用独立 typed schema，例如 SRS 使用 `functional_requirements` / `non_functional_requirements`，API 使用 `apis`，HLD 使用 `modules`，TC 使用 `test_cases`，DBDD 使用 `tables`
-- `id` 是系统生成的稳定对象 ID，例如 `FREQ-001`；原文编号可作为 `name` 后缀保留，例如 `用户注册（SRS-USER-001）`
+- 每类文档使用独立 typed schema：SRS 使用 `functional_requirements` / `non_functional_requirements` / `business_flows`，API 使用 `apis`，HLD 使用 `modules` / `core_flows` / `design_decisions`，TC 使用 `test_cases`，DBDD 使用 `tables`
+- `id` 是系统生成的稳定对象 ID，例如 `FREQ-001`；原文编号可作为 `name` 后缀保留
 - SRS 的验收标准不作为独立需求输出，局部验收条目写入对应功能需求的 `criteria`
-- `entities` 只保存产品域或架构中可独立指称的角色、模块、系统、服务、组件、数据对象，不保存需求标题
-- `interfaces` 使用受限字段表达可验证事实：`interface_type`、`http_method`、`endpoint`、`provider`、`consumer`
-- `interfaces.endpoint` 只保存明确入口标识，如 URL path、RPC 方法名、topic/queue、表名、文件路径或页面路由；没有明确值则留空
-- `interfaces.http_method` 只保存明确 HTTP 方法，泛化动作词如“调用”“访问”“请求”不进入结构字段
 - `evidence` 保存对象到 `DocumentElement` 的回溯信息
 - `evidence_element_ids` 是少量定位锚点，不要求覆盖对象的每个字段或明细
 - `evidence` 不包含独立编号或章节路径；定位依赖 `object_id`、`element_id`、`page`、`bbox`、`text_span`
-- 不再使用 `views`、`relations`、`metrics` 顶层槽位；量化指标写入相关对象字段
 
 ## 快速开始
 
@@ -130,6 +126,10 @@ DOCLING_FORCE_BACKEND_TEXT=true
 | `DOCLING_ENABLE_OCR` | Docling OCR 开关 | `false` |
 | `DOCLING_ENABLE_TABLE_STRUCTURE` | Docling 表格结构识别开关 | `true` |
 | `DOCLING_FORCE_BACKEND_TEXT` | Docling 优先使用 PDF 原生文本层 | `true` |
+| `EXTRACTION_CHUNK_OVERLAP_CHARS` | 相邻分块重叠字符数 | `200` |
+| `LLM_MAX_TOKENS` | LLM 最大输出 token 数 | `16384` |
+| `PHASE0_ENABLED` | Phase 0 预扫描开关 | `false` |
+| `PHASE0_MAX_SAMPLE_CHARS` | Phase 0 采样字符数上限 | `6000` |
 
 ### 3. 启动后端
 
@@ -147,6 +147,7 @@ python main.py
 | 文档解析 | `docling`、`pymupdf4llm`、`python-docx` |
 | 结构化抽取 | OpenAI-Compatible API + `Pydantic` |
 | 评测 | Python 脚本 + JSON / Markdown 报告 |
+| 前端 | `React 19` + `TypeScript` + `Vite` + `Tailwind CSS v4` + `shadcn/ui` |
 
 ## 项目结构
 
@@ -155,18 +156,45 @@ DocStruct/
 ├── main.py
 ├── core/
 │   ├── parser.py
+│   ├── parsers/
+│   │   ├── __init__.py
+│   │   └── docling_parser.py
 │   ├── ir.py
 │   ├── chunker.py
 │   ├── extractor.py
 │   ├── reducer.py
+│   ├── config.py
+│   ├── constants.py
+│   ├── utils.py
+│   ├── schema_registry.py
 │   ├── experiment_sdk.py
 │   ├── document_service.py
 │   └── llm.py
 ├── schemas/
 │   ├── models.py
-│   └── dto.py
-└── scripts/
-    ├── ci_test.py
+│   ├── dto.py
+│   ├── constants.py
+│   ├── extraction.py
+│   ├── ir.py
+│   └── docs/
+│       ├── __init__.py
+│       ├── base.py
+│       ├── srs.py
+│       ├── api.py
+│       ├── design.py
+│       ├── test.py
+│       └── dbdd.py
+├── scripts/
+│   ├── ci_test.py
+│   └── evaluate.py
+├── tests/
+│   ├── test_extractor_prompts.py
+│   └── test_reducer.py
+├── frontend/         (React + TypeScript + Vite)
+├── experiments/      (offline evaluation)
+├── static/           (example documents)
+├── docs/             (documentation)
+└── paper/            (thesis chapters)
 ```
 
 ## 核心流程
@@ -204,6 +232,9 @@ Evidence Binding 回填 page / bbox / text_span
 | `GET` | `/api/documents/{doc_id}` | 获取文档详情 |
 | `PATCH` | `/api/documents/{doc_id}` | 人工修订 `raw_text`、`summary` 或 `extracted_data` |
 | `DELETE` | `/api/documents/{doc_id}` | 删除文档记录与原始文件 |
+| `GET` | `/api/documents/{doc_id}/chunks` | 返回分块调试数据 |
+| `POST` | `/api/documents/{doc_id}/retry-extraction` | 重新执行结构化抽取 |
+| `GET` | `/api/documents/{doc_id}/file` | 下载原始上传文件 |
 
 上传请求要求：
 

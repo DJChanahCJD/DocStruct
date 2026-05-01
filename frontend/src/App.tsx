@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { Toaster } from "sonner";
@@ -26,6 +26,27 @@ function AppContent() {
     setSelectedDocId(id);
     setHasUnsavedRawChanges(false);
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const docIdParam = params.get("docId");
+    if (docIdParam) {
+      const parsedId = Number(docIdParam);
+      if (!Number.isNaN(parsedId)) {
+        setSelectedDocId(parsedId);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedDocId !== null) {
+      url.searchParams.set("docId", String(selectedDocId));
+    } else {
+      url.searchParams.delete("docId");
+    }
+    window.history.replaceState(null, "", url);
+  }, [selectedDocId]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

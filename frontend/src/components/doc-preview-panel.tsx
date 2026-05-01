@@ -13,20 +13,16 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 
-import { ChunkDebugPanel } from "@/components/chunk-debug-panel";
 import { ExtractionMetadataDialog } from "@/components/extraction-metadata-dialog";
 import { ExtractionResultPanel } from "@/components/extraction-result-panel";
+import { DocxEvidenceViewer } from "@/components/docx-evidence-viewer";
+import { MarkdownEvidenceViewer } from "@/components/markdown-evidence-viewer";
 import { PdfEvidenceViewer } from "@/components/pdf-evidence-viewer";
+import { PlainTextEvidenceViewer } from "@/components/plain-text-evidence-viewer";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -59,7 +55,7 @@ export function DocPreviewPanel({
   const { data: doc, isLoading } = useDocument(docId);
   const { data: documentFile, isLoading: isFileLoading } = useDocumentFile(docId);
   const [rawSheetOpen, setRawSheetOpen] = useState(false);
-  const [chunkSheetOpen, setChunkSheetOpen] = useState(false);
+  const [, setChunkSheetOpen] = useState(false);
   const [rawDraft, setRawDraft] = useState("");
   const [savedRawContent, setSavedRawContent] = useState("");
   const [jsonDraft, setJsonDraft] = useState("");
@@ -163,6 +159,17 @@ export function DocPreviewPanel({
       if (extension === "pdf" || documentFile.contentType.includes("pdf")) {
         if (!disposed) {
           setSourcePreview({ kind: "pdf" });
+        }
+        return;
+      }
+
+      if (
+        extension === "docx" ||
+        extension === "doc" ||
+        documentFile.contentType.includes("wordprocessingml")
+      ) {
+        if (!disposed) {
+          setSourcePreview({ kind: "docx" });
         }
         return;
       }
@@ -645,6 +652,7 @@ export function DocPreviewPanel({
 type SourcePreviewState =
   | { kind: "empty" }
   | { kind: "pdf" }
+  | { kind: "docx" }
   | { kind: "text"; text: string }
   | { kind: "markdown"; text: string }
   | { kind: "download"; url: string; fileName: string }
@@ -689,28 +697,36 @@ function SourcePreview({
     );
   }
 
-  if (preview.kind === "text") {
+  if (preview.kind === "docx") {
     return (
-      <ScrollArea className="h-full">
-        <pre className="whitespace-pre-wrap px-5 py-4 font-mono text-sm leading-6 text-foreground">
-          {preview.text}
-        </pre>
-      </ScrollArea>
+      <DocxEvidenceViewer
+        file={file!}
+        items={items}
+        selectedEvidence={selectedEvidence}
+        onSelectEvidence={onSelectEvidence}
+      />
     );
   }
 
   if (preview.kind === "markdown") {
     return (
-      <ScrollArea className="h-full">
-        <div className="prose prose-sm max-w-none px-5 py-4 text-foreground prose-headings:font-semibold prose-pre:bg-muted">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex, rehypeHighlight]}
-          >
-            {preview.text}
-          </ReactMarkdown>
-        </div>
-      </ScrollArea>
+      <MarkdownEvidenceViewer
+        markdown={preview.text}
+        items={items}
+        selectedEvidence={selectedEvidence}
+        onSelectEvidence={onSelectEvidence}
+      />
+    );
+  }
+
+  if (preview.kind === "text") {
+    return (
+      <PlainTextEvidenceViewer
+        text={preview.text}
+        items={items}
+        selectedEvidence={selectedEvidence}
+        onSelectEvidence={onSelectEvidence}
+      />
     );
   }
 
