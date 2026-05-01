@@ -4,13 +4,13 @@
   "type": "bachelor",
   "target_words": 10000,
   "chapters": [
-    {"id": "01-background", "title": "背景", "status": "drafting"},
-    {"id": "02-related-tech", "title": "相关技术", "status": "drafting"},
-    {"id": "03-requirements", "title": "需求分析", "status": "drafting"},
-    {"id": "04-system-design", "title": "系统设计", "status": "drafting"},
-    {"id": "05-implementation", "title": "系统实现", "status": "drafting"},
-    {"id": "06-evaluation", "title": "系统测试", "status": "drafting"},
-    {"id": "07-conclusion", "title": "结论", "status": "drafting"}
+    {"id": "00-abstract", "title": "摘要", "status": "draft"},
+    {"id": "01-background", "title": "背景", "status": "draft"},
+    {"id": "02-requirements", "title": "需求分析", "status": "draft"},
+    {"id": "03-system-design", "title": "系统设计", "status": "draft"},
+    {"id": "04-implementation", "title": "系统实现", "status": "draft"},
+    {"id": "05-evaluation", "title": "系统测试", "status": "draft"},
+    {"id": "06-conclusion", "title": "结论", "status": "draft"}
   ],
   "references": "references.md",
   "acknowledgments": "ack.md"

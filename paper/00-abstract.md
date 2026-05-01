@@ -1,0 +1,11 @@
+# 摘要
+
+软件工程文档包含需求、接口、概要设计、测试用例和数据库设计等关键信息，是软件系统分析、开发、测试和维护的重要依据。实际项目中，此类文档常以 PDF、DOCX、Markdown 或纯文本形式保存，格式差异大、结构层次不稳定，难以直接转换为可计算的数据。针对这一问题，本文设计并实现了基于大语言模型的软件工程文档内容结构化提取系统 DocStruct。系统面向单文档级抽取场景，支持多格式文档上传，覆盖需求规格说明书、API 接口文档、概要设计说明书、测试用例文档和数据库设计文档五类主干软件工程文档。系统采用 Parser、Document IR、摘要生成、章节感知分块、Map 抽取、Finalizer/Reduce 合并和证据绑定的处理流程，将非结构化文档转化为带证据回溯的 typed JSON。后端基于 FastAPI、Pydantic 和 SQLite 实现，前端基于 React、TypeScript、Vite 和 Tailwind CSS 实现，支持文档上传、结构化结果查看、原文对照和 PDF 证据定位。实验部分基于轻量人工标注数据集和离线评测脚本进行验证，并通过模型对比选定 DeepSeek-V4-Flash 作为后续系统默认模型。结果表明，该方案能够较好地完成中短软件工程文档的结构化抽取，并具备一定的可解释性和工程可维护性。
+
+**关键词**：大语言模型；软件工程文档；结构化抽取；文档解析；证据回溯
+
+# Abstract
+
+Software engineering documents contain key information such as requirements, APIs, architecture designs, test cases, and database schemas. In real projects, these documents are often stored as PDF, DOCX, Markdown, or plain text files with inconsistent formats and unstable structures, making them difficult to convert into computable data. To address this problem, this thesis designs and implements DocStruct, an LLM-based structured content extraction system for software engineering documents. DocStruct focuses on single-document extraction and supports multiple input formats. It covers five major document types: software requirements specifications, API documents, high-level design documents, test case documents, and database design documents. The system follows a pipeline of Parser, Document IR, summary generation, section-aware chunking, Map extraction, Finalizer/Reduce merging, and evidence binding, converting unstructured documents into typed JSON with traceable evidence. The backend is implemented with FastAPI, Pydantic, and SQLite, while the frontend is implemented with React, TypeScript, Vite, and Tailwind CSS. A lightweight manually labeled dataset and an offline evaluation script are used for validation, and a model comparison experiment selects DeepSeek-V4-Flash as the final model for subsequent system use. The results indicate that the proposed system can extract structured information from medium and short software engineering documents with traceable evidence and maintainable engineering design.
+
+**Keywords**: Large Language Model; Software Engineering Document; Structured Extraction; Document Parsing; Evidence Traceability

@@ -1,25 +1,27 @@
 # 参考文献
 
-[1] 李舟军, 范宇, 吴贤杰. 面向自然语言处理的预训练技术研究综述. 计算机科学, 2020, 47(3): 162-173.
+[1] Ivanov V, Sadovykh A, Naumchev A, et al. Extracting Software Requirements from Unstructured Documents[A]. Requirements Engineering: Foundation for Software Quality (REFSQ 2021)[C]. Springer, 2021.
 
-[2] Devlin J, Chang M W, Lee K, et al. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. Proceedings of NAACL-HLT, 2019: 4171-4186.
+[2] Lazar K, Vetzler M, Kate K, et al. OASBuilder: Generating OpenAPI Specifications from Online API Documentation with Large Language Models[EB/OL]. arXiv:2507.05316, 2025. https://arxiv.org/abs/2507.05316.
 
-[3] Brown T B, Mann B, Ryder N, et al. Language Models are Few-Shot Learners. Advances in Neural Information Processing Systems, 2020, 33: 1877-1901.
+[3] Mandal S, Chethan A, Janfaza V, et al. Large Language Models Based Automatic Synthesis of Software Specifications[A]. 2023 USENIX Annual Technical Conference (USENIX ATC 23)[C]. Boston, MA: USENIX Association, 2023: 1-12.
 
-[4] IBM Research. Docling: Document Understanding for the LLM Era. GitHub Repository, 2024. https://github.com/DS4SD/docling
+[4] 徐志辉．PDF内容提取系统设计与实现[D]．北京：北京邮电大学，2022.
 
-[5] Vaswani A, Shazeer N, Parmar N, et al. Attention is All You Need. Advances in Neural Information Processing Systems, 2017, 30.
+[5] Auer C, Lysak M, Nassar A, et al. Docling Technical Report[EB/OL]. arXiv:2408.09869, 2024. https://arxiv.org/abs/2408.09869.
 
-[6] Wei J, Wang X, Schuurmans D, et al. Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. Advances in Neural Information Processing Systems, 2022, 35: 24824-24837.
+[6] Wang S, et al. LLM×MapReduce: Simplified Long-Sequence Processing using Large Language Models[EB/OL]. arXiv:2410.09342, 2024. https://arxiv.org/abs/2410.09342.
 
-[7] pymupdf4llm contributors. pymupdf4llm: Convert PDF to Markdown for LLM/RAG. PyPI Package, 2024. https://pypi.org/project/pymupdf4llm/
+[7] Gao T, Yen H, Yu J, et al. ALCE: An Automatic Benchmark for Large Language Model Generations with Citations[EB/OL]. arXiv:2305.14627, 2023. https://arxiv.org/abs/2305.14627.
 
-[8] FastAPI contributors. FastAPI: Modern Web Framework for Building APIs with Python. 2024. https://fastapi.tiangolo.com/
+[8] Es S, James J, Espinosa-Anke L, et al. Ragas: Automated Evaluation of Retrieval Augmented Generation[EB/OL]. arXiv:2309.15217, 2023. https://arxiv.org/abs/2309.15217.
 
-[9] Pydantic contributors. Pydantic V2: Data Validation Using Python Type Annotations. 2024. https://docs.pydantic.dev/
+[9] Niu J, et al. MinerU2.5: A Decoupled Vision-Language Model for Efficient High-Resolution Document Parsing[EB/OL]. arXiv:2509.22186, 2025. https://arxiv.org/abs/2509.22186.
 
-[10] Colby C, Ivanov V. python-docx: Create and Modify Word Documents with Python. PyPI Package, 2024. https://python-docx.readthedocs.io/
+[10] Khalid M, et al. ReqFusion: A Multi-Provider Framework for Automated PEGS Analysis Across Software Domains[EB/OL]. arXiv:2603.23482, 2026. https://arxiv.org/abs/2603.23482.
 
-[11] OpenAI. GPT-4 Technical Report. arXiv preprint arXiv:2303.08774, 2023.
+[11] Jiang Z, Zhang J, Weir N, et al. Core: Robust Factual Precision Scoring with Informative Sub-Claim Identification[EB/OL]. arXiv:2407.03572, 2024. https://arxiv.org/abs/2407.03572.
 
-[12] Dean J, Ghemawat S. MapReduce: Simplified Data Processing on Large Clusters. Communications of the ACM, 2008, 51(1): 107-113.
+[12] Gao Y, Xiong Y, et al. Retrieval-Augmented Generation for Large Language Models: A Survey[EB/OL]. arXiv:2312.10997, 2023. https://arxiv.org/abs/2312.10997.
+
+[13] 崔磊，徐毅恒，吕腾超，等．文档智能：数据集、模型和应用[J]．中文信息学报，2022，36(6)：1-19.
