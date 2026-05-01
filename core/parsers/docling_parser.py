@@ -115,6 +115,11 @@ class DoclingParser:
             # 5. 构建 DocBlock 列表
             blocks = self._build_blocks(elements)
             blocks = self._merge_adjacent_paragraphs(blocks)
+            if not blocks:
+                raise ValueError(
+                    "Docling 未提取到可用文本元素，请检查 PDF 是否为扫描件，"
+                    "或启用 Docling OCR 后重试"
+                )
 
             # 6. 渲染 Markdown
             renderer = MarkdownRenderer()
@@ -163,14 +168,24 @@ class DoclingParser:
 
         # 使用 iterate_items 遍历文档元素
         if hasattr(document, "iterate_items"):
-            for idx, item in enumerate(document.iterate_items()):
-                element = self._convert_element(item, idx, document)
+            for idx, raw_item in enumerate(document.iterate_items()):
+                item, item_level = self._unwrap_iterated_item(raw_item)
+                element = self._convert_element(item, idx, document, item_level=item_level)
                 if element:
                     elements.append(element)
 
         return elements
 
-    def _convert_element(self, item, idx: int, document) -> ParsedElement | None:
+    @staticmethod
+    def _unwrap_iterated_item(raw_item: Any) -> tuple[Any, int | None]:
+        """兼容 Docling iterate_items 返回 item 或 (item, level) 两种形态。"""
+        if isinstance(raw_item, tuple) and len(raw_item) == 2:
+            item, level = raw_item
+            if isinstance(level, int):
+                return item, level
+        return raw_item, None
+
+    def _convert_element(self, item, idx: int, document, *, item_level: int | None = None) -> ParsedElement | None:
         """
         将 Docling 元素转换为 ParsedElement。
 
@@ -178,6 +193,7 @@ class DoclingParser:
             item: Docling 的元素对象
             idx: 元素索引
             document: Docling 的 DoclingDocument 对象
+            item_level: Docling 遍历返回的层级
 
         Returns:
             ParsedElement 或 None
@@ -213,7 +229,7 @@ class DoclingParser:
             markdown=markdown,
             page=page,
             bbox=bbox,
-            extra=self._extract_extra(item, item_type, document),
+            extra=self._extract_extra(item, item_type, document, item_level=item_level),
         )
 
     def _extract_position(self, item) -> tuple[int | None, list[float] | None]:
@@ -246,13 +262,13 @@ class DoclingParser:
 
         return page, bbox
 
-    def _extract_extra(self, item, item_type: str, document) -> dict[str, Any]:
+    def _extract_extra(self, item, item_type: str, document, *, item_level: int | None = None) -> dict[str, Any]:
         """提取额外属性。"""
         extra: dict[str, Any] = {}
 
         # 标题级别
         if item_type in {"title", "section_header", "heading"}:
-            extra["level"] = self._infer_heading_level(item, document)
+            extra["level"] = self._infer_heading_level(item, document, item_level=item_level)
 
         # 表格数据
         if item_type == "table":
@@ -399,7 +415,7 @@ class DoclingParser:
             return f"*{text}*"
         return text
 
-    def _infer_heading_level(self, item: Any, document: Any) -> int:
+    def _infer_heading_level(self, item: Any, document: Any, *, item_level: int | None = None) -> int:
         """从编号模式、Markdown 标题前缀或元素属性推断标题层级。"""
         # 获取标题文本
         text = getattr(item, "text", "") or ""
@@ -425,6 +441,8 @@ class DoclingParser:
                 return min(max(int(getattr(item, attr)), 1), 6)
             except (TypeError, ValueError):
                 continue
+        if item_level is not None:
+            return min(max(item_level, 1), 6)
         return 1
 
     @staticmethod
