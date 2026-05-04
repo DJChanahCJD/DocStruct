@@ -38,6 +38,8 @@ export function JsonCodeEditor({
   selectedItem,
 }: JsonCodeEditorProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   const extensions = useMemo(
     () => [
@@ -103,7 +105,7 @@ export function JsonCodeEditor({
         const view = editorRef.current?.view;
         if (!view) return;
 
-        const range = findJsonItemRange(value, selectedItem);
+        const range = findJsonItemRange(valueRef.current, selectedItem);
         if (!range) {
           console.warn(
             `JsonCodeEditor: 无法定位 "${selectedItem.slot}" / "${selectedItem.id}" 在 JSON 中的位置。`,
@@ -131,7 +133,7 @@ export function JsonCodeEditor({
       cancelled = true;
       cancelAnimationFrame(frameId);
     };
-  }, [value, selectedItem]);
+  }, [selectedItem]);
 
   return (
     <div className="h-full min-h-0 overflow-hidden rounded-md border bg-muted/10">
