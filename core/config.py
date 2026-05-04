@@ -52,7 +52,7 @@ def get_settings() -> RuntimeSettings:
     return RuntimeSettings(
         llm_api_key=os.getenv("LLM_API_KEY") or os.getenv("DASHSCOPE_API_KEY"),
         llm_base_url=os.getenv("LLM_BASE_URL"),
-        llm_model=os.getenv("LLM_MODEL", "qwen-doc-turbo"),
+        llm_model=os.getenv("LLM_MODEL", "deepseek-v4-flash"),
         upload_dir=os.getenv("UPLOAD_DIR", os.path.join("db", "uploads")),
         db_path=os.getenv("DB_PATH", os.path.join("db", "db.sqlite3")),
         extraction_threshold=_get_int("EXTRACTION_THRESHOLD", DEFAULT_EXTRACTION_THRESHOLD),
