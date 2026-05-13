@@ -1,37 +1,89 @@
 {
   "doc_type": "api",
   "title": "NebulaLab 实验编排平台 API 文档",
-  "base_url": "",
+  "base_url": "https://api.nebulalab.example.com/v1",
   "apis": [
     {
       "name": "获取访问令牌",
       "method": "POST",
       "path": "/auth/token",
-      "description": "获取访问令牌"
+      "description": "获取访问令牌",
+      "request_parameters": [
+        {"name": "client_id", "type": "string", "required": true, "description": "客户端 ID"},
+        {"name": "client_secret", "type": "string", "required": true, "description": "客户端密钥"},
+        {"name": "grant_type", "type": "string", "required": true, "description": "授权类型"}
+      ],
+      "response_fields": [
+        {"name": "access_token", "type": "string", "description": "访问令牌"},
+        {"name": "token_type", "type": "string", "description": "令牌类型"},
+        {"name": "expires_in", "type": "integer", "description": "过期时间"}
+      ]
     },
     {
       "name": "创建实验项目",
       "method": "POST",
       "path": "/projects",
-      "description": "创建实验项目"
+      "description": "创建实验项目",
+      "request_parameters": [
+        {"name": "name", "type": "string", "required": true, "description": "项目名称"},
+        {"name": "code", "type": "string", "required": true, "description": "项目编码"},
+        {"name": "owner", "type": "string", "required": true, "description": "负责人"},
+        {"name": "tags", "type": "array", "required": false, "description": "标签"},
+        {"name": "metadata", "type": "object", "required": false, "description": "元数据"}
+      ],
+      "response_fields": [
+        {"name": "project_id", "type": "string", "description": "项目 ID"},
+        {"name": "name", "type": "string", "description": "项目名称"},
+        {"name": "code", "type": "string", "description": "项目编码"},
+        {"name": "status", "type": "string", "description": "状态"},
+        {"name": "created_at", "type": "string", "description": "创建时间"}
+      ]
     },
     {
       "name": "查询项目列表",
       "method": "GET",
       "path": "/projects",
-      "description": "查询项目列表"
+      "description": "查询项目列表",
+      "request_parameters": [
+        {"name": "status", "type": "string", "required": false, "description": "状态过滤"},
+        {"name": "tag", "type": "string", "required": false, "description": "标签过滤"},
+        {"name": "page", "type": "integer", "required": false, "description": "页码"},
+        {"name": "page_size", "type": "integer", "required": false, "description": "分页大小"}
+      ],
+      "response_fields": [
+        {"name": "items", "type": "array", "description": "项目列表"},
+        {"name": "pagination", "type": "object", "description": "分页信息"}
+      ]
     },
     {
       "name": "批量创建样本",
       "method": "POST",
       "path": "/projects/{project_id}/samples/batch",
-      "description": "批量创建样本"
+      "description": "批量创建样本",
+      "request_parameters": [
+        {"name": "project_id", "type": "string", "required": true, "description": "项目 ID"},
+        {"name": "samples", "type": "array", "required": true, "description": "样本数组"}
+      ],
+      "response_fields": [
+        {"name": "created", "type": "integer", "description": "创建数量"},
+        {"name": "sample_ids", "type": "array", "description": "样本 ID 列表"}
+      ]
     },
     {
       "name": "获取样本详情",
       "method": "GET",
       "path": "/samples/{sample_id}",
-      "description": "获取样本详情"
+      "description": "获取样本详情",
+      "request_parameters": [
+        {"name": "sample_id", "type": "string", "required": true, "description": "样本 ID"}
+      ],
+      "response_fields": [
+        {"name": "sample_id", "type": "string", "description": "样本 ID"},
+        {"name": "label", "type": "string", "description": "标签"},
+        {"name": "type", "type": "string", "description": "类型"},
+        {"name": "mass_mg", "type": "number", "description": "质量"},
+        {"name": "status", "type": "string", "description": "状态"}
+      ]
     },
     {
       "name": "注册设备",

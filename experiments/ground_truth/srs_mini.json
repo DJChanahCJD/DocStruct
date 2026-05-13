@@ -1,12 +1,8 @@
 {
   "doc_type": "srs",
   "title": "智能文档系统需求规格说明书",
-  "system_name": "智能文档分析系统",
-  "target_users": [
-    "系统管理员",
-    "项目经理",
-    "开发人员"
-  ],
+  "system_name": "智能文档系统",
+  "target_users": [],
   "functional_requirements": [
     {
       "name": "用户注册（SRS-USER-001）",

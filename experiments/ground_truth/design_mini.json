@@ -1,28 +1,36 @@
 {
   "doc_type": "hld",
   "title": "智能文档系统概要设计",
-  "architecture_style": "",
+  "architecture_style": "前后端分离架构",
   "technology_stack": [],
   "modules": [
     {
       "name": "Web前端",
-      "description": "",
-      "responsibilities": []
+      "description": "提供文档上传、查看和搜索界面",
+      "responsibilities": [
+        "提供文档上传、查看和搜索界面"
+      ]
     },
     {
       "name": "API服务",
-      "description": "",
-      "responsibilities": []
+      "description": "处理认证、文档管理和检索请求",
+      "responsibilities": [
+        "处理认证、文档管理和检索请求"
+      ]
     },
     {
       "name": "文档解析服务",
-      "description": "",
-      "responsibilities": []
+      "description": "将 PDF、Word、Markdown 转换为结构化文档 IR",
+      "responsibilities": [
+        "将 PDF、Word、Markdown 转换为结构化文档 IR"
+      ]
     },
     {
       "name": "数据库",
-      "description": "",
-      "responsibilities": []
+      "description": "存储文档记录、解析结果和抽取结果",
+      "responsibilities": [
+        "存储文档记录、解析结果和抽取结果"
+      ]
     }
   ],
   "core_flows": [
@@ -41,7 +49,7 @@
         "抽取模块根据文档类型输出结构化对象",
         "API 服务更新处理状态并返回结果"
       ],
-      "outcome": "文档处理状态更新并返回结构化抽取结果"
+      "outcome": "API 服务更新处理状态并返回结果"
     }
   ],
   "design_decisions": [

@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime
 from typing import Any
 
@@ -209,6 +210,36 @@ def _field_exact_score(pred: dict[str, Any], gt: dict[str, Any], fields: tuple[s
     return 1.0
 
 
+def _has_value(value: Any) -> bool:
+    """判断字段是否包含可评估内容。"""
+    return value not in (None, "", [], {})
+
+
+def _field_completeness_score(pred: dict[str, Any], gt: dict[str, Any]) -> tuple[int, int]:
+    """按 GT 中非空字段统计预测对象字段填充完整率。"""
+    if isinstance(pred, str) or isinstance(gt, str):
+        return (1, 1)
+    ignored = {"id", "evidence_element_ids"}
+    filled = 0
+    total = 0
+    for field, gt_value in gt.items():
+        if field in ignored or not _has_value(gt_value):
+            continue
+        total += 1
+        if _has_value(pred.get(field)):
+            filled += 1
+    return filled, total
+
+
+def _evidence_coverage(preds: list[dict[str, Any]]) -> float:
+    """统计预测对象中带 evidence_element_ids 的比例。"""
+    object_preds = [item for item in preds if isinstance(item, dict)]
+    if not object_preds:
+        return 0.0
+    covered = sum(1 for item in object_preds if item.get("evidence_element_ids"))
+    return round(covered / len(object_preds), 4)
+
+
 def _name_similarity(pred: dict[str, Any], gt: dict[str, Any], slot: str) -> float:
     """计算两个对象在当前槽位下的最佳文本相似度。"""
     best = 0.0
@@ -238,6 +269,11 @@ def _slot_similarity(pred: dict[str, Any], gt: dict[str, Any], slot: str, type_f
         score = _field_exact_score(pred, gt, ("http_method", "path"))
         if score:
             return score
+    if slot == "apis":
+        score = _field_exact_score(pred, gt, ("method", "path"))
+        if score:
+            return score
+        return 0.0
     if slot == "interfaces":
         score = _field_exact_score(pred, gt, ("interface_type", "http_method", "endpoint"))
         if score:
@@ -287,6 +323,8 @@ def match_objects(
                 "pred_name": _get_raw_name(preds[pi]),
                 "gt_name": _get_raw_name(gts[gi]),
                 "similarity": round(sim, 4),
+                "pred_index": pi,
+                "gt_index": gi,
             })
 
     tp = len(matched_pairs)
@@ -361,6 +399,16 @@ def evaluate_slot(
     tp, fp, fn, pairs = match_objects(pred_items, gt_items, type_field, slot=slot)
     metrics = compute_f1(tp, fp, fn)
     diagnostics = _diagnose_unmatched(pred_items, gt_items, pairs)
+    field_filled = 0
+    field_total = 0
+    for pair in pairs:
+        pred_index = pair.get("pred_index")
+        gt_index = pair.get("gt_index")
+        if isinstance(pred_index, int) and isinstance(gt_index, int):
+            filled, total = _field_completeness_score(pred_items[pred_index], gt_items[gt_index])
+            field_filled += filled
+            field_total += total
+    field_completeness = round(field_filled / field_total, 4) if field_total else 0.0
     return {
         "slot": slot,
         "gt_count": len(gt_items),
@@ -371,6 +419,10 @@ def evaluate_slot(
         **metrics,
         "ignored": False,
         "matched_pairs": pairs,
+        "field_filled": field_filled,
+        "field_total": field_total,
+        "field_completeness": field_completeness,
+        "evidence_coverage": _evidence_coverage(pred_items),
         **diagnostics,
     }
 
@@ -378,19 +430,19 @@ def evaluate_slot(
 # ── extraction helper ──────────────────────────────────────────
 
 
-def _run_extraction(markdown: str, doc_type: Any) -> dict[str, Any]:
+def _run_extraction(markdown: str, doc_type: Any, *, model_name: str | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     """同步包装器：调用 LLM 抽取并返回 dict。"""
     from core.schema_registry import get_response_model
 
     response_model = get_response_model(doc_type)
     if response_model is None:
-        return {"doc_type": str(doc_type)}
+        return {"doc_type": str(doc_type)}, {}
 
     from core.extractor import extract_structure_with_meta
 
-    async def _run() -> dict[str, Any]:
-        extracted, _meta = await extract_structure_with_meta(markdown, response_model)
-        return extracted.model_dump(mode="json", exclude_none=True)
+    async def _run() -> tuple[dict[str, Any], dict[str, Any]]:
+        extracted, meta = await extract_structure_with_meta(markdown, response_model, model_name=model_name)
+        return extracted.model_dump(mode="json", exclude_none=True), meta
 
     return asyncio.run(_run())
 
@@ -404,6 +456,7 @@ def evaluate_document(
     *,
     live: bool = False,
     cache_dir: str = DEFAULT_CACHE_DIR,
+    model_name: str | None = None,
 ) -> dict[str, Any]:
     """评估单篇文档，返回指标字典。"""
     doc_abs = os.path.join(PROJECT_ROOT, doc_path)
@@ -414,6 +467,8 @@ def evaluate_document(
 
     # 获取抽取结果
     cache_path = os.path.join(cache_dir, f"{doc_id}.json")
+    elapsed = 0.0
+    extraction_meta: dict[str, Any] = {}
     if not live:
         if os.path.exists(cache_path):
             pred = load_json(cache_path)
@@ -440,7 +495,9 @@ def evaluate_document(
 
         doc_type = normalize_doc_type(gt.get("doc_type"))
 
-        extracted_data = _run_extraction(markdown, doc_type)
+        started_at = time.perf_counter()
+        extracted_data, extraction_meta = _run_extraction(markdown, doc_type, model_name=model_name)
+        elapsed = time.perf_counter() - started_at
         pred = extracted_data
         mode = "live"
         save_json(pred, cache_path)
@@ -455,13 +512,22 @@ def evaluate_document(
     all_tp = sum(r["tp"] for r in slot_results.values())
     all_fp = sum(r["fp"] for r in slot_results.values())
     all_fn = sum(r["fn"] for r in slot_results.values())
+    field_filled = sum(r.get("field_filled", 0) for r in slot_results.values())
+    field_total = sum(r.get("field_total", 0) for r in slot_results.values())
+    evidence_values = [r.get("evidence_coverage", 0.0) for r in slot_results.values() if r.get("pred_count", 0) > 0]
     summary = compute_f1(all_tp, all_fp, all_fn)
+    summary["field_completeness"] = round(field_filled / field_total, 4) if field_total else 0.0
+    summary["evidence_coverage"] = round(sum(evidence_values) / len(evidence_values), 4) if evidence_values else 0.0
 
     return {
         "doc_id": doc_id,
         "doc_path": doc_path,
         "doc_type": gt.get("doc_type"),
         "mode": mode,
+        "model": model_name or extraction_meta.get("llm_model"),
+        "elapsed_seconds": round(elapsed, 3),
+        "status": "ok",
+        "json_valid": True,
         "slots": slot_results,
         "summary": {"tp": all_tp, "fp": all_fp, "fn": all_fn, **summary},
     }
@@ -475,6 +541,7 @@ def evaluate_all(
     *,
     live: bool = False,
     cache_dir: str = DEFAULT_CACHE_DIR,
+    model_name: str | None = None,
 ) -> dict[str, Any]:
     manifest = load_json(manifest_path)
     results = {}
@@ -482,7 +549,24 @@ def evaluate_all(
 
     for doc_path, gt_path in manifest.items():
         print(f"Evaluating: {doc_path} ...", end=" ", flush=True)
-        result = evaluate_document(doc_path, gt_path, live=live, cache_dir=cache_dir)
+        try:
+            result = evaluate_document(doc_path, gt_path, live=live, cache_dir=cache_dir, model_name=model_name)
+        except Exception as exc:
+            print(f"FAILED ({exc})")
+            results[doc_path] = {
+                "doc_id": os.path.splitext(os.path.basename(doc_path))[0],
+                "doc_path": doc_path,
+                "doc_type": None,
+                "mode": "live" if live else "cached",
+                "model": model_name,
+                "elapsed_seconds": 0.0,
+                "status": "failed",
+                "json_valid": False,
+                "error": str(exc),
+                "slots": {},
+                "summary": {"tp": 0, "fp": 0, "fn": 0, **compute_f1(0, 0, 0), "field_completeness": 0.0, "evidence_coverage": 0.0},
+            }
+            continue
         if result is None:
             continue
         results[doc_path] = result
@@ -493,12 +577,26 @@ def evaluate_all(
         print(f"F1={s['f1']:.3f} (P={s['precision']:.3f} R={s['recall']:.3f}) [{result['mode']}]")
 
     overall = compute_f1(all_tp, all_fp, all_fn)
+    ok_docs = [doc for doc in results.values() if doc.get("status") == "ok"]
+    overall["field_completeness"] = round(
+        sum(doc["summary"].get("field_completeness", 0.0) for doc in ok_docs) / len(ok_docs), 4
+    ) if ok_docs else 0.0
+    overall["evidence_coverage"] = round(
+        sum(doc["summary"].get("evidence_coverage", 0.0) for doc in ok_docs) / len(ok_docs), 4
+    ) if ok_docs else 0.0
+    overall["avg_elapsed_seconds"] = round(
+        sum(doc.get("elapsed_seconds", 0.0) for doc in ok_docs) / len(ok_docs), 3
+    ) if ok_docs else 0.0
+    overall["json_valid_rate"] = round(
+        sum(1 for doc in results.values() if doc.get("json_valid")) / len(results), 4
+    ) if results else 0.0
     print(f"\nOverall: P={overall['precision']:.3f} R={overall['recall']:.3f} F1={overall['f1']:.3f}")
 
     return {
         "generated_at": datetime.now().isoformat(),
         "manifest": manifest_path,
         "mode": "live" if live else "cached",
+        "model": model_name,
         "overall": {"tp": all_tp, "fp": all_fp, "fn": all_fn, **overall},
         "documents": results,
     }
@@ -520,13 +618,17 @@ def print_markdown_report(results: dict[str, Any]) -> None:
     print(f"| Recall | {overall['recall']:.4f} |")
     print(f"| F1 | {overall['f1']:.4f} |")
     print(f"| TP / FP / FN | {overall['tp']} / {overall['fp']} / {overall['fn']} |")
+    print(f"| Field completeness | {overall.get('field_completeness', 0.0):.4f} |")
+    print(f"| Evidence coverage | {overall.get('evidence_coverage', 0.0):.4f} |")
+    print(f"| JSON valid rate | {overall.get('json_valid_rate', 0.0):.4f} |")
+    print(f"| Avg elapsed seconds | {overall.get('avg_elapsed_seconds', 0.0):.3f} |")
 
     print(f"\n## 按文档\n")
-    print(f"| 文档 | 类型 | P | R | F1 | TP/FP/FN |")
-    print(f"|---|---|---|---|---|---|")
+    print(f"| 文档 | 类型 | P | R | F1 | 字段完整率 | 证据覆盖率 | 耗时/s | TP/FP/FN |")
+    print(f"|---|---|---|---|---|---|---|---|---|")
     for doc in results["documents"].values():
         s = doc["summary"]
-        print(f"| {doc['doc_id']} | {doc['doc_type']} | {s['precision']:.3f} | {s['recall']:.3f} | {s['f1']:.3f} | {s['tp']}/{s['fp']}/{s['fn']} |")
+        print(f"| {doc['doc_id']} | {doc['doc_type']} | {s['precision']:.3f} | {s['recall']:.3f} | {s['f1']:.3f} | {s.get('field_completeness', 0.0):.3f} | {s.get('evidence_coverage', 0.0):.3f} | {doc.get('elapsed_seconds', 0.0):.3f} | {s['tp']}/{s['fp']}/{s['fn']} |")
 
     # Collect all slot names from results
     all_slots: set[str] = set()
@@ -537,14 +639,14 @@ def print_markdown_report(results: dict[str, Any]) -> None:
     print(f"\n## 按槽位\n")
     for slot in report_slots:
         print(f"\n### {slot}\n")
-        print(f"| 文档 | GT | Pred | TP | FP | FN | P | R | F1 | 备注 |")
-        print(f"|---|---|---|---|---|---|---|---|---|---|")
+        print(f"| 文档 | GT | Pred | TP | FP | FN | P | R | F1 | 字段完整率 | 证据覆盖率 | 备注 |")
+        print(f"|---|---|---|---|---|---|---|---|---|---|---|---|")
         for doc in results["documents"].values():
             r = doc["slots"].get(slot)
             if r is None:
                 continue
             note = "ignored" if r.get("ignored") else ""
-            print(f"| {doc['doc_id']} | {r['gt_count']} | {r['pred_count']} | {r['tp']} | {r['fp']} | {r['fn']} | {r['precision']:.3f} | {r['recall']:.3f} | {r['f1']:.3f} | {note} |")
+            print(f"| {doc['doc_id']} | {r['gt_count']} | {r['pred_count']} | {r['tp']} | {r['fp']} | {r['fn']} | {r['precision']:.3f} | {r['recall']:.3f} | {r['f1']:.3f} | {r.get('field_completeness', 0.0):.3f} | {r.get('evidence_coverage', 0.0):.3f} | {note} |")
 
     print(f"\n## 诊断样例\n")
     for doc in results["documents"].values():
@@ -591,6 +693,7 @@ def main() -> None:
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST, help="实验清单路径")
     parser.add_argument("--output", default=None, help="输出目录")
     parser.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR, help="缓存目录")
+    parser.add_argument("--model", default=None, help="live 模式使用的 LLM 模型名")
     parser.add_argument("--doc", default=None, help="单文档路径（指定后只评估该文档，需配合 --gt）")
     parser.add_argument("--gt", default=None, help="单文档对应的 ground truth 路径")
     args = parser.parse_args()
@@ -601,7 +704,7 @@ def main() -> None:
         if not args.gt:
             print("单文档模式需要 --gt 指定 ground truth 路径")
             sys.exit(1)
-        result = evaluate_document(args.doc, args.gt, live=args.live, cache_dir=args.cache_dir)
+        result = evaluate_document(args.doc, args.gt, live=args.live, cache_dir=args.cache_dir, model_name=args.model)
         if result is None:
             print("SKIP (no cache, use --live)")
             sys.exit(0)
@@ -613,6 +716,7 @@ def main() -> None:
         wrapper = {
             "generated_at": datetime.now().isoformat(),
             "mode": args.live and "live" or "cached",
+            "model": args.model,
             "overall": result["summary"],
             "documents": {args.doc: result},
         }
@@ -623,7 +727,7 @@ def main() -> None:
         print(f"Manifest not found: {args.manifest}")
         sys.exit(1)
 
-    results = evaluate_all(args.manifest, live=args.live, cache_dir=args.cache_dir)
+    results = evaluate_all(args.manifest, live=args.live, cache_dir=args.cache_dir, model_name=args.model)
     save_report(results, output_dir)
 
 
