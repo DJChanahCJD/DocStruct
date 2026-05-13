@@ -21,10 +21,10 @@ experiments/results/cached/*.json
 当前全量缓存结果可复现为：
 
 ```text
-Precision = 0.9570
-Recall    = 0.8241
-F1        = 0.8856
-TP/FP/FN  = 89/4/19
+Precision = 0.9560
+Recall    = 0.8447
+F1        = 0.8969
+TP/FP/FN  = 87/4/16
 ```
 
 代表样本快速评测使用：
@@ -58,7 +58,7 @@ uv run python scripts/evaluate.py --live
 | --- | --- | --- |
 | `experiments/assets/srs_mini.md` | srs | `experiments/ground_truth/srs_mini.json` |
 | `static/examples/srs_example.md` | srs | `experiments/ground_truth/srs_example.json` |
-| `experiments/assets/api_mini.md` | api | `experiments/ground_truth/api_mini.json` |
+| `experiments/assets/dbdd_mini.md` | dbdd | `experiments/ground_truth/dbdd_mini.json` |
 | `static/examples/api_example.md` | api | `experiments/ground_truth/api_example.json` |
 | `static/examples/test_case_example.md` | tc | `experiments/ground_truth/test_case.json` |
 | `experiments/assets/design_mini.md` | hld | `experiments/ground_truth/design_mini.json` |

@@ -1,0 +1,26 @@
+{
+  "doc_type": "dbdd",
+  "db_name": "docstruct",
+  "db_type": "SQLite",
+  "tables": [
+    {
+      "name": "document",
+      "comment": "文件记录表，存储文档的解析内容、结构化抽取结果和处理状态",
+      "fields": [
+        {"name": "id", "type": "IntField", "primary_key": true, "nullable": false, "comment": "自增主键"},
+        {"name": "title", "type": "CharField(255)", "primary_key": false, "nullable": false, "comment": "文档标题，默认取文件名"},
+        {"name": "stored_path", "type": "CharField(512)", "primary_key": false, "nullable": false, "comment": "文件存储路径"},
+        {"name": "created_at", "type": "DatetimeField", "primary_key": false, "nullable": false, "comment": "创建时间，自动填充"},
+        {"name": "updated_at", "type": "DatetimeField", "primary_key": false, "nullable": true, "comment": "最后修改时间"},
+        {"name": "doc_type", "type": "CharField(50)", "primary_key": false, "nullable": false, "comment": "文档类型"},
+        {"name": "raw_text", "type": "TextField", "primary_key": false, "nullable": true, "comment": "解析后的原始文本"},
+        {"name": "summary", "type": "TextField", "primary_key": false, "nullable": true, "comment": "文档摘要"},
+        {"name": "document_ir", "type": "JSONField", "primary_key": false, "nullable": true, "comment": "文档IR，用于分块与证据回溯"},
+        {"name": "extracted_data", "type": "JSONField", "primary_key": false, "nullable": true, "comment": "结构化抽取结果"},
+        {"name": "extraction_meta", "type": "JSONField", "primary_key": false, "nullable": true, "comment": "抽取元信息"},
+        {"name": "status", "type": "CharField(20)", "primary_key": false, "nullable": false, "comment": "处理状态"},
+        {"name": "error_message", "type": "TextField", "primary_key": false, "nullable": true, "comment": "失败原因"}
+      ]
+    }
+  ]
+}
