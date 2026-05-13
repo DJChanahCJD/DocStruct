@@ -13,7 +13,8 @@ DocStruct 当前聚焦于软件工程文档的结构化提取与离线评测。�
 - `unknown` 类型只保留解析后的原文、摘要与 IR，不执行结构化抽取
 - 解析结果同时保存 `raw_text`、`summary` 和 `document_ir`
 - 抽取结果统一输出五类主干对象和证据回溯
-- 前端支持 PDF 原文与结构化结果左右对照，并可点击提取项定位 Docling bbox 证据
+- 前端支持 PDF/DOCX 原文与结构化结果左右对照，并可点击提取项定位 bbox 证据
+- 支持从文档前部确定性提取版本号等元数据
 - 提供离线评测脚本，便于论文实验复现
 
 ## 设计概要
@@ -31,7 +32,9 @@ Section-aware Chunking
     ↓
 Map：逐块局部抽取
     ↓
-Reduce：合并、去重、全局 ID
+Finalize：LLM 合并分块候选（失败则降级跳过）
+    ↓
+Reduce：确定性合并、去重、全局 ID
     ↓
 Evidence Binding
     ↓
@@ -44,6 +47,8 @@ Final JSON
 - `summary` 在解析后由 LLM 基于文档内容和大纲生成，并作为分块抽取的全局上下文
 - `ExtractionContract` 控制每类文档抽什么，不使用任意动态 Schema
 - LLM 只负责 chunk 内局部语义抽取和候选合并，Reduce 尽量使用确定性逻辑
+- Finalizer 在 Map 之后用一次额外 LLM 调用合并分块候选，失败时自动降级跳过
+- 术语表、参考资料、附录等章节在分块时自动跳过
 - finalizer 只合并分块候选，不再读取完整原文证据片段，避免退化为全文一次性抽取
 - 每个对象通过 1-3 个 `evidence_element_ids` 锚点绑定到原文元素，最终生成 `evidence`
 - 前端通过 `evidence.object_id/page/bbox` 将结构化对象映射回 PDF 页面证据
@@ -81,7 +86,21 @@ class SrsExtractedDocument(SrsExtraction, BaseExtractedDocument):
 ```
 
 - 每类文档使用独立 typed schema：SRS 使用 `functional_requirements` / `non_functional_requirements` / `business_flows`，API 使用 `apis`，HLD 使用 `modules` / `core_flows` / `design_decisions`，TC 使用 `test_cases`，DBDD 使用 `tables`
-- `id` 是系统生成的稳定对象 ID，例如 `FREQ-001`；原文编号可作为 `name` 后缀保留
+- `id` 是系统生成的稳定对象 ID，前缀映射如下：
+
+| 槽位 | 前缀 | 示例 |
+| --- | --- | --- |
+| `functional_requirements` | `FREQ` | `FREQ-001` |
+| `non_functional_requirements` | `NFR` | `NFR-001` |
+| `business_flows` | `BFL` | `BFL-001` |
+| `apis` | `APIS` | `APIS-001` |
+| `modules` | `MOD` | `MOD-001` |
+| `core_flows` | `CFL` | `CFL-001` |
+| `design_decisions` | `DEC` | `DEC-001` |
+| `test_cases` | `TC` | `TC-001` |
+| `tables` | `TBL` | `TBL-001` |
+
+- 原文编号可作为 `name` 后缀保留
 - SRS 的验收标准不作为独立需求输出，局部验收条目写入对应功能需求的 `criteria`
 - `evidence` 保存对象到 `DocumentElement` 的回溯信息
 - `evidence_element_ids` 是少量定位锚点，不要求覆盖对象的每个字段或明细
@@ -102,7 +121,7 @@ pip install -r requirements.txt
 ```env
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_API_KEY=your_api_key
-LLM_MODEL=qwen-doc-turbo
+LLM_MODEL=deepseek-v4-flash
 EXTRACTION_CHUNK_MAX_CHARS=5000
 EXTRACTION_MAX_CHARS=100000
 EXTRACTION_CONCURRENCY=3
@@ -114,13 +133,14 @@ DOCLING_FORCE_BACKEND_TEXT=true
 
 | 配置项 | 说明 | 默认值 |
 | --- | --- | --- |
-| `LLM_API_KEY` | 大模型调用鉴权，也可使用 `DASHSCOPE_API_KEY` | 无 |
+| `LLM_API_KEY` | 大模型调用鉴权（回退 `DASHSCOPE_API_KEY`） | 无 |
 | `LLM_BASE_URL` | OpenAI-Compatible 接口地址 | 无 |
-| `LLM_MODEL` | 结构化提取模型 | `qwen-doc-turbo` |
+| `LLM_MODEL` | 结构化提取模型 | `deepseek-v4-flash` |
 | `UPLOAD_DIR` | 上传文件目录 | `db/uploads` |
 | `DB_PATH` | SQLite 路径 | `db/db.sqlite3` |
 | `EXTRACTION_CHUNK_MAX_CHARS` | IR chunk 目标大小 | `5000` |
 | `EXTRACTION_MAX_CHARS` | 文档最大字符数上限 | `100000` |
+| `EXTRACTION_THRESHOLD` | 触发抽取的最小字符阈值 | `6000` |
 | `EXTRACTION_CONCURRENCY` | 分块并发抽取数 | `3` |
 | `PARSER_BACKEND` | 解析后端，当前默认 `basic` | `basic` |
 | `DOCLING_ENABLE_OCR` | Docling OCR 开关 | `false` |
@@ -147,7 +167,7 @@ python main.py
 | 文档解析 | `docling`、`pymupdf4llm`、`python-docx` |
 | 结构化抽取 | OpenAI-Compatible API + `Pydantic` |
 | 评测 | Python 脚本 + JSON / Markdown 报告 |
-| 前端 | `React 19` + `TypeScript` + `Vite` + `Tailwind CSS v4` + `shadcn/ui` |
+| 前端 | `React 19` + `TypeScript` + `Vite` + `Tailwind CSS v4` + `shadcn/ui` + `CodeMirror` + `pdfjs-dist` + `TanStack Query` |
 
 ## 项目结构
 
@@ -166,6 +186,7 @@ DocStruct/
 │   ├── config.py
 │   ├── constants.py
 │   ├── utils.py
+│   ├── metadata.py
 │   ├── schema_registry.py
 │   ├── experiment_sdk.py
 │   ├── document_service.py
@@ -186,14 +207,17 @@ DocStruct/
 │       └── dbdd.py
 ├── scripts/
 │   ├── ci_test.py
-│   └── evaluate.py
+│   ├── evaluate.py
+│   └── hooks/
 ├── tests/
+│   ├── test_reducer.py
 │   ├── test_extractor_prompts.py
-│   └── test_reducer.py
+│   ├── test_dto.py
+│   ├── test_metadata.py
+│   └── test_docling_parser.py
 ├── frontend/         (React + TypeScript + Vite)
 ├── experiments/      (offline evaluation)
 ├── static/           (example documents)
-├── docs/             (documentation)
 └── paper/            (thesis chapters)
 ```
 
@@ -214,7 +238,9 @@ LLM 生成 summary
     ↓
 并发 Map 抽取
     ↓
-Reduce 合并、去重、重排全局 ID
+Finalize：LLM 合并分块候选（失败则降级跳过）
+    ↓
+Reduce 确定性合并、去重、重排全局 ID
     ↓
 Evidence Binding 回填 page / bbox / text_span
     ↓
@@ -283,3 +309,4 @@ uv run python scripts/ci_test.py --frontend-only
 ## 参考资料
 
 - https://github.com/docling-project/docling
+- https://github.com/IBM/docling

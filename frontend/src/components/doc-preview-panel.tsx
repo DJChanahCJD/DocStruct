@@ -129,6 +129,16 @@ export function DocPreviewPanel({
   }, [hasRawChanges, onRawDirtyChange, rawSheetOpen]);
 
   useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasRawChanges || hasJsonChanges) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasRawChanges, hasJsonChanges]);
+
+  useEffect(() => {
     let objectUrl: string | null = null;
     let disposed = false;
 
@@ -247,6 +257,16 @@ export function DocPreviewPanel({
     if (item) setSelectedItem(item);
     setRawSheetOpen(false);
     setJsonSheetOpen(true);
+  };
+
+  const handleJsonSheetOpenChange = (open: boolean) => {
+    if (!open && hasJsonChanges) {
+      const confirmed = window.confirm("当前 JSON 修改尚未保存，确定要关闭吗？");
+      if (!confirmed) {
+        return;
+      }
+    }
+    setJsonSheetOpen(open);
   };
 
   const handleResetJson = () => {
@@ -481,7 +501,7 @@ export function DocPreviewPanel({
         isSaving={updateDocument.isPending}
         onSave={handlePatchMetadata}
       />
-      <Sheet open={jsonSheetOpen} onOpenChange={setJsonSheetOpen}>
+      <Sheet open={jsonSheetOpen} onOpenChange={handleJsonSheetOpenChange}>
         <SheetContent
           className="gap-0 p-0 sm:max-w-none"
           style={{ width: "min(1200px, 90vw)", maxWidth: "none" }}
