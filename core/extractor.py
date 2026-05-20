@@ -63,7 +63,6 @@ def build_extraction_contract(
         "保持原文的聚合粒度。不要将同一编号、同一标题或同一表格行下的多个指标拆分为独立对象，也不要把多个独立条目合并为一个。",
         "evidence_element_ids 只使用 [ELEMENT: ...] 标记中的元素 ID。",
         "evidence_element_ids 只保留能直接支撑对象存在、定义或关键约束的高价值元素。",
-        "每个字段名即为该字段的语义含义，请按字段名自然理解其用途。",
         "只返回目标对象槽位；未出现的对象槽返回空列表。",
     ]
     target_slots = discover_slots(response_model)
@@ -518,7 +517,6 @@ def _render_chunk_context(
         (
             "evidence_element_ids 必须来自 allowed_evidence_element_ids。"
             "Document Summary 只用于理解上下文，不能作为对象存在或证据引用的依据。"
-            "每个字段名即为该字段的语义含义，请按字段名自然理解其用途。"
             "当前分块没有某类对象时，该槽位返回空列表。"
         ),
     ])

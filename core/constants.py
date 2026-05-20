@@ -47,40 +47,9 @@ SUMMARY_USER_PROMPT_TEMPLATE = """
 {content}
 """
 
-# === Phase 0 Pre-scan Prompts ===
-
-PHASE0_SYSTEM_PROMPT = """
-你是文档预分析专家。快速扫描文档采样片段，输出 JSON 元信息。
-只输出合法 JSON，不要 Markdown、注释或解释。
-"""
-
-PHASE0_USER_PROMPT_TEMPLATE = """
-请分析以下文档采样（开头、中间、结尾片段），输出文档元信息。
-
-文档采样：
-{content}
-
-输出 JSON 格式：
-{{
-  "doc_type": "srs|api|design|test|manual|issue|unknown",
-  "doc_type_confidence": 0.0-1.0,
-  "key_entities": ["文档中出现的系统/角色/数据名称"],
-  "section_themes": {{"章节路径": "该章节主要讨论什么"}},
-  "extraction_hints": ["针对本文档的提取注意事项"]
-}}
-
-规则：
-- doc_type 基于文档标题和内容特征判断
-- key_entities 只列文档明确提及的实体名
-- section_themes 每个章节一句话概括
-- extraction_hints 列出提取时需注意的特殊情况（如"本文档的接口定义在第3章"）
-"""
-
 DEFAULT_EXTRACTION_THRESHOLD = 6000
 DEFAULT_EXTRACTION_CHUNK_MAX_CHARS = 5000
-DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS = 200
+DEFAULT_EXTRACTION_CHUNK_OVERLAP_CHARS = 300
 DEFAULT_EXTRACTION_MAX_CHARS = 100000
 DEFAULT_EXTRACTION_CONCURRENCY = 3
 DEFAULT_LLM_MAX_TOKENS = 16384
-
-DEFAULT_PHASE0_MAX_SAMPLE_CHARS = 6000

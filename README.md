@@ -146,10 +146,8 @@ DOCLING_FORCE_BACKEND_TEXT=true
 | `DOCLING_ENABLE_OCR` | Docling OCR 开关 | `false` |
 | `DOCLING_ENABLE_TABLE_STRUCTURE` | Docling 表格结构识别开关 | `true` |
 | `DOCLING_FORCE_BACKEND_TEXT` | Docling 优先使用 PDF 原生文本层 | `true` |
-| `EXTRACTION_CHUNK_OVERLAP_CHARS` | 相邻分块重叠字符数 | `200` |
+| `EXTRACTION_CHUNK_OVERLAP_CHARS` | 相邻分块重叠字符数 | `300` |
 | `LLM_MAX_TOKENS` | LLM 最大输出 token 数 | `16384` |
-| `PHASE0_ENABLED` | Phase 0 预扫描开关 | `false` |
-| `PHASE0_MAX_SAMPLE_CHARS` | Phase 0 采样字符数上限 | `6000` |
 
 ### 3. 启动后端
 
