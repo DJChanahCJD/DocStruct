@@ -3,7 +3,8 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from core.config import get_settings
-from core.extractor import _render_chunk_context, _render_finalizer_input, extract_structure_with_meta
+from core.extractor import extract_structure_with_meta
+from core.prompting import render_chunk_context, render_finalizer_input
 from schemas.extraction import ExtractionContract
 from schemas.models import DocType, DocumentChunk, DocumentElement, DocumentIR, DocumentOutline, SrsExtractedDocument
 
@@ -54,7 +55,7 @@ class ExtractorPromptRenderingTest(unittest.TestCase):
             markdown="[ELEMENT: el-1]\n系统应支持登录。",
         )
 
-        rendered = _render_chunk_context(
+        rendered = render_chunk_context(
             document_ir=ir,
             contract=_sample_contract(),
             chunk=chunk,
@@ -68,7 +69,7 @@ class ExtractorPromptRenderingTest(unittest.TestCase):
 
     def test_render_finalizer_input_does_not_include_full_evidence_snippets(self) -> None:
         """Finalizer 只合并候选，不再接收全文 evidence snippets。"""
-        rendered = _render_finalizer_input(
+        rendered = render_finalizer_input(
             document_ir=_sample_ir(),
             contract=_sample_contract(),
             chunk_results=[

@@ -11,9 +11,6 @@ from core.chunker import split_ir_into_chunks, summarize_chunk
 from core.config import get_settings
 from core.constants import (
     JSON_FORMAT_INSTRUCTION,
-    MAP_USER_PROMPT_TEMPLATE,
-    SUMMARY_USER_PROMPT_TEMPLATE,
-    SYSTEM_PROMPT,
 )
 from core.ir import build_basic_ir_from_markdown, document_ir_from_payload
 from core.llm import build_chat_completion_kwargs, get_openai_client
@@ -21,6 +18,14 @@ from core.metadata import apply_document_metadata, extract_document_metadata
 from core.reducer import discover_document_fields, discover_slots, reduce_extraction_results
 from core.schema_registry import normalize_doc_type
 from core.utils import clean_and_parse_json, normalize_extracted_data
+from core.prompting import (
+    create_prompt_messages,
+    render_chunk_context,
+    render_finalize_prompt,
+    render_finalizer_input,
+    render_map_prompt,
+    render_summary_prompt,
+)
 from schemas.extraction import ExtractionContract, ExtractionMeta
 from schemas.models import (
     DocType,
@@ -34,22 +39,6 @@ settings = get_settings()
 raw_client = get_openai_client()
 RESPONSE_PREVIEW_CHARS = 500
 SUMMARY_INPUT_MAX_CHARS = 12000
-
-
-FINALIZE_USER_PROMPT_TEMPLATE = """
-请使用给定 JSON Schema，把分块级抽取候选合并成一个最终结构化文档。
-结合文档大纲、文档摘要和分块候选处理去重、合并和父子结构。
-不要新增分块候选中不存在的对象事实。
-保留并合并候选对象已有的 evidence_element_ids；不要编造新的证据 ID。
-
-输入:
-{content}
-
-Schema:
-{schema}
-
-{json_instruction}
-"""
 
 
 def build_extraction_contract(
@@ -138,12 +127,9 @@ def generate_document_summary(
     compact_content = _compact_text(markdown_content)
     content = compact_content[:SUMMARY_INPUT_MAX_CHARS]
     outline = ir.outline.model_dump_json(indent=2)
-    prompt = SUMMARY_USER_PROMPT_TEMPLATE.format(outline=outline, content=content)
+    prompt = render_summary_prompt(outline=outline, content=content)
     summary = _create_text_completion(
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT.strip()},
-            {"role": "user", "content": prompt},
-        ],
+        messages=create_prompt_messages(prompt=prompt),
         temperature=0.0,
         model_name=model_name,
     )
@@ -162,17 +148,15 @@ def _extract_once(
     if context_note:
         prompt_content = f"{context_note}\n\n[Current Chunk]\n{content}"
 
-    template = prompt_template or MAP_USER_PROMPT_TEMPLATE
-    prompt = template.format(
-        content=prompt_content,
-        schema=_json_schema_text(response_model),
-        json_instruction=JSON_FORMAT_INSTRUCTION,
-    )
+    if prompt_template:
+        prompt = prompt_template.format(
+            content=prompt_content,
+            schema=_json_schema_text(response_model),
+        )
+    else:
+        prompt = render_map_prompt(content=prompt_content, response_model=response_model)
     response_text = _create_text_completion(
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT.strip()},
-            {"role": "user", "content": prompt},
-        ],
+        messages=create_prompt_messages(prompt=prompt),
         temperature=0.0,
         model_name=model_name,
     )
@@ -208,7 +192,7 @@ async def _extract_chunk(
                 _extract_once,
                 chunk.markdown,
                 response_model,
-                context_note=_render_chunk_context(
+                context_note=render_chunk_context(
                     document_ir=document_ir,
                     contract=contract,
                     chunk=chunk,
@@ -403,21 +387,17 @@ def _finalize_extraction_once(
     """
     Use the LLM to merge chunk candidates into one global structured document.
     """
-    prompt = FINALIZE_USER_PROMPT_TEMPLATE.format(
-        content=_render_finalizer_input(
+    prompt = render_finalize_prompt(
+        content=render_finalizer_input(
             document_ir=document_ir,
             contract=contract,
             chunk_results=chunk_results,
             document_summary=document_summary,
         ),
-        schema=_json_schema_text(response_model),
-        json_instruction=JSON_FORMAT_INSTRUCTION,
+        response_model=response_model,
     )
     response_text = _create_text_completion(
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT.strip()},
-            {"role": "user", "content": prompt},
-        ],
+        messages=create_prompt_messages(prompt=prompt),
         temperature=0.0,
         model_name=model_name,
     )
@@ -456,68 +436,3 @@ def _typed_extraction_model(response_model: type[BaseModel]) -> type[BaseModel]:
     return mapping[response_model]
 
 
-def _render_finalizer_input(
-    *,
-    document_ir: DocumentIR,
-    contract: ExtractionContract,
-    chunk_results: list[dict[str, Any]],
-    document_summary: str | None = None,
-) -> str:
-    """渲染 finalizer 输入，只提供全局背景和分块候选。"""
-    parts = [
-        "[Document Outline]",
-        document_ir.outline.model_dump_json(indent=2),
-    ]
-    if document_summary and document_summary.strip():
-        parts.extend([
-            "[Document Summary]",
-            document_summary.strip(),
-        ])
-    parts.extend([
-        "[Extraction Contract]",
-        contract.model_dump_json(indent=2),
-        "[Chunk Candidates]",
-        json.dumps(chunk_results, ensure_ascii=False, indent=2),
-    ])
-    return "\n\n".join(parts)
-
-
-def _render_chunk_context(
-    *,
-    document_ir: DocumentIR,
-    contract: ExtractionContract,
-    chunk: DocumentChunk,
-    document_summary: str | None = None,
-) -> str:
-    """渲染分块抽取上下文，summary 仅作为背景，证据仍限定在当前分块。"""
-    parts = [
-        "[Document Outline]",
-        document_ir.outline.model_dump_json(indent=2),
-    ]
-    if document_summary and document_summary.strip():
-        parts.extend([
-            "[Document Summary]",
-            document_summary.strip(),
-        ])
-    parts.extend([
-        "[Extraction Contract]",
-        contract.model_dump_json(indent=2),
-        "[Chunk Metadata]",
-        json.dumps(
-            {
-                "chunk_id": chunk.chunk_id,
-                "section_path": chunk.section_path,
-                "page_start": chunk.page_start,
-                "page_end": chunk.page_end,
-                "allowed_evidence_element_ids": [element.element_id for element in chunk.elements],
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        (
-            "evidence_element_ids 必须来自 allowed_evidence_element_ids。"
-            "Document Summary 只用于理解上下文，不能作为对象存在或证据引用的依据。"
-            "当前分块没有某类对象时，该槽位返回空列表。"
-        ),
-    ])
-    return "\n\n".join(parts)
